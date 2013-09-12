@@ -1,0 +1,235 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>RuCTFE 2012之geotracker漏洞分析 - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="这个漏洞是由陈钦（hellok）和我一起分析发现的，在这里不得不说下逆向大牛hellok，他对java程序，二进制程序等各种逆向都非常熟悉，而且为人很低调谦虚，所以大家没有感觉到他的厉害。下面说下程序分析思路。 首先，通过查看proc目录，得到程序的运行命令为java -jar &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net/www/geotracker%e6%bc%8f%e6%b4%9e%e5%88%86%e6%9e%90">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">blue-lotus</a></h1>
+  
+    <h2>Security Research Team @ Tsinghua University</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:www.blue-lotus.net/www" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">RuCTFE 2012之geotracker漏洞分析</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-11-27T00:00:00+08:00" pubdate data-updated="true">Nov 27<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>这个漏洞是由陈钦（hellok）和我一起分析发现的，在这里不得不说下逆向大牛hellok，他对java程序，二进制程序等各种逆向都非常熟悉，而且为人很低调谦虚，所以大家没有感觉到他的厉害。下面说下程序分析思路。</p>
+
+<p>首先，通过查看proc目录，得到程序的运行命令为java -jar geotracker.jar push-server,这个在合作文档中可以看到，说明程序以push-sevrer作为参数。</p>
+
+<p>然后，在程序目录下就看到push-server.xml，对java程序比较了解的同学，应该知道java的很多框架都是用xml来作为配置文件，而且这个xml文件非常重要，是保证程序松耦合和灵活性的重点。打开xml文件就会看到很多重要信息。这个程序采用spring+hibernate框架设计，使用了hsql数据库，hsql采用 In-process模式运行，数据库的用户名为sa，密码为空。你可能会想到，从外部连接到数据库去看看数据库内部数据，但是hsql的In-process模式不支持这种做法。所以，我们只有去找数据库的文件，在配置文件中，我们知道数据库的名字叫localDB，然后在程序目录下就会找到localDB.scripts文件。根据师兄们给我们讲的经验，key一般存在于数据库中。然而，第一次我们打开这个文件时，文件中基本没有数据，但是我们清晰的看到了表结构。</p>
+
+<p>其实在我打算分析这个程序之前，hellok很早就在合作文档中写下的发现一个SQL注入漏洞，在程序的NotificationRepository.java文件中存在以下一段代码</p>
+
+<p><img src="http://img.my.csdn.net/uploads/201211/26/1353930188_4059.png" alt="enter image description here" /></p>
+
+<p>从这段代码中，我们看到程序在设置SQL语句参数时，使用string相加的形式，显然是不可取的。然后我们就在后面很长一段时间内不断分析怎么利用SQL注入。由于当时分析思路错误，浪费了很多时间。我们总是通过nc连接到10901端口，然后输入data1|PUSH|data2|data3向数据库插入数据，其中data1,data2,data3中包含特殊字符，但是无论我们怎么构造字符串，这些字符串都能完整的存入数据库，最后我们发现插入数据库的函数是javax中的一个库函数persist()，在网上搜了一下，没有发现对这个函数的SQL注入信息。这时，我们意识到前面那个sql注入漏洞只是在查询时存在。当然我们也走了一些其他的弯路，甚至一度怀疑程序运行依赖的jdk库有问题，反正很长一段时间都没有进展，一直不成功。</p>
+
+<p>在山重水复疑无路的时候，我们发现有一些流量向我们的镜像这个服务发送，开始我们以为是别人的攻击流量，通过分析发现，基本都是官方服务器发送的。然后赶紧打开数据库文件，里面竟然全部都是key,我们自己的key！这就坚定了我们去拖别人库的决心。最后我们发现，通过nc连接别人的10900端口，然后发送 :0: 字符串就可以完全将数据库内容查询出来，其中包含了很多key。然而当我们欣喜地提交这些key的时候，不知道什么原因，总是提示Denied: flag is too old、Denied: your appropriate service (geotracker) is not UP或者Denied: no such flag，我们觉得完全不可思议，因为我们自己数据库的这些内容都是官方服务器发送填充的。再加上我们自己的geotracker服务一直被检测处于down或者mumble状态，很长时间不能提交key，所以我们就没有继续分析这个服务。</p>
+
+<p>早上6点左右，我小憩一会儿醒来发现那个服务又被检测为up状态，我赶紧提交了几个key,结果accept一个，当我准备把这个抓key的步骤脚本化的时候，那个服务又down了，再加上当时我们队的名次不是很好，大家士气比较低落，然后我也就没有弄了，跟大家一起去吃饭，回去睡觉了。</p>
+
+<p>由于比赛在夜间进行，比赛过程很艰辛，但是充满快乐。我从这个比赛中，见识了各种牛人，增强了与其他同学的交流，学习到了很多漏洞分析知识。更重要的是，跟实验室的师兄和同学一起聚餐，一起努力通宵奋斗的经历，成为我这一年难忘的记忆之一。</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">chenjj</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-11-27T00:00:00+08:00" pubdate data-updated="true">Nov 27<span>th</span>, 2012</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ctf/'>CTF</a>, <a class='category' href='/blog/categories/writeup/'>writeup</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://www.blue-lotus.net/www/geotracker%e6%bc%8f%e6%b4%9e%e5%88%86%e6%9e%90/" data-via="" data-counturl="http://www.blue-lotus.net/www/geotracker%e6%bc%8f%e6%b4%9e%e5%88%86%e6%9e%90/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/notes-of-ructfe-2012/" title="Previous Post: RuCTFE 2012參賽記">&laquo; RuCTFE 2012參賽記</a>
+      
+      
+        <a class="basic-alignment right" href="/ructfe-2012-mongodb/" title="Next Post: RuCTFE 2012之mongodb">RuCTFE 2012之mongodb &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-memdump-writeup/">ASIS CTF Memdump Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufo-ctf-2013-reverse-keygenme-writeup/">UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
+      </li>
+    
+      <li class="post">
+        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

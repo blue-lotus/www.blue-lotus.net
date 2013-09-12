@@ -1,0 +1,392 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>BaltCTF 2013 binary 500 - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="binary500 is .net reserve. it Deserialize a class to filestream. which contain 625 neurons
+neurons struct like this:
+{
+data,
+weight
+}
+default data &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net/www/baltctf-2013-binary-500">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">blue-lotus</a></h1>
+  
+    <h2>Security Research Team @ Tsinghua University</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:www.blue-lotus.net/www" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">BaltCTF 2013 Binary 500</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-05-14T00:00:00+08:00" pubdate data-updated="true">May 14<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>binary500 is .net reserve.</p>
+
+<!--more-->
+
+
+<p>it Deserialize a class to filestream. which contain 625 neurons<br/>
+neurons struct like this:<br/>
+{<br/>
+data,<br/>
+weight<br/>
+}<br/>
+default data are all 0.<br/>
+after the Deserialize ,those 625 neurons&#8217;s data is filled with user control data,actually data from our input image file.<br/>
+all neurons&#8217;s weight is from pink.data<br/>
+the programe try to divide 625 into 10 blocks,and calc sum of data*weight.<br/>
+correct input will make the second block&#8217;s sum is the biggest,which is the program wanted.</p>
+
+<pre><code>namespace koh
+{
+    using AForge;
+    using AForge.Imaging;
+    using AForge.Imaging.Filters;
+    //using koh;
+    using System;
+    using System.Collections.Generic;
+    using System.Drawing;
+    using System.IO;
+    using System.Linq;
+    using System.Runtime.Serialization.Formatters.Binary;
+
+    internal class Program
+    {
+        private static bool CheckArg(string arg)
+        {
+            try
+            {
+                FileInfo info = new FileInfo(arg);
+                return (info.Exists &amp;amp;&amp;amp; (info.Length &amp;lt; 0x800000L));
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        private static List ConvertImage(Bitmap img)
+        {
+            List list = new List();
+            using (UnmanagedImage image = UnmanagedImage.FromManagedImage(img))
+            {
+                List points = new List();
+                for (int i = 0; i &amp;lt; image.Width; i++)
+                {
+                    for (int j = 0; j &amp;lt; image.Height; j++)
+                    {
+                        points.Add(new IntPoint(i, j));
+                        Console.Write(i+&amp;quot;,&amp;quot;+j+&amp;quot;:&amp;quot;);
+                    }
+                }
+                byte[] collection = image.Collect8bppPixelValues(points);
+                Console.Write(collection + &amp;quot;:&amp;quot;);
+
+                list.AddRange(collection);
+            }
+            return list;
+        }
+
+        private static Bitmap LoadImage(string arg)
+        {
+            return AForge.Imaging.Image.FromFile(arg);
+        }
+
+        private static void Main(string[] args)
+        {
+           /* if ((args.Length != 1) || !CheckArg(args[0]))
+            {
+                Usage();
+            }
+            else
+            {
+            * */
+              //  string arg = args[0];
+                string arg = &amp;quot;C:\\Users\\Administrator\\Desktop\\baltctf\\braaainz\\out.bmp&amp;quot;;
+                Bitmap img = ProcessImage(LoadImage(arg));
+                List source = ConvertImage(img);
+                img.Save("out.jpg");
+                BinaryFormatter formatter = new BinaryFormatter();
+                FileStream serializationStream = File.OpenRead("pinky.brain");
+                KohonenLayer layer = (KohonenLayer) formatter.Deserialize(serializationStream);
+
+                Console.WriteLine(layer.Neurons.Count);
+                Console.WriteLine(layer.PrevLayer.Count);
+
+
+            Console.WriteLine("######################################");
+            Console.WriteLine(layer.PrevLayer.Count);
+
+                for (int j = 0; j &amp;lt; layer.PrevLayer.Count; j++)
+                {
+                    //Console.Write(layer.PrevLayer[j]);
+
+                    foreach (Link link in layer.PrevLayer[j].IngoingLinks)
+                    {
+                        //Console.Write(link.Data);
+                      //  Console.WriteLine(link.Weight);
+                    }
+
+                    foreach (Link link in layer.PrevLayer[j].OutgoingLinks)
+                    {
+                        //Console.Write(link.Data);
+                      //  Console.WriteLine(link.Weight);
+                    }
+
+
+                }
+                double minValue = double.MinValue;
+                int num2 = 0;//让1号神经元的SUM最大。625个点指向10个神经元
+
+                List aa = source.Select(new Func(Convert.ToDouble)).ToList();
+            /////////////////////////////////////////
+
+
+                for (int i = 0; i &amp;lt; aa.Count; i++)
+                {
+                    foreach (Link link in layer.PrevLayer[i].OutgoingLinks)
+                    {
+                        link.Data = aa[i];
+                    }
+                }
+
+                Console.WriteLine(&amp;quot;layer.Neurons.Count:&amp;quot;+layer.Neurons.Count);
+                for (int j = 0; j  minValue)
+                    {
+                        minValue = num5;
+                        num2 = j;
+                    }
+                }
+                Console.WriteLine("return:"+num2);
+
+
+
+            //source: 255----&amp;gt;aa:255.0
+
+                Console.WriteLine(layer.Activate(aa));
+
+            //}
+        }
+
+        private static Bitmap ProcessImage(Bitmap img)
+        {
+            img = new ResizeBicubic(0x19, 0x19).Apply(img);
+            //http://www.aforgenet.com/framework/docs/html/1371dd12-7dbd-2a0e-a0d7-32d8c28d73eb.htm
+            img = new GrayscaleRMY().Apply(img);
+            //http://www.aforgenet.com/framework/docs/html/1100c0be-7a9f-490e-b49c-a2f3cc681a01.htm
+            img = new OtsuThreshold().Apply(img);
+            //http://www.aforgenet.com/framework/docs/html/b2bd54da-46c2-cb64-3577-0962d8f56554.htm
+            return img;
+        }
+
+        private static void Usage()
+        {
+            Console.WriteLine("Provide path to image");
+        }
+    }
+}
+</code></pre>
+
+<p>send the image to organizer,you will get the flag: Braaaaaaaaaaainzeeeeeerule</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">hellok</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-05-14T00:00:00+08:00" pubdate data-updated="true">May 14<span>th</span>, 2013</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/uncategorized/'>Uncategorized</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://www.blue-lotus.net/www/baltctf-2013-binary-500/" data-via="" data-counturl="http://www.blue-lotus.net/www/baltctf-2013-binary-500/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/plaidctf-2013-crypto-compression250-writeup/" title="Previous Post: PlaidCTF 2013 Crypto compression(250)  writeup">&laquo; PlaidCTF 2013 Crypto compression(250)  writeup</a>
+      
+      
+        <a class="basic-alignment right" href="/baltctf-2013-crypto10/" title="Next Post: BaltCTF 2013 crypto 100">BaltCTF 2013 crypto 100 &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-memdump-writeup/">ASIS CTF Memdump Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufo-ctf-2013-reverse-keygenme-writeup/">UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
+      </li>
+    
+      <li class="post">
+        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

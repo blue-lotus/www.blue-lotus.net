@@ -1,0 +1,281 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>secuinside CTF Quals 2013 PE_Time writeup - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="PE_Time.exe is a traditional Windows Form Application. Once executed, a window named MyEdit will be created and a Window Procedure located at &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net/www/secuinside-ctf-quals-2013-pe_time-writeup">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">blue-lotus</a></h1>
+  
+    <h2>Security Research Team @ Tsinghua University</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:www.blue-lotus.net/www" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Secuinside CTF Quals 2013 PE_Time Writeup</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-05-29T00:00:00+08:00" pubdate data-updated="true">May 29<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>PE_Time.exe is a traditional Windows Form Application.</p>
+
+<p>Once executed, a window named <strong><em>MyEdit</em></strong> will be created and a <strong>Window Procedure</strong> located at 0x004010F0 will be registered to handle all the messages sent to this window.</p>
+
+<p><img src="http://www.blue-lotus.net/wp-content/uploads/2013/05/1.jpg" alt="enter image description here" /></p>
+
+<p>After looking into the Window Procedure, we can easily find a piece of code that deal with the <strong>WM_COMMAND</strong> message &#8212; the message sent when the user selects a command item from a menu, when a control sends a notification message to its parent window, or when an accelerator keystroke is translated.</p>
+
+<p><img src="http://www.blue-lotus.net/wp-content/uploads/2013/05/2.jpg" alt="enter image description here" /></p>
+
+<p>Looking down along those code, we find it use the <strong>GetWindowTextA()</strong> API to obtain a text that typed into an EditBox controls, and then do some conversion to each byte of the input text.</p>
+
+<p><img src="http://www.blue-lotus.net/wp-content/uploads/2013/05/31.jpg" alt="enter image description here" /></p>
+
+<p>A similar Loop has been used to deal with each byte of the input text, here is a pseudocode for each Loop:</p>
+
+<pre><code>while(LoopCount--)
+{
+    InputText[i] -= LoopCount;
+    InputText[i] ^= XorKey;
+}
+</code></pre>
+
+<p>After converting all the four bytes, it will compare it with a string <strong><em>&#8220;C;@R&#8221;</em></strong>. Once the string is match, we will get a congratulation.</p>
+
+<p><img src="http://www.blue-lotus.net/wp-content/uploads/2013/05/5.jpg" alt="enter image description here" /></p>
+
+<p>So the key must be what we input and it is very easy to be worked out:</p>
+
+<pre><code>#givemekey.py
+str = 'C;@R'
+keystr = ''
+
+key = ord(str[0])
+for i in range(1, 6):
+    key = key ^ 3
+    key = key + i
+keystr = keystr + chr(key)
+
+key = ord(str[1])
+for i in range(1, 5):
+    key = key ^ 4
+    key = key + i
+keystr = keystr + chr(key)
+
+key = ord(str[2])
+for i in range(1, 4):
+    key = key ^ 5
+    key = key + i
+keystr = keystr + chr(key)
+
+key = ord(str[3])
+for i in range(1, 3):
+    key = key ^ 6
+    key = key + i
+keystr = keystr + chr(key)
+
+print keystr
+</code></pre>
+
+<p>Here is the key:</p>
+
+<p><img src="http://www.blue-lotus.net/wp-content/uploads/2013/05/6.jpg" alt="enter image description here" /></p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">LittleFater</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-05-29T00:00:00+08:00" pubdate data-updated="true">May 29<span>th</span>, 2013</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ctf/'>CTF</a>, <a class='category' href='/blog/categories/writeup/'>writeup</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://www.blue-lotus.net/www/secuinside-ctf-quals-2013-pe_time-writeup/" data-via="" data-counturl="http://www.blue-lotus.net/www/secuinside-ctf-quals-2013-pe_time-writeup/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/secuinsidectf-2013-web-banking-writeup/" title="Previous Post: secuinsideCTF 2013 web banking writeup">&laquo; secuinsideCTF 2013 web banking writeup</a>
+      
+      
+        <a class="basic-alignment right" href="/secuinside-ctf-2013-quals-reader-writeup/" title="Next Post: secuinside CTF 2013 quals reader writeup">secuinside CTF 2013 quals reader writeup &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-memdump-writeup/">ASIS CTF Memdump Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufo-ctf-2013-reverse-keygenme-writeup/">UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
+      </li>
+    
+      <li class="post">
+        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

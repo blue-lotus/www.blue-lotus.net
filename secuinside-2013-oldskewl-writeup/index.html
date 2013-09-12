@@ -1,0 +1,307 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Secuinside 2013 oldskewl Writeup - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="The binary is obfuscated by adding random 0xF0 in order to stop IDA from analyzing the binary correctly. So first we should de-obfuscate the binary. &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net/www/secuinside-2013-oldskewl-writeup">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">blue-lotus</a></h1>
+  
+    <h2>Security Research Team @ Tsinghua University</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:www.blue-lotus.net/www" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Secuinside 2013 Oldskewl Writeup</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-09T00:00:00+08:00" pubdate data-updated="true">Jun 9<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>The binary is obfuscated by adding random <em>0xF0</em> in order to stop IDA from analyzing the binary correctly. So first we should de-obfuscate the binary.</p>
+
+<p>After de-obfuscation, we could find a tiny VM engine after spending some time in analysis. Function <em>0x4015b0</em> is the vital function for initializing VM dispatching functions. Sorry for those ambiguous function names <img src='http://www.blue-lotus.net/wp-includes/images/smilies/icon_razz.gif' alt=':P' class='wp-smiley' /> .</p>
+
+<pre><code>/* 0x4015b0 */
+struct_vm *__thiscall init_struct_vm(struct_vm *this)
+{
+  this-&gt;func1 = (int)func_acc_reg1;
+  this-&gt;func2 = (int)func_read_data;
+  this-&gt;func3 = (int)func_dereference;
+  this-&gt;func4 = (int)func_shift_left;
+  this-&gt;func5 = (int)func_nop_n;
+  this-&gt;func6 = (int)func_nop_n_if_reg1_is_not_0;
+  this-&gt;func7 = (int)func_end;
+  return this;
+}
+</code></pre>
+
+<p>After that it&#8217;s trivial to rip the actual VM&#8217;ed code out and reverse it into human-understandable logics. The code appears to be reading three strings out from the sokcet and hashing them. At first we thought it to be a hash-construction problem, but a hint told us a dictionary is needed. Then we had to write a Python script to bruteforce for hash collisions.</p>
+
+<pre><code>def calc(lst):
+    x = 0
+    for i in range(0, len(lst)):
+        x = ((x &lt;&lt; 16) &amp; 0xffffffff) + ((x &lt;&lt; 6) &amp; 0xffffffff) + x + ord(lst[i : i + 1])
+        #x = ord(lst[i : i + 1]) + x * 65601
+        x = x &amp; 0xffffffff
+    return x
+
+def main():
+    for x in range(0, 0xff + 1):
+        data = 0
+        for y in range(0, 0xff + 1):
+            for z in range(0, 0xff + 1):
+                lst = []
+                lst.append(x)
+                lst.append(y)
+                lst.append(z)
+                data = calc(lst)
+                if data == 0x38B7E73C:
+                    print "Done!"
+        print hex(data)
+
+def find(base, index):
+    if index &gt;= 15:
+        return -1
+    for i in range(0, 2000):
+        d = base + i * 0x100000000
+        x = d % 65601
+        if x &lt;= 0x7f and x &gt; 0x0a:
+            new_base = d - x
+            new_base = new_base / 65601
+            if new_base &lt;= 0x7f and new_base &gt; 0x0a:
+                print "%02x %02x" % (new_base, x),
+                return 0
+            if find(new_base, index + 1) != -1:
+                print "%02x" % x,
+                return 0
+    return -1
+
+if __name__ == '__main__':
+    remainder = 0
+    base = []
+    base.append(0x38b7e73c)
+    base.append(0x991181ae)
+    base.append(0x478692f9)
+    # find(base, 0)
+    f = open('wordsEn.TXT')
+    data = f.read()
+    f.close()
+    strs = data.split('\n')
+    for s in strs:
+        result = calc(s)
+        for b in base:
+            if result == b:
+                print "%x %s" % (b, s)
+
+    for s1 in strs:
+        print s1
+        for s2 in strs:
+            s = s1 + s2
+            result = calc(s)
+            for b in base:
+                if result == b:
+                    print "%x %s" % (b, s)
+
+    print "finished"
+</code></pre>
+
+<p>Finally we got the flag: <strong>codename ancien regime</strong></p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">fish</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-09T00:00:00+08:00" pubdate data-updated="true">Jun 9<span>th</span>, 2013</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ctf/'>CTF</a>, <a class='category' href='/blog/categories/writeup/'>writeup</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://www.blue-lotus.net/www/secuinside-2013-oldskewl-writeup/" data-via="" data-counturl="http://www.blue-lotus.net/www/secuinside-2013-oldskewl-writeup/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/ebctf-2013-pwn-300-snake-writeup/" title="Previous Post: ebctf 2013 pwn 300 snake writeup">&laquo; ebctf 2013 pwn 300 snake writeup</a>
+      
+      
+        <a class="basic-alignment right" href="/secuinside-2013-save_the_zombie-writeup/" title="Next Post: Secuinside 2013 save_the_zombie writeup">Secuinside 2013 save_the_zombie writeup &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-memdump-writeup/">ASIS CTF Memdump Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufo-ctf-2013-reverse-keygenme-writeup/">UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
+      </li>
+    
+      <li class="post">
+        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

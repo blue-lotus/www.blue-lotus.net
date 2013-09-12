@@ -1,0 +1,290 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>SIGINT 2013 crypto 200 rsa - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="http://slipper.tk/writeup/2013/07/10/sigint-2013-crypto-rsa/ SIGINT2013 crypto200 rsa Description Cryptography is difficult
+authorized_keys
+ssh to &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net/www/sigint-2013-crypto-200-rsa">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">blue-lotus</a></h1>
+  
+    <h2>Security Research Team @ Tsinghua University</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:www.blue-lotus.net/www" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">SIGINT 2013 Crypto 200 Rsa</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-10T00:00:00+08:00" pubdate data-updated="true">Jul 10<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p><a href="http://slipper.tk/writeup/2013/07/10/sigint-2013-crypto-rsa/">http://slipper.tk/writeup/2013/07/10/sigint-2013-crypto-rsa/</a></p>
+
+<h1><a href="http://slipper.tk/writeup/2013/07/10/sigint-2013-crypto-rsa/">SIGINT2013 crypto200 rsa</a></h1>
+
+<p>Description</p>
+
+<pre><code>Cryptography is difficult
+authorized_keys
+ssh to challenge@188.40.147.109
+</code></pre>
+
+<p><a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/rsa/genrsa.py">genrsa.py</a></p>
+
+<p><a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/rsa/authorized_keys">authorized_keys</a></p>
+
+<p>challenge@188.40.147.109的ssh密钥是用genrsa.py生成的。</p>
+
+<pre><code>SEED = int(time())
+def randfunc(n):
+    def rand():
+        global SEED
+        ret = SEED*0x1333370023004200babe004141414100e9a1192355de965ab8cc1239cf015a4e35 + 1
+        SEED = ret
+        return (ret &amp;gt;&amp;gt; 0x10) &amp;amp; 0x7fff
+    ret = ""
+    while len(ret)  id_rsa.pub &amp;amp;&amp;amp; rm pub")`显然非常慢。更好的办法是从公钥中解出N，每次比较生成的N是否相同。
+</code></pre>
+
+<p>RSAPublicKey的结构：</p>
+
+<ul>
+<li>The key type</li>
+<li>A chunk of PEM-encoded data</li>
+<li>A comment</li>
+</ul>
+
+
+<p>PEM是<a href="http://en.wikipedia.org/wiki/Base64#Privacy-enhanced_mail">Privacy Enhanced Mail</a>的缩写。<br/>
+对于ssh密钥，PEM是由一些小数据块(big-endian)组成的。每一块前面是数据长度，后面就是数据。</p>
+
+<pre><code>def b2i(s):
+        ret = 0L
+        for i in s:
+                ret = (ret &amp;lt;&amp;gt; 0x10) &amp;amp; 0xff
+    ret = ""
+    while len(ret) &amp;lt; n:
+        ret += chr(rand())
+    return ret
+
+def guess(x):
+        global seed
+        seed = x
+        keypair = RSA.generate(1024, randfunc)
+        if  getattr(keypair, &amp;#039;n&amp;#039;) != N :
+            return False
+        print getattr(keypair, &amp;#039;n&amp;#039;), x
+        return True
+
+if __name__ == &amp;#039;__main__&amp;#039;:
+    #now = 1373041808
+    now = 1373038672    #answer
+    while (not guess(now)):
+            now -= 1
+            print now
+</code></pre>
+
+<p><a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/rsa/my.py">my.py</a></p>
+
+<p>SIGINT_some_people_pay_100_euro_for_this<br/>
+<a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/rsa/flag">flag</a></p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">slipper</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-10T00:00:00+08:00" pubdate data-updated="true">Jul 10<span>th</span>, 2013</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/uncategorized/'>Uncategorized</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://www.blue-lotus.net/www/sigint-2013-crypto-200-rsa/" data-via="" data-counturl="http://www.blue-lotus.net/www/sigint-2013-crypto-200-rsa/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/sigint2013-cloud200-bloat/" title="Previous Post: SIGINT 2013 cloud200 bloat">&laquo; SIGINT 2013 cloud200 bloat</a>
+      
+      
+        <a class="basic-alignment right" href="/sigint-2013-crypto300-satisfaction/" title="Next Post: SIGINT 2013 crypto300 satisfaction">SIGINT 2013 crypto300 satisfaction &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-memdump-writeup/">ASIS CTF Memdump Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufo-ctf-2013-reverse-keygenme-writeup/">UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
+      </li>
+    
+      <li class="post">
+        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

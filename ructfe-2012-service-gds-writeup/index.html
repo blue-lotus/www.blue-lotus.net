@@ -1,0 +1,262 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>RuCTFe 2012  Service gds writeup - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="gds is a service coded in C++ and Qt. You may get the binary and source code from http://ctftime.org/task/153/. The program locates at /home/gds/ &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net/www/ructfe-2012-service-gds-writeup">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">blue-lotus</a></h1>
+  
+    <h2>Security Research Team @ Tsinghua University</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:www.blue-lotus.net/www" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">RuCTFe 2012 Service Gds Writeup</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-12-04T00:00:00+08:00" pubdate data-updated="true">Dec 4<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>gds is a service coded in C++ and Qt. You may get the binary and source code from <a href="http://ctftime.org/task/153/">http://ctftime.org/task/153/</a>.</p>
+
+<p>The program locates at /home/gds/service and listens at TCP port 2012, and it receives some commands after you log in. Initially you may log in using booking/booking. Obviously we should patch it.</p>
+
+<p>Keys are pushed into PNR database, which is located at /home/gds/pnrs.db. After some analysis of the binary under the help of IDA, we found a vulnerability that we could exploit. Simply type command *RT * after logging in, and you could retrive every single PNRs in database, including keys.</p>
+
+<p>Now as we have the source code (I&#8217;m not on the mail list, so I found the code snippet right before I write this writeup, shiiiiiit), the vulnerability is more than obvious. The command <em>RT * is first converted into a *GDSCommand</em> instance, with no parameters (m_params is empty). Here is the definition of <em>GDSCommand</em>.</p>
+
+<pre><code>class GDSCommand {
+public:
+    GDSCommand(const QByteArray&amp;);
+    virtual ~GDSCommand() {};
+    static QString help() { return "No help on subject"; }
+    QString getParam( int i );
+protected:
+    QStringList m_params;
+};
+</code></pre>
+
+<p>And let&#8217;s have a look at <em>GDSPnrDatabase::compareWithTemplate(const GDSPnr&amp; f, const GDSPnr&amp; templ)</em>:</p>
+
+<pre><code>bool GDSPnrDatabase::compareWithTemplate( const GDSPnr&amp; f, const GDSPnr&amp; templ )
+{
+    bool result = true;
+    result &amp;= ( templ.name.isEmpty() || f.name == templ.name );
+    result &amp;= ( templ.surname.isEmpty() || f.surname == templ.surname );
+    result &amp;= ( templ.passport.isEmpty() || f.passport == templ.passport );
+    result &amp;= ( templ.agent.isEmpty() || f.agent == templ.agent );
+    result &amp;= ( templ.uniqID.isEmpty() || f.uniqID == templ.uniqID );
+    return result;
+}
+</code></pre>
+
+<p>The argument <em>templ</em> contains the argument in our command <em>RT <unique ID></em>. The unique ID is retrived by <em>getParam(1);</em>, and <em>getParam()</em> is defined as follows:</p>
+
+<pre><code>QString GDSCommand::getParam( int i )
+{
+    return m_params.value(i);
+}
+</code></pre>
+
+<p>If <em>i</em> is out of bounds, then <a href="http://doc.qt.digia.com/qt/qlist.html#value">a default-constructed value is returned</a>. Well, that&#8217;s why we could retrieve every PNRs by typing *RT *, where no parameters are provided.</p>
+
+<p>BTW: We need a VPS in Korea or Russia for proxy next time.</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">fish</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-12-04T00:00:00+08:00" pubdate data-updated="true">Dec 4<span>th</span>, 2012</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ctf/'>CTF</a>, <a class='category' href='/blog/categories/writeup/'>writeup</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://www.blue-lotus.net/www/ructfe-2012-service-gds-writeup/" data-via="" data-counturl="http://www.blue-lotus.net/www/ructfe-2012-service-gds-writeup/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/ructfe2012_flightprocess/" title="Previous Post: [RuCTFE2012]flightprocess">&laquo; [RuCTFE2012]flightprocess</a>
+      
+      
+        <a class="basic-alignment right" href="/io-smaththestack-level-10/" title="Next Post: IO SmathTheStack Level 10">IO SmathTheStack Level 10 &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-memdump-writeup/">ASIS CTF Memdump Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufo-ctf-2013-reverse-keygenme-writeup/">UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
+      </li>
+    
+      <li class="post">
+        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

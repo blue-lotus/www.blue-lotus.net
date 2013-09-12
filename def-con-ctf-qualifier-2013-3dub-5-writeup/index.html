@@ -1,0 +1,270 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>DEF CON CTF Qualifier 2013 3dub 5 Writeup - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="This task was solved by aay soon after the the problem came up.ym. The initial intention of the organizer is that the vulnerability is in session and &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-3dub-5-writeup">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">blue-lotus</a></h1>
+  
+    <h2>Security Research Team @ Tsinghua University</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:www.blue-lotus.net/www" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">DEF CON CTF Qualifier 2013 3dub 5 Writeup</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-17T00:00:00+08:00" pubdate data-updated="true">Jun 17<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>This task was solved by <em>aay</em> soon after the the problem came up.ym.</p>
+
+<p>The initial intention of the organizer is that the vulnerability is in session and the cookie is decrypt byte per byte so we can post some username like &#8216;admiX&#8217; and brute force the ciphertext of the last letter to get the admin&#8217;s session.However there&#8217;s another quick way to achieve the goal.</p>
+
+<p>As we visited the page, corresponding to the experience of solving the 3dub problem before, we tried to login as admin.But the ruby program had a runtime error.We thought that we should decode and construct the cookie.</p>
+
+<p>From the backtrace, we can get some code</p>
+
+<pre><code>get '/' do
+  haml :index
+end
+
+post '/' do
+  if params[:username] == 'admin'
+    raise "can't log in as admin, be smarter"
+end
+
+cipher = make_cipher
+cipher.encrypt
+cipher.key = CRYPTO_KEY
+iv = cipher.random_iv
+</code></pre>
+
+<p>That says the POST variable username is checked and cannot be admin.The key point is that we can use <strong>username[]</strong> to bypass since Array is a totally different thing from String.So just modify the form&#8217;s field from <em>username</em> to <em>username[]</em> and it takes effect.The problem is solved so far.</p>
+
+<p>However, the fact that really confuse me is that since username[] is an Array, why the program manages to run correctly by username[] which replaces username.</p>
+
+<p>I happened to find some clue later.Just changed the <em>username</em> field to <em>username[]</em> and added a new POST field <em>username[][]</em> and then submitted it.The program had another error: <strong>ArgumentError at / odd number of arguments for Hash</strong>, and the backtrace with some new code.</p>
+
+<pre><code>end
+
+cipher = make_cipher
+cipher.encrypt
+cipher.key = CRYPTO_KEY
+iv = cipher.random_iv
+
+plaintext = Hash[*params.sort.flatten].to_param
+
+ciphertext = cipher.update plaintext
+ciphertext &amp;lt;&amp;lt; cipher.final
+
+cookies[:iv] = iv
+cookies[:ciphertext] = ciphertext
+cookies[:verification] = params[:verification]
+</code></pre>
+
+<p>Now we can have a clear view on how the cookies are generated.And pay attention to the following code:</p>
+
+<pre><code>plaintext = Hash[*params.sort.flatten].to_param
+</code></pre>
+
+<p>The params list is sorted and then flattened which means that the inner square brackets [] are token out so that [&lsquo;admin&rsquo;] are changed into &#8216;admin&#8217;.</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">lovelydream</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-17T00:00:00+08:00" pubdate data-updated="true">Jun 17<span>th</span>, 2013</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/uncategorized/'>Uncategorized</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-3dub-5-writeup/" data-via="" data-counturl="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-3dub-5-writeup/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/def-con-ctf-qualifier-2013-3dub-4-writeup/" title="Previous Post: DEF CON CTF Qualifier 2013 3dub 4 Writeup">&laquo; DEF CON CTF Qualifier 2013 3dub 4 Writeup</a>
+      
+      
+        <a class="basic-alignment right" href="/def-con-ctf-qualifier-2013-gnireenigne-5-writeup/" title="Next Post: DEF CON CTF Qualifier 2013 gnireenigne 5 Writeup">DEF CON CTF Qualifier 2013 gnireenigne 5 Writeup &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-memdump-writeup/">ASIS CTF Memdump Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufo-ctf-2013-reverse-keygenme-writeup/">UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
+      </li>
+    
+      <li class="post">
+        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

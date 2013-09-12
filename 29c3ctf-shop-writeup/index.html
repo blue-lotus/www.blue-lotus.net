@@ -1,0 +1,287 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>29c3ctf shop writeup - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="This problem is solved by jay. I write this writeup to admire his work! This a php web problem. After diving into the website, we found that, it&# &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net/www/29c3ctf-shop-writeup">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">blue-lotus</a></h1>
+  
+    <h2>Security Research Team @ Tsinghua University</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:www.blue-lotus.net/www" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">29c3ctf Shop Writeup</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-12-30T00:00:00+08:00" pubdate data-updated="true">Dec 30<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>This problem is solved by jay. I write this writeup to admire his work!</p>
+
+<p>This a php web problem. After diving into the website, we found that, it&#8217;s a online shop, with 2 items in it, but the account balance is 0, however we can have some bonus code the reduce the price by 5, so we can by the unimportant note, which shows file not found. So we can deduce that if we have a 1337 bonus to buy the important note, we can have the flag.</p>
+
+<p>Scan this website(use wvs, wwwscan, nikto, etc), we can get <a href="http://94.45.252.234/free.php">http://94.45.252.234/free.php</a> , which can generate 5 bonus for us. Then somebody tried some malformed bonus token, such as FpqIyUuxZClovPxTaXfWHGEKeNBOBE892V59/fYAvON/MmQV , at the top of the page, a php warning shows, revealing another page: <a href="http://94.45.252.234/reduction.inc">http://94.45.252.234/reduction.inc</a></p>
+
+<p>The code in reduction.inc shows how token are generated and verified. So we need to construct another token of 1337 bonus to crack it. Note that, the crypto method uses ofb mode, which is very weak. The <a href="http://en.wikipedia.org/wiki/Block_cipher_modes_of_operation">wiki</a> has a simple illustration on how it works. Actually, we don&#8217;t need the key and iv to do encryption, what we need is the original plain text, then we can construct new encryption using xor operation: (original&#95;encyption xor original&#95;plain&#95;text xor new&#95;plain_text). The original plain text is &#8220;$salt.5.1&#8243; So we only need the salt, which is 16 bytes long, indicated by 3-DES. And this is where I got stucked.</p>
+
+<p>But jay solved this problem using a python script:</p>
+
+<pre><code>import binascii, base64;
+import urllib
+import urllib2
+
+enc_salt= "169a88c94bb1642968bcfc536977d61c";
+tail = "730af8d0955fc1fbfbfa3540cd9f10b68f93c85233";
+
+
+def gen_reduction(byte_index, mask):
+       enc_salt_bin = binascii.unhexlify(enc_salt);
+       left = enc_salt[0:2*byte_index];
+       middle = enc_salt[2*byte_index:2*byte_index+2];
+       right = enc_salt[2*byte_index+2:32];
+       middle = hex(mask ^ (16*int(middle[:1], 16) + int(middle[1:], 16)));
+       middle = middle[2:];
+       if(1==len(middle)):
+               middle = '0' + middle;
+       reduction = binascii.unhexlify(left + middle + right + tail);
+       return base64.b64encode(reduction);
+
+def test_reduction(byte_index, mask):
+       url = 'http://94.45.252.234/cart.php'
+       user_agent = 'Mozilla/4.0 (compatible; MSIE 5.5; Windows NT)'
+       values = {'reduction' : gen_reduction(byte_index, mask),
+                'Add Bonus Code' : 'True'
+               }
+       headers = { 'User-Agent' : user_agent }
+
+       data = urllib.urlencode(values)
+       req = urllib2.Request(url, data, headers)
+       response = urllib2.urlopen(req)
+       page = response.read()
+       if('h' == page[1]):
+               return 1;
+       return 0;
+
+for i in range(16):
+       salt = "";
+       for j in range(1,256):
+               if(1 == test_reduction(i,j)):
+                       byte = hex(j ^ 0x2e);
+                       print byte
+</code></pre>
+
+<p>This script is a little complicated. It reduces the attempt time of cracking salt from 256<sup>16</sup> down to 256*16. The important thing is that, the server will response with warning notice when we construct a fake bonus token which contains less than 2 period symbols, which is caused by following line:</p>
+
+<pre><code>    list($in_salt, $amount, $rnd) = explode('.', $reduction);
+</code></pre>
+
+<p>This also tells us, the salt does not contain period symbol. So we can construct a fake token which contains only 1 period symbol first, then try to translate each char of the salt to period, if success, then there will be no warning, otherwise there will be php complaint:</p>
+
+<pre><code>Notice: Undefined offset: 2 in /var/www/reduction.inc on line 21
+</code></pre>
+
+<p>So we can get 1 char in 256 attempt. This is how the python script works.</p>
+
+<p>After cracking the salt, we already knows how to construct the encryption, and md5 is also straight-forward.</p>
+
+<p>Admire jay again! Any comments?</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">zTrix</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-12-30T00:00:00+08:00" pubdate data-updated="true">Dec 30<span>th</span>, 2012</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ctf/'>CTF</a>, <a class='category' href='/blog/categories/writeup/'>writeup</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://www.blue-lotus.net/www/29c3ctf-shop-writeup/" data-via="" data-counturl="http://www.blue-lotus.net/www/29c3ctf-shop-writeup/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/29c3ctf-regexdb/" title="Previous Post: 29c3ctf web100 regexdb writeup">&laquo; 29c3ctf web100 regexdb writeup</a>
+      
+      
+        <a class="basic-alignment right" href="/29c3ctf-web300-pwsafe-writeup/" title="Next Post: 29c3ctf web300 pwsafe writeup">29c3ctf web300 pwsafe writeup &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-memdump-writeup/">ASIS CTF Memdump Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufo-ctf-2013-reverse-keygenme-writeup/">UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
+      </li>
+    
+      <li class="post">
+        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

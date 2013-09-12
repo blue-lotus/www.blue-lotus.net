@@ -1,0 +1,451 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>DEF CON CTF Qualifier 2013 gnireenigne 5 Writeup - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="This is a x64 binary running on Linux. It binds to the first IP of eth0 and accepts connections at port 6823. The client should submit data in the &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-gnireenigne-5-writeup">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">blue-lotus</a></h1>
+  
+    <h2>Security Research Team @ Tsinghua University</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:www.blue-lotus.net/www" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">DEF CON CTF Qualifier 2013 Gnireenigne 5 Writeup</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-17T00:00:00+08:00" pubdate data-updated="true">Jun 17<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>This is a x64 binary running on Linux. It binds to the first IP of eth0 and accepts connections at port 6823. The client should submit data in the following manner:</p>
+
+<pre><code>4 bytes length | the first block | the second block
+</code></pre>
+
+<p>The two blocks have identical sizes, and the first field indicates the total size of two blocks. The total size should be between 48 and 1024.</p>
+
+<p>After that, our input will be checked against two hashing algorithms. The first one is a standard MD5, and the MD5 values of two blocks cannot be identical, otherwise no key will be printed. The second one is an unknown hashing algorithm. When we found a collision in the second hashing algorithm, we could finally get the key.</p>
+
+<p>We spent some time to fully reverse that algorithm:</p>
+
+<pre><code>unsigned char BOX_[256] = { 0x07, 0x00, 0x00, 0x00, 0x0c, 0x00, 0x00, 0x00,
+    0x11, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00,
+    0x07, 0x00, 0x00, 0x00, 0x0c, 0x00, 0x00, 0x00,
+    0x11, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00,
+    0x07, 0x00, 0x00, 0x00, 0x0c, 0x00, 0x00, 0x00,
+    0x11, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00,
+    0x07, 0x00, 0x00, 0x00, 0x0c, 0x00, 0x00, 0x00,
+    0x11, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00,
+    0x05, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00,
+    0x0e, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00,
+    0x05, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00,
+    0x0e, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00,
+    0x05, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00,
+    0x0e, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00,
+    0x05, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00,
+    0x0e, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00,
+    0x04, 0x00, 0x00, 0x00, 0x0b, 0x00, 0x00, 0x00,
+    0x10, 0x00, 0x00, 0x00, 0x17, 0x00, 0x00, 0x00,
+    0x04, 0x00, 0x00, 0x00, 0x0b, 0x00, 0x00, 0x00,
+    0x10, 0x00, 0x00, 0x00, 0x17, 0x00, 0x00, 0x00,
+    0x04, 0x00, 0x00, 0x00, 0x0b, 0x00, 0x00, 0x00,
+    0x10, 0x00, 0x00, 0x00, 0x17, 0x00, 0x00, 0x00,
+    0x04, 0x00, 0x00, 0x00, 0x0b, 0x00, 0x00, 0x00,
+    0x10, 0x00, 0x00, 0x00, 0x17, 0x00, 0x00, 0x00,
+    0x06, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00,
+    0x0f, 0x00, 0x00, 0x00, 0x15, 0x00, 0x00, 0x00,
+    0x06, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00,
+    0x0f, 0x00, 0x00, 0x00, 0x15, 0x00, 0x00, 0x00,
+    0x06, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00,
+    0x0f, 0x00, 0x00, 0x00, 0x15, 0x00, 0x00, 0x00,
+    0x06, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00,
+    0x0f, 0x00, 0x00, 0x00, 0x15, 0x00, 0x00, 0x00};
+
+void calc_hash(unsigned char* input, unsigned int size, unsigned char* output)
+{
+    unsigned int* BOX = (unsigned int*)BOX_;
+    unsigned char *buffer_ptr = NULL;
+
+    unsigned char IV[] = {0x68, 0x69, 0x20, 0x6D, 0x79, 0x20, 0x6E, 0x61, 0x6D, 0x65, 0x20, 0x69, 0x73, 0x20, 0x69, 0x74};
+
+    unsigned int counter_1 = 0;
+    unsigned int ctr = 0;
+
+    ctr = size + 1;
+    while((ctr &amp; 0x3f) != 0x38)
+    {
+        ++ctr;
+    }
+    buffer_ptr = (unsigned char*)malloc(ctr + 8);
+    memcpy(buffer_ptr, input, size);
+    *(buffer_ptr + size) = 0x80;
+    unsigned int input_size_2 = size + 1;
+
+    unsigned int buffer_A[2000] = {0};
+
+    unsigned int string_1, string_2, string_3, string_4, string_5, ctr_3, string_6;
+
+    while(ctr &gt; input_size_2)
+    {
+        *(buffer_ptr + input_size_2) = 0;
+        ++input_size_2;
+    }
+
+    unsigned int a_ = size &lt;&lt; 3;
+    unsigned char* b_ = buffer_ptr + ctr;
+    *b_ = (unsigned char)a_;
+    *(b_ + 1) = (unsigned char)(a_ &gt;&gt; 8);
+    *(b_ + 2) = (unsigned char)(a_ &gt;&gt; 16);
+    *(b_ + 3) = (unsigned char)(a_ &gt;&gt; 24);
+
+    unsigned int c_ = size &gt;&gt; 0x1d;
+    unsigned char* d_ = buffer_ptr + ctr + 4;
+    *d_ = (unsigned char)c_;
+    *(d_ + 1) = (unsigned char)(c_ &gt;&gt; 8);
+    *(d_ + 2) = (unsigned char)(c_ &gt;&gt; 16);
+    *(d_ + 3) = (unsigned char)(c_ &gt;&gt; 24);
+    input_size_2 = 0;
+
+    while(ctr &gt; input_size_2)
+    {
+        // 0x40248f
+        unsigned int ctr_2 = 0;
+        while(ctr_2 &lt;= 15)
+        {
+            // 0x402498
+            unsigned char* e_ = buffer_ptr + input_size_2 + (ctr_2 &lt;&lt; 2);
+            unsigned int c = *(e_);
+            unsigned int d = *(e_ + 1);
+            d = d &lt;&lt; 8;
+            d = d | c;
+            c = *(e_ + 2) &lt;&lt; 16;
+            d = d | c;
+            c = *(e_ + 3) &lt;&lt; 24;
+            c = c | d;
+            buffer_A[ctr_2] = c;
+            ++ctr_2;
+        }
+        string_1 = *(unsigned int*)IV;
+        string_2 = *(unsigned int*)(IV + 4);
+        string_3 = *(unsigned int*)(IV + 8);
+        string_4 = *(unsigned int*)(IV + 12);
+
+        ctr_2 = 0;
+        while(ctr_2 &lt;= 63)
+        {
+            // 0x402535
+            if(ctr_2 &lt;= 0xf)
+            {
+                string_5 = (~string_2 &amp; string_4) | (string_3 &amp; string_2);
+                ctr_3 = ctr_2;
+            }
+            // 0x402558
+            else if(ctr_2 &lt;= 0x1f)
+            {
+                string_5 = (~string_4 &amp; string_3) | (string_4 &amp; string_2);
+                ctr_3 = ((ctr_2 &lt;&lt; 2) + ctr_2 + 1) &amp; 0xf;
+            }
+            // 0x402588
+            else if(ctr_2 &lt;= 0x2f)
+            {
+                string_5 = (string_3 ^ string_2) ^ string_4;
+                ctr_3 = (ctr_2 * 3 + 5) &amp; 0xf;
+            }
+            else
+            {
+                // 0x4025b0
+                string_5 = (~string_4 | string_2) ^ string_3;
+                ctr_3 = ((ctr_2 &lt;&lt; 3) - ctr_2) &amp; 0xf;
+            }
+
+            // 0x4025ce
+            string_6 = string_4;
+            string_4 = string_3;
+            string_3 = string_2;
+            unsigned int ebx = string_1 + string_5;
+            double sin_result = sin((double)(ctr_2 + 1));
+            double d = sin_result * sin_result;
+            double e = sqrt(d) * 4.294967296e9;
+            unsigned long y = ebx + (unsigned long)e + buffer_A[ctr_3];
+            ebx = (y &lt;&lt; (BOX[ctr_2] &amp; 0xff));
+            d = sin((double)(ctr_2 + 1));
+            d = d * d;
+            e = sqrt(d) * 4.294967296e9;
+            unsigned int x1 = string_5 + string_1 + (unsigned long)e + buffer_A[ctr_3];
+            unsigned int x2 = 0x20 - BOX[ctr_2];
+            string_2 = string_2 + ((x1 &gt;&gt; (x2 &amp; 0xff)) | ebx);
+            string_1 = string_6;
+            ++ctr_2;
+        }
+        unsigned int x = *(unsigned int*)IV;
+        x += string_1;
+        *(unsigned int*)IV = x;
+        x = *(unsigned int*)(IV + 4);
+        x += string_2;
+        *(unsigned int*)(IV + 4) = x;
+        x = *(unsigned int*)(IV + 8);
+        x += string_3;
+        *(unsigned int*)(IV + 8) = x;
+        x = *(unsigned int*)(IV + 12);
+        x += string_4;
+        *(unsigned int*)(IV + 12) = x;
+        input_size_2 += 0x40;
+    }
+
+    free(buffer_ptr);
+    memcpy(output, IV, 16);
+    return;
+}
+</code></pre>
+
+<p>According to <a href="http://en.wikipedia.org/wiki/Md5#Pseudocode">Wikipedia</a>, it is a revised MD5. The IV is changed to &#8220;hi my name is it&#8221;. To find a collision, you may download and compile <a href="http://dl.packetstormsecurity.net/crypt/md/md5coll.c">md5coll</a> by Patrick Stach, and execute it with new IV.</p>
+
+<pre><code>fish@fish-Linux-Mint-13 ~/defconctf/tastycloud $ ./md5coll-optimized 0x6d206968 0x616e2079 0x6920656d 0x74692073
+block #1 done
+block #2 done
+unsigned int m0[32] = {
+0xf5ff5286, 0xd5187d3b, 0x30dd0e80, 0xca85cc02, 
+0x9747a14e, 0xc832351a, 0xcd333352, 0x16602937, 
+0x0632ecc1, 0x62b34dff, 0x83aee8f3, 0xd2c11b1d, 
+0x098950f8, 0x37dbacfa, 0x85abc37e, 0x1aac555a, 
+0x7ac11e49, 0x050463bb, 0xd3c58401, 0xd4d5dd63, 
+0xc6761a4f, 0x0dd022c4, 0x16696944, 0xe02da950, 
+0x747aeff5, 0x487cf5cc, 0xaae46a9a, 0x3e9ed485, 
+0xfd2968ee, 0x025bcaa4, 0x68f2289f, 0x4d353e49, 
+};
+
+unsigned int m1[32] = {
+0xf5ff5286, 0xd5187d3b, 0x30dd0e80, 0xca85cc02, 
+0x1747a14e, 0xc832351a, 0xcd333352, 0x16602937, 
+0x0632ecc1, 0x62b34dff, 0x83aee8f3, 0xd2c19b1d, 
+0x098950f8, 0x37dbacfa, 0x05abc37e, 0x1aac555a, 
+0x7ac11e49, 0x050463bb, 0xd3c58401, 0xd4d5dd63, 
+0x46761a4f, 0x0dd022c4, 0x16696944, 0xe02da950, 
+0x747aeff5, 0x487cf5cc, 0xaae46a9a, 0x3e9e5485, 
+0xfd2968ee, 0x025bcaa4, 0xe8f2289f, 0x4d353e49, 
+};
+</code></pre>
+
+<p>So here is the final Python script to get the key.</p>
+
+<pre><code>import sys, os, time, struct, socket
+
+HOST = "tastycloud.shallweplayaga.me"
+PORT = 6283
+
+data1 = "\x86\x52\xff\xf5\x3b\x7d\x18\xd5\x80\x0e\xdd\x30\x02\xcc\x85\xca\x4e\xa1\x47\x97\x1a\x35\x32\xc8\x52\x33\x33\xcd\x37\x29\x60\x16\xc1\xec\x32\x06\xff\x4d\xb3\x62\xf3\xe8\xae\x83\x1d\x1b\xc1\xd2\xf8\x50\x89\x09\xfa\xac\xdb\x37\x7e\xc3\xab\x85\x5a\x55\xac\x1a\x49\x1e\xc1\x7a\xbb\x63\x04\x05\x01\x84\xc5\xd3\x63\xdd\xd5\xd4\x4f\x1a\x76\xc6\xc4\x22\xd0\x0d\x44\x69\x69\x16\x50\xa9\x2d\xe0\xf5\xef\x7a\x74\xcc\xf5\x7c\x48\x9a\x6a\xe4\xaa\x85\xd4\x9e\x3e\xee\x68\x29\xfd\xa4\xca\x5b\x02\x9f\x28\xf2\x68\x49\x3e\x35\x4d"
+data2 = "\x86\x52\xff\xf5\x3b\x7d\x18\xd5\x80\x0e\xdd\x30\x02\xcc\x85\xca\x4e\xa1\x47\x17\x1a\x35\x32\xc8\x52\x33\x33\xcd\x37\x29\x60\x16\xc1\xec\x32\x06\xff\x4d\xb3\x62\xf3\xe8\xae\x83\x1d\x9b\xc1\xd2\xf8\x50\x89\x09\xfa\xac\xdb\x37\x7e\xc3\xab\x05\x5a\x55\xac\x1a\x49\x1e\xc1\x7a\xbb\x63\x04\x05\x01\x84\xc5\xd3\x63\xdd\xd5\xd4\x4f\x1a\x76\x46\xc4\x22\xd0\x0d\x44\x69\x69\x16\x50\xa9\x2d\xe0\xf5\xef\x7a\x74\xcc\xf5\x7c\x48\x9a\x6a\xe4\xaa\x85\x54\x9e\x3e\xee\x68\x29\xfd\xa4\xca\x5b\x02\x9f\x28\xf2\xe8\x49\x3e\x35\x4d"
+
+s = socket.socket()
+s.connect((HOST, PORT))
+size = len(data1) + len(data2)
+
+s.send(struct.pack("I",size))
+s.send(data1)
+s.send(data2)
+
+print s.recv(1024)
+</code></pre>
+
+<p>Run the script, we get the key: <strong>pringlelingus and redbull without a cause</strong></p>
+
+<p>This is one of the few challenges that we didn&#8217;t manage to solve during the game. It&#8217;s a pity as we finally noticed the final hashing algorithm is a revised MD5, however we have no time to construct a collision. It&#8217;s all my fault that I didn&#8217;t realized it was a MD5 as soon as possible <img src='http://www.blue-lotus.net/wp-includes/images/smilies/icon_razz.gif' alt=':P' class='wp-smiley' /> . Many thanks to NWMonster, Slipper and cq for their precious help.</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">fish</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-17T00:00:00+08:00" pubdate data-updated="true">Jun 17<span>th</span>, 2013</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ctf/'>CTF</a>, <a class='category' href='/blog/categories/writeup/'>writeup</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-gnireenigne-5-writeup/" data-via="" data-counturl="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-gnireenigne-5-writeup/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/def-con-ctf-qualifier-2013-3dub-5-writeup/" title="Previous Post: DEF CON CTF Qualifier 2013 3dub 5 Writeup">&laquo; DEF CON CTF Qualifier 2013 3dub 5 Writeup</a>
+      
+      
+        <a class="basic-alignment right" href="/def-con-ctf-qualifier-2013-omgacm-1-writeup/" title="Next Post: DEF CON CTF Qualifier 2013 OMGACM 1 Writeup">DEF CON CTF Qualifier 2013 OMGACM 1 Writeup &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-memdump-writeup/">ASIS CTF Memdump Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufo-ctf-2013-reverse-keygenme-writeup/">UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
+      </li>
+    
+      <li class="post">
+        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

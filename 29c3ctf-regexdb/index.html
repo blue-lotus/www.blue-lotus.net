@@ -1,0 +1,301 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>29c3ctf web100 regexdb writeup - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="Problem Link: regexdb **Description** Ever played Googlewhack? Well, this is a bit [easier][2] and gives you more power, enjoy. Quote From google &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net/www/29c3ctf-regexdb">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">blue-lotus</a></h1>
+  
+    <h2>Security Research Team @ Tsinghua University</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:www.blue-lotus.net/www" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">29c3ctf Web100 Regexdb Writeup</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-12-30T00:00:00+08:00" pubdate data-updated="true">Dec 30<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><h2>Problem Link: <a href="https://29c3ctf.aachen.ccc.de/challenges/16/">regexdb</a></h2>
+
+<pre><code>**Description**
+
+Ever played Googlewhack? Well, this is a bit [easier][2] and gives you more power, enjoy.
+</code></pre>
+
+<h2>Quote From google shared doc:</h2>
+
+<pre><code>题目给的提示是googlewhack，这个的意思就是查询时仅返回一条结果。
+
+首先经过测试，所有的输入要在--之间。  
+比如:输入 -- 返回结果是 18 .
+
+输入 - . - 返回结果是： results: 1: 29C3_NotAKey
+</code></pre>
+
+<h2>Some useful information:</h2>
+
+<pre><code>Query language “analysis” (Jay):
+
+\- . is single character
+\- * is wildcard
+\-  | is OR operator
+\-  ^ is BEGINNING OF STRING operator
+</code></pre>
+
+<h2>Examples</h2>
+
+<pre><code>** - 18 results (total in db)
+*29C3* - 12 results
+*^29C3* - 6 results
+*.{40}* - 3 results (all results which are 40 chars long)
+**!!This is a perl regular expression engine!!**
+</code></pre>
+
+<p>First step is to sort all the 18 result by length, use a simple script to help.</p>
+
+<p><code>wget -q -O - --post-data="input=-$1-" "http://94.45.252.233/" | grep Results</code></p>
+
+<p>Using the regex : <code>^.{$length}$</code> to seperate all the input data.</p>
+
+<p>Then we can got almost all the wrong answers:</p>
+
+<pre>29C3_
+Key: None
+Key: 29C3_
+29C3_Wrong
+Hello World!
+29C3_NoBadOne
+29C3_____NO_____
+Wrong: 29C3_Wrong
+K3y: 29C3_AlsoBad
+29C3_ImSimplyWrong
+23 23 23 23 23 23 23 23
+This one is unrelated...
+Key: 29C3_AnotherOneWhichIsWrong
+29C3_NotAKey &lt;- this one is not a key
+42 42 42 42 42 42 42 42 42 42 42 42 42 42
+Key: 29C3_??        length 40
+Key: 29C3_??        length 40
+</pre>
+
+
+<p>Then we know the answer is one of the last 2 key.</p>
+
+<p>(after got the flag,we know that they are both the keys)</p>
+
+<p>Construct the regex expression <code>^.{$left}[$query_set].{$right}$</code></p>
+
+<p>Here we need $left+$right equal to 39 and find the unique $query_set,then it&#8217;s the answer.</p>
+
+<p>We can simply use escape grammar to do this. It does not support [a-zA-Z] grammar,</p>
+
+<p>so we have to write all the query characters.</p>
+
+<p>Starts from <code>$query="\1\2...\7f"</code>,check the result wether include character &#8217;2&#8242;</p>
+
+<p>Binary search here is a better choice.</p>
+
+<p>After all above, we got the answer:</p>
+
+<p><code>Key: 29C3_Well.This/Is#Not+The|Wrong?Key</code></p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">aay</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-12-30T00:00:00+08:00" pubdate data-updated="true">Dec 30<span>th</span>, 2012</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ctf/'>CTF</a>, <a class='category' href='/blog/categories/writeup/'>writeup</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://www.blue-lotus.net/www/29c3ctf-regexdb/" data-via="" data-counturl="http://www.blue-lotus.net/www/29c3ctf-regexdb/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/29c3-exp200-ru133/" title="Previous Post: 29C3ctf_exp200_ru1337_writeup">&laquo; 29C3ctf_exp200_ru1337_writeup</a>
+      
+      
+        <a class="basic-alignment right" href="/29c3ctf-shop-writeup/" title="Next Post: 29c3ctf shop writeup">29c3ctf shop writeup &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-memdump-writeup/">ASIS CTF Memdump Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufo-ctf-2013-reverse-keygenme-writeup/">UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
+      </li>
+    
+      <li class="post">
+        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

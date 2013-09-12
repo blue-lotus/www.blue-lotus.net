@@ -1,0 +1,394 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>SIGINT 2013 crypto300 satisfaction - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="http://slipper.tk/writeup/2013/07/11/sigint-2013-crypto-satisfaction/ SIGINT 2013 crypto300 satisfaction Description Something fishy going on:
+you &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net/www/sigint-2013-crypto300-satisfaction">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">blue-lotus</a></h1>
+  
+    <h2>Security Research Team @ Tsinghua University</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:www.blue-lotus.net/www" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">SIGINT 2013 Crypto300 Satisfaction</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-10T00:00:00+08:00" pubdate data-updated="true">Jul 10<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p><a href="http://slipper.tk/writeup/2013/07/11/sigint-2013-crypto-satisfaction/">http://slipper.tk/writeup/2013/07/11/sigint-2013-crypto-satisfaction/</a></p>
+
+<h1><a href="http://slipper.tk/writeup/2013/07/11/sigint-2013-crypto-satisfaction/">SIGINT 2013 crypto300 satisfaction</a></h1>
+
+<p>Description</p>
+
+<pre><code>Something fishy going on:
+you need this
+188.40.147.108 2000
+This flag does not have a SIGINT_ prefix!
+</code></pre>
+
+<p><a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/satisfaction/server.rb">server.rb</a></p>
+
+<p><a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/satisfaction/bf.rb">bf.rb</a></p>
+
+<p>The server only runs properly RSA signed brainfuck code.</p>
+
+<pre><code>def valid?(code, cert)
+  return false unless code =~ /\A[\[\]+\-\. ]+\Z/
+  return false unless cert =~ /\A\d+\Z/
+  sig = cert.to_i
+  crc = crc32(code)
+  test = crc.to_bn.mod_exp($d, $n)
+  return sig == test
+end
+
+  if(valid_cert)
+    puts "got valid code: #{code.inspect}"
+    ruby_code = bfdo(code)
+    puts "got some ruby code: #{ruby_code.inspect}"
+    client.puts eval(ruby_code)
+</code></pre>
+
+<p>If the brainfuck code which we submit only contains <code>+-[].</code>, then the sever will calculate the crc of the code and check if it matches the signature.<br/>
+Then how does <code>crc32()</code> work? The code in the script seems different from classic <a href="http://en.wikipedia.org/wiki/Crc32">CRC32</a>.</p>
+
+<pre><code>def crc32(str)
+  mask = 0x04C11DB7
+  crc = 0
+  str.bytes.each do |byte|
+    byte.to_s(2).rjust(8,"0").each_char do |bit|
+      h_crc_bit = ( (( crc &amp;amp; 0x80_00_00_00) != 0) ? 1 : 0)
+      h_byte_bit = bit.to_i
+      if  h_crc_bit == h_byte_bit
+        crc = ((crc &amp;lt;&amp;lt; 1)^mask) &amp;amp; 0xffffffff
+      else
+        crc = (crc &amp;lt;&amp;lt; 1) &amp;amp; 0xffffffff
+      end
+    end
+  end
+  return crc
+end
+</code></pre>
+
+<p>Standard CRC32 is the remainder of a polynomial division of the target string. In practice it employs the finite field GF(2). XOR is equivalent to division in GF(2).<br/>
+As a hash function, CRC32 is easy to collision.<br/>
+In the code above, XOR was taken when <code>h_crc_bit == h_byte_bit</code>.<br/>
+However, in standard CRC32, it should be <code>h_crc_bit == 1 &amp;amp;&amp;amp; h_byte_bit == 1</code><br/>
+Maybe the new crc32 is more likely to collision.</p>
+
+<p>To study this algorithm, I rewrite it in C++.</p>
+
+<pre><code>unsigned int CRC32_bit(unsigned char data[], int len)
+{
+        unsigned int r = 0;
+        unsigned int s;
+        for (int i = 0; i &amp;lt; len; i++) {
+                s = data[i] &amp;lt;&amp;lt; 24;
+                for (int j = 0; j &amp;lt; 8; j++) {
+                        if (!((r ^ s) &amp;amp; 0x80000000))
+                        //instead of if (r &amp;amp; 0x80000000)
+                                r = (r &amp;lt;&amp;lt; 1) ^ POLY;
+                        else
+                                r = r &amp;lt;&amp;lt; 1;
+                        s = s &amp;lt;&amp;lt; 1;
+                }
+        }
+        return r;
+}
+</code></pre>
+
+<p>In this problem, it seems that we can&rsquo;t sign the code because we don&rsquo;t know the constants in <code>./rsa_keys.rb</code>.<br/>
+The basic idea is very simple. If we keep the <code>crc=0</code> or <code>crc=1</code>, then signature is always the same with crc(0 or 1). Now we just need to find something excutable whose crc is 0 or 1.</p>
+
+<p>First we should write a brainfuck program whose output is a legal ruby code, then append some useless character to the code to make its crc be 0 or 1.</p>
+
+<p>A simple brainfuck programmer is like this</p>
+
+<pre><code>def bf(s):
+        p = 0
+        q = 0
+        K = 48
+        ret = &amp;#039;&amp;#039;
+        now = 0
+        for c in s:
+            if ord(c) &amp;lt; K:
+                    if (now != 0):
+                            ret += &amp;#039;&amp;lt;&amp;#039;
+                            now = 0
+                    while (p  ord(c)):
+                            p -= 1
+                            ret += '-'
+            else:                                                                                                                                                                             
+                    if (now != 1):                                                                                                                                                            
+                            ret += '&amp;gt;'                                                                                                                                                        
+                            now = 1                                                                                                                                                           
+                    while (q  ord(c)):
+                            q -= 1
+                            ret += '-'
+            ret += '.'
+    return ret
+</code></pre>
+
+<p>My code is kind of ugly but it does work. (The brainfuck code length is limited to 1000)</p>
+
+<p>Given a crc sum and a byte we can calculate the next crc sum directly.</p>
+
+<pre><code>inline unsigned int extend(unsigned int r, unsigned char s)
+{
+        return (r &amp;lt;&amp;gt; 24) ^ s];
+}
+</code></pre>
+
+<p><code>crc_table</code> is a pre-calculated table.</p>
+
+<p>If the crc sum is 0, then `r &lt;> 8;<br/>
+x |= (i ^ s) &lt;&lt; 24;<br/>
+if (extend(x, s) == r) {<br/>
+//some code<br/>
+}<br/>
+}<br/>
+}</p>
+
+<p>But charset that we can use is limited, so we don&rsquo;t need to worry about too many solutions.</p>
+
+<p>I used a bidirectional search algorithm to speed up my search in my code.<br/>
+<a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/satisfaction/crc32.cpp">crc32.cpp</a></p>
+
+<p>It works well even I only use <code>+-</code> to generate collisions.</p>
+
+<pre><code>import subprocess
+from time import sleep
+from socket import *
+
+...
+
+if __name__ == '__main__' :
+        s = socket(AF_INET, SOCK_STREAM)
+        s.connect(('188.40.147.108', 2000))
+        print s.recv(1024)
+        #raw = bf("""client.puts File.readlines("/etc/passwd")#""")
+        #raw = bf("""client.puts File.readlines("./the_flag.rb")#""")
+        raw = bf("""client.puts File.readlines("./rsa_keys.rb")#""")
+
+        p = subprocess.Popen("./crc32", stdin = subprocess.PIPE, stdout = subprocess.PIPE)
+        p.stdin.write(str(len(raw)) + "\n")
+        p.stdin.write(raw + "\n")
+        suffix = p.stdout.read()
+
+        payload = raw + suffix
+
+        print len(payload)
+        print payload
+
+        s.send(payload + "\n")
+        s.send("1\n")
+        sleep(5)
+        print s.recv(4096)
+</code></pre>
+
+<p><a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/satisfaction/go.py">go.py</a><br/>
+Then I read <a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/satisfaction/the_flag.rb">./the_flag.rb</a> and <a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/satisfaction/rsa_keys.rb">./rsa_keys.rb</a>.</p>
+
+<p>The FLAG is <code>goozbartouuu</code></p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">slipper</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-10T00:00:00+08:00" pubdate data-updated="true">Jul 10<span>th</span>, 2013</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/uncategorized/'>Uncategorized</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://www.blue-lotus.net/www/sigint-2013-crypto300-satisfaction/" data-via="" data-counturl="http://www.blue-lotus.net/www/sigint-2013-crypto300-satisfaction/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/sigint-2013-crypto-200-rsa/" title="Previous Post: SIGINT 2013 crypto 200 rsa">&laquo; SIGINT 2013 crypto 200 rsa</a>
+      
+      
+        <a class="basic-alignment right" href="/ufoctf2013-web100-flagstore/" title="Next Post: UFOCTF2013 Web100 FlagStore">UFOCTF2013 Web100 FlagStore &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-memdump-writeup/">ASIS CTF Memdump Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufo-ctf-2013-reverse-keygenme-writeup/">UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
+      </li>
+    
+      <li class="post">
+        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

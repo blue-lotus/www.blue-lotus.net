@@ -1,0 +1,536 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>DEF CON CTF Qualifier 2013 OMGACM 4 Writeup - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="Problem Description Each problem gives you a circuit board, which will have a dimension, a set of nulls (that trace cannot go through), a feed point &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-omgacm-4-writeup">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">blue-lotus</a></h1>
+  
+    <h2>Security Research Team @ Tsinghua University</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:www.blue-lotus.net/www" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">DEF CON CTF Qualifier 2013 OMGACM 4 Writeup</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-18T00:00:00+08:00" pubdate data-updated="true">Jun 18<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><h1>Problem Description</h1>
+
+<p>Each problem gives you a circuit board, which will have a dimension, a set of nulls (that trace cannot go through), a feed point, and a set of antenna points.</p>
+
+<p>Your goal is to draw a trace for each antenna point that starts at the feed point, ends at the antenna point and does not intersect other traces.</p>
+
+<p>The distance of these traces must also be equal for all antenna points.</p>
+
+<h1>Our Solution</h1>
+
+<p>Since we intuitively classify this problem as NP-Complete, we resort to iterative deepening depth-first search for solving it.</p>
+
+<p>In our algorithm, we choose to &#8220;grow&#8221; the traces from antenna points, which means that all the traces simultaneously start from their respective antenna point and go one step further one by one.</p>
+
+<p>This strategy forces that all the traces will be equal length with each other, thus many unnecessary states are avoided.</p>
+
+<p>And if one trace encounters with another trace before reaching the feed point, we can simply merge them into one to eschew intersection.</p>
+
+<p>More specifically, in order to record the current state, we use:</p>
+
+<ol>
+<li>Nine bool variables for each point: one for the point and 8 for adjacent edges;</li>
+<li>One pair &lt; int, int > (one for 1 and the other for sqrt 2) variable for each point to store the distance from this point to the corresponding antenna point if it has been covered by a trace;</li>
+<li>Current &#8220;growing&#8221; point for each trace;</li>
+<li>Which trace’s turn is it to grow in this iteration;</li>
+<li>The final distance, if one of the traces has reached the feed point;</li>
+</ol>
+
+
+<p>And we also use a set of pruning tricks to accelerate the algorithm.</p>
+
+<ol>
+<li>Iterative deepening on length of each path;</li>
+<li>Limit the depth of dfs to be at most 30. (This ought to have been another iterative deepening argument, but we hard code it with an empirical number for simplifying the code);</li>
+<li>Preprocess the minimal distance from each point to the feed point and combine this information with iterative deepening threshold for further pruning;</li>
+<li>If one of the trace has already reached the feed point, use the distance for pruning.</li>
+</ol>
+
+
+<p>Here is another tip:</p>
+
+<p>The intersections will not only happen at points but also in small squares, you may need to double check this.</p>
+
+<h1>Code</h1>
+
+<pre><code>#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;map&gt;
+#include &lt;set&gt;
+#include &lt;vector&gt;
+#include &lt;queue&gt;
+#include &lt;string.h&gt;
+using namespace std;
+
+typedef unsigned long long llu;
+#define MAX 100
+#define mp make_pair
+#define pb push_back
+
+bool Null[MAX][MAX], Null2[MAX][MAX];
+int XY[MAX][MAX];
+int N, M, eN, fX, fY, P, UP;
+int dy[] = {1, 0, -1, 1, -1, 1, 0, -1};
+int dx[] = {1, 1, 1, 0, 0, -1, -1, -1};
+int verse[] = {8, 7, 6, 5, 4, 3, 2 , 1};
+set&lt;vector&lt;bool&gt; &gt; S;
+pair&lt;int, int&gt; dp[] = {
+    mp(0, 1),
+    mp(1, 0),
+    mp(0, 1),
+    mp(1, 0),
+    mp(1, 0),
+    mp(0, 1),
+    mp(1, 0),
+    mp(0, 1)
+};
+
+struct node {
+    vector&lt;bool&gt; t;
+    vector&lt;pair&lt;int, int&gt; &gt; len;
+    int cnt;
+    pair&lt;int, int&gt; ans;
+    vector&lt;pair&lt;int, int&gt; &gt; now;
+    vector&lt;bool &gt; used;
+    int I;
+};
+node Key;
+
+int get(int x, int y) {
+    return x*M + y;
+}
+
+pair&lt;int, int&gt; getLen(int j) {
+    return mp(Key.len[get(Key.now[Key.I].first, Key.now[Key.I].second)].first+dp[j].first, 
+        Key.len[get(Key.now[Key.I].first, Key.now[Key.I].second)].second+dp[j].second);
+}
+
+void output(node ans) {
+    printf("Solution %d\n", P);
+    int kk=0, L=0;
+    for (int i=0; i&lt;N*M; i++) {
+        kk++;
+        int tx = i / M;
+        int ty = i % M;
+        for (int j=0; j&lt;4; j++, kk++) {
+            if (ans.t[kk])
+                L++;
+        }
+        kk+=4;
+    }
+    printf("Line %d\n", L);
+    int k=0;
+    for (int i=0; i&lt;N*M; i++) {
+        k++;
+        int tx = i / M;
+        int ty = i % M;
+        for (int j=0; j&lt;4; j++, k++) {
+            if (ans.t[k])
+                printf("Segment %d %d %d %d\n", tx, ty, tx+dx[j], ty+dy[j]);
+        }
+        k+=4;
+    }
+}
+
+bool none() {
+    for (int i=0; i&lt;eN; i++)
+        if (Key.used[i]) return false;
+    return true;
+}
+
+int myabs(int xx) {
+    if (xx&lt;0) return -xx;
+    return xx;
+}
+
+
+int UPPER_BOUND = 28;
+void dfs(int depth) {
+    if (depth &gt; UPPER_BOUND) return;
+
+    int x = Key.now[Key.I].first;
+    int y = Key.now[Key.I].second;
+
+    int i = rand() % 8;
+    for (int iii=0; iii&lt;8; iii++, i=(i+1)%8) {
+        int newX = x + dx[i];
+        int newY = y + dy[i];
+
+        if (newX &lt; 0 || newX &gt;= N) continue;
+        if (newY &lt; 0 || newY &gt;= M) continue;
+        if (Null[newX][newY]) continue;
+        if (XY[newX][newY] == -1 || getLen(i).first + getLen(i).second + XY[newX][newY] &gt; UP) continue;
+        if (Key.cnt &gt; 0 &amp;&amp;
+                            (Key.ans.first &lt; getLen(i).first || Key.ans.second &lt; getLen(i).second) ) continue;
+        if (Key.cnt &gt; 0 &amp;&amp;
+                            (Key.ans.first == getLen(i).first &amp;&amp; Key.ans.second == getLen(i).second) ) continue;
+
+
+        if (i == 0) {
+            if (Key.t[get(x+1, y) * 9 + 6]) continue;
+        }
+        if (i == 2) {
+            if (Key.t[get(x+1, y) * 9 + 8]) continue;
+        }
+        if (i == 7) {
+            if (Key.t[get(x, y-1) * 9 + 6]) continue;
+        }
+        if (i == 5) {
+            if (Key.t[get(x, y+1) * 9 + 8]) continue;
+        }
+
+
+        if (newX == fX &amp;&amp; newY == fY) {
+            if (Key.cnt &gt; 0 &amp;&amp; Key.ans != getLen(i)) continue;
+            Key.cnt++; Key.ans = getLen(i);
+            Key.t[(newX*M + newY)*9 + verse[i]] = true;
+            Key.t[get(x, y)*9 + i + 1] = true;
+            Key.used[Key.I] = false;
+            Key.now[Key.I] = mp(newX, newY);
+
+
+            if (Key.cnt &gt; 0 &amp;&amp; none()) {
+                output(Key);
+                exit(0);
+            }
+
+            int II = Key.I, ttt = 0;
+            for (Key.I=(Key.I+1)%eN; ttt&lt;eN; ttt++, Key.I=(Key.I+1)%eN)
+                if (Key.used[Key.I])
+                    break;
+            if (ttt &lt; eN) {
+                dfs(depth+1);
+            }
+
+            Key.t[(newX*M + newY)*9 + verse[i]] = false;
+            Key.t[get(x, y)*9 + i + 1] = false;
+            Key.I = II;
+            Key.used[Key.I] = true;
+            Key.now[Key.I] = mp(x, y);
+            Key.cnt--;
+        } else if (Key.t[get(newX, newY) * 9]) {
+            if (Key.len[newX*M + newY] != getLen(i)) continue;
+
+            Key.t[(newX*M + newY)*9 + verse[i]] = true;
+            Key.t[get(x, y)*9 + i + 1] = true;
+            Key.used[Key.I] = false;
+            Key.now[Key.I] = mp(newX, newY);
+
+            int II = Key.I, ttt = 0;
+            for (Key.I=(Key.I+1)%eN; ttt&lt;eN; ttt++, Key.I=(Key.I+1)%eN)
+                if (Key.used[Key.I])
+                    break;
+            if (ttt &lt; eN) {
+                dfs(depth+1);
+            }
+
+            Key.t[(newX*M + newY)*9 + verse[i]] = false;
+            Key.t[get(x, y)*9 + i + 1] = false;
+            Key.I = II;
+            Key.used[Key.I] = true;
+            Key.now[Key.I] = mp(x, y);
+        } else {
+            Key.t[(newX*M + newY)*9] = true;
+            Key.t[(newX*M + newY)*9 + verse[i]] = true;
+            Key.t[get(x, y)*9 + i + 1] = true;
+            Key.len[newX*M + newY] = getLen(i);
+            Key.now[Key.I] = mp(newX, newY);
+
+            int II = Key.I, ttt = 0;
+            for (Key.I=(Key.I+1)%eN; ttt&lt;eN; ttt++, Key.I=(Key.I+1)%eN)
+                if (Key.used[Key.I])
+                    break;
+            if (ttt &lt; eN) {
+                dfs(depth+1);
+            }
+
+            Key.t[(newX*M + newY)*9] = false;
+            Key.t[(newX*M + newY)*9 + verse[i]] = false;
+            Key.t[get(x, y)*9 + i + 1] = false;
+            Key.I = II;
+            Key.now[Key.I] = mp(x, y);
+        }
+    }
+}
+
+void dfs2(int x, int y) {
+    for (int i=0; i&lt;8; i++) {
+        int newX = x + dx[i];
+        int newY = y + dy[i];
+
+        if (newX &lt; 0 || newX &gt;= N) continue;
+        if (newY &lt; 0 || newY &gt;= M) continue;
+        if (Null[newX][newY]) continue;
+
+        if (XY[newX][newY] != -1 &amp;&amp; XY[newX][newY] &lt;= XY[x][y] + 1) continue;
+        XY[newX][newY] = XY[x][y] + 1;
+        dfs2(newX, newY);
+    }
+}
+
+void solve() {
+    scanf("%*s%d", &amp;P);
+
+    scanf("%*s%*d");
+    scanf("%d%d", &amp;N, &amp;M);
+
+    scanf("%*s%*d");
+    scanf("%d%d", &amp;fX, &amp;fY);
+
+
+
+    Key.t.resize(N * M * 9);
+    Key.len.resize(N * M);
+
+    scanf("%*s%d", &amp;eN);
+    for (int i=0; i&lt;eN; i++) {
+        int tx, ty;
+        scanf("%d%d", &amp;tx, &amp;ty);
+
+        Key.now.pb(mp(tx, ty));
+        Key.t[get(tx, ty) * 9] = true;
+        Key.used.pb(true);
+    }
+
+    int nN;
+    scanf("%*s%d", &amp;nN);
+    memset(Null, 0, sizeof(Null));
+    memset(Null2, 0, sizeof(Null2));
+    for (int i=0; i&lt;nN; i++) {
+        int tx, ty;
+        scanf("%d%d", &amp;tx, &amp;ty);
+        Null[tx][ty] = true;
+        Null2[tx][ty] = true;
+    }
+
+
+
+    memset(XY, -1, sizeof(XY));
+    XY[fX][fY] = 0;
+    dfs2(fX, fY);
+
+    node base = Key;
+    for (UP=6; ; UP++) {
+        dfs(0);
+        Key = base;
+    }
+}
+
+int main() {
+    solve();
+}
+</code></pre>
+
+<h1>Result</h1>
+
+<p>You can check out <a href="http://ascii.io/a/3644">http://ascii.io/a/3644</a> for the result.</p>
+
+<p><strong>CAVEAT:</strong> We use many heuristics in the program, so it will not guarantee success for every run.</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">james0zan</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-18T00:00:00+08:00" pubdate data-updated="true">Jun 18<span>th</span>, 2013</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/uncategorized/'>Uncategorized</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-omgacm-4-writeup/" data-via="" data-counturl="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-omgacm-4-writeup/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/def-con-ctf-qualifier-2013-3dub-3-writeup/" title="Previous Post: DEF CON CTF Qualifier 2013 3dub 3 Writeup">&laquo; DEF CON CTF Qualifier 2013 3dub 3 Writeup</a>
+      
+      
+        <a class="basic-alignment right" href="/sigint2013-cloud200-bloat/" title="Next Post: SIGINT 2013 cloud200 bloat">SIGINT 2013 cloud200 bloat &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-memdump-writeup/">ASIS CTF Memdump Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufo-ctf-2013-reverse-keygenme-writeup/">UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
+      </li>
+    
+      <li class="post">
+        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

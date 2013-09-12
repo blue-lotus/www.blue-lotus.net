@@ -1,0 +1,393 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>DEF CON CTF Qualifier 2013 OMGACM 1 Writeup - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="We are given several 8-puzzles and are required to give a sequence of actions that leads from the initial state to the goal state. Each state of an 8 &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-omgacm-1-writeup">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">blue-lotus</a></h1>
+  
+    <h2>Security Research Team @ Tsinghua University</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:www.blue-lotus.net/www" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">DEF CON CTF Qualifier 2013 OMGACM 1 Writeup</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-17T00:00:00+08:00" pubdate data-updated="true">Jun 17<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>We are given several 8-puzzles and are required to give a sequence of actions that leads</p>
+
+<p>from the initial state to the goal state.</p>
+
+<p>Each state of an 8-puzzle can be represented as a permutation of 9 such as 123456780,</p>
+
+<p>which can be expressed as a Lehmor code in the factorial number system.</p>
+
+<p>Given that there is a bijection from 0 ~ n!-1 to a number coded in the factorial number system,</p>
+
+<p>we can encode the state of the 8-puzzle compactly.</p>
+
+<p>Thus we translate the puzzle into a pathfinding problem (from the initial state to the goal state).</p>
+
+<p>Many algorithms apply and we just take one of the simplest: breadth-first search.</p>
+
+<p>On a separate note, we need to send the whole sequence of actions at once to reduce time spent on network transmission.</p>
+
+<p>Here is the heart of the program (in C++ 11):</p>
+
+<pre><code>#include 
+#include 
+#include 
+#include 
+using namespace std;
+
+const int factorial[] = {1,1,2,6,24,120,720,5040,40320};
+
+#define FOR(i, a, b) for (int i = (a); i &amp;lt; (b); i++)
+#define REP(i, n) FOR(i, 0, n)
+
+enum Direction {U, R, D, L};
+
+struct Node
+{
+  int a[9], g;
+  int zero() const {
+    return int(find(a, a + 9, 0) - a);
+  }
+  Node up() {
+    int p = zero();
+    if (p = 6) throw 0;
+    Node res = *this;
+    swap(res.a[p], res.a[p+3]);
+    res.g = g + 1;
+    return res;
+  }
+  Node left() {
+    int p = zero();
+    if (p % 3 == 0) throw 0;
+    Node res = *this;
+    swap(res.a[p], res.a[p-1]);
+    res.g = g + 1;
+    return res;
+  }
+  bool operator==(const Node &amp;amp;rhs) const {
+    return equal(a, a + 9, rhs.a);
+  }
+};
+
+int closed[362880];
+
+const Node dst = 1;
+int lehmorCode(const Node &amp;amp;x)
+{
+  int h = 0;
+  REP(i, 9)
+    REP(j, i)
+      if (x.a[j] &amp;gt; x.a[i])
+        h += factorial[8-j];
+  return h;
+}
+
+int bfs(const Node &amp;amp;src)
+{
+  queue q;
+  fill_n(closed, 362880, -1);
+  int dst_code = lehmorCode(dst);
+
+  Node orig = dst;
+  q.push(orig);
+  closed[dst_code] = -2;
+
+  while (! q.empty()) {
+    Node curr = q.front();
+    q.pop();
+    if (curr == src) return curr.g;
+    int dir = 0;
+    function fs[] = {&amp;amp;Node::up, &amp;amp;Node::right, &amp;amp;Node::down, &amp;amp;Node::left};
+    for (auto f : fs) {
+      dir++;
+      try {
+        Node succ = f(curr);
+        int h = lehmorCode(succ);
+        if (closed[h] == -1) {
+          q.push(succ);
+          closed[h] = dir - 1;
+        }
+      } catch (int) {
+      }
+    }
+  }
+  return -1;
+}
+
+void print(Node x)
+{
+  for(;;) {
+    switch (closed[lehmorCode(x)]) {
+    case U:
+      x = x.down();
+      puts("up");
+      break;
+    case R:
+      x = x.left();
+      puts("right");
+      break;
+    case D:
+      x = x.up();
+      puts("down");
+      break;
+    case L:
+      x = x.right();
+      puts("left");
+      break;
+    case -2:
+      return;
+    }
+  }
+}
+
+int main()
+{
+  Node src;
+  REP(i, 9)
+    scanf("%1d", &amp;amp;src.a[i]);
+  int len = bfs(src);
+  printf("%d\n", len);
+  if (len &amp;gt; 0)
+    print(src);
+}
+</code></pre>
+
+<p>And the communication module written in Ruby:</p>
+
+<pre><code>require 'socket'
+
+s = TCPSocket.new 'pieceofeight.shallweplayaga.me', 8273
+
+src = ''
+rest = 0
+
+while line = s.gets
+  puts line
+  if line =~ /|  \d/
+    xs = line.scan(/\|  ./).map {|x| x[-1] }
+    if xs.find {|x| x =~ /\d/ }
+      src &amp;lt; 0
+      rest -= 1
+    else
+      IO.popen './acm1', 'r+' do |h|
+        h.puts src
+        h.close_write
+        xs = h.read.lines.to_a
+        s.puts xs[1..-1].join
+        rest = xs[0].to_i
+      end
+    end
+    src = ''
+  end
+  if line =~ /The key is/
+    File.open('flag') {|hh| hh.puts line }
+  end
+end
+</code></pre>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">ray</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-17T00:00:00+08:00" pubdate data-updated="true">Jun 17<span>th</span>, 2013</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/uncategorized/'>Uncategorized</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-omgacm-1-writeup/" data-via="" data-counturl="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-omgacm-1-writeup/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/def-con-ctf-qualifier-2013-gnireenigne-5-writeup/" title="Previous Post: DEF CON CTF Qualifier 2013 gnireenigne 5 Writeup">&laquo; DEF CON CTF Qualifier 2013 gnireenigne 5 Writeup</a>
+      
+      
+        <a class="basic-alignment right" href="/def-con-ctf-qualifier-2013-omgacm-2-writeup/" title="Next Post: DEF CON CTF Qualifier 2013 OMGACM 2 Writeup">DEF CON CTF Qualifier 2013 OMGACM 2 Writeup &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-memdump-writeup/">ASIS CTF Memdump Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufo-ctf-2013-reverse-keygenme-writeup/">UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
+      </li>
+    
+      <li class="post">
+        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

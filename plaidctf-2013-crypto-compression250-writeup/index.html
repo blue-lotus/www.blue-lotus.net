@@ -1,0 +1,311 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>PlaidCTF 2013 Crypto compression(250)  writeup - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="We managed to get the source code for an encryption service running at 54.234.224.216 :4433 OK #!/usr/bin/python
+import os
+import struct
+import &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net/www/plaidctf-2013-crypto-compression250-writeup">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">blue-lotus</a></h1>
+  
+    <h2>Security Research Team @ Tsinghua University</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:www.blue-lotus.net/www" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">PlaidCTF 2013 Crypto Compression(250) Writeup</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-04-28T00:00:00+08:00" pubdate data-updated="true">Apr 28<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>We managed to get the source code for an encryption service running at</p>
+
+<p>54.234.224.216 :4433 OK</p>
+
+<pre><code>#!/usr/bin/python
+import os
+import struct
+import SocketServer
+import zlib
+from Crypto.Cipher import AES
+from Crypto.Util import Counter
+
+# Not the real keys!
+ENCRYPT_KEY = '0000000000000000000000000000000000000000000000000000000000000000'.decode('hex')
+# Determine this key.
+# Character set: lowercase letters and underscore
+PROBLEM_KEY = 'XXXXXXXXXXXXXXXXXXXX'
+
+def encrypt(data, ctr):
+    aes = AES.new(ENCRYPT_KEY, AES.MODE_CTR, counter=ctr)
+    return aes.encrypt(zlib.compress(data))
+
+class ProblemHandler(SocketServer.StreamRequestHandler):
+    def handle(self):
+        nonce = os.urandom(8)
+        self.wfile.write(nonce)
+        ctr = Counter.new(64, prefix=nonce)
+        while True:
+            data = self.rfile.read(4)
+            if not data:
+                break
+
+            try:
+                length = struct.unpack('I', data)[0]
+                if length &amp;gt; (1&amp;lt; CTR非常依赖Counter的唯一性。这是因为，如果你重用一个Counter，那么对两个密文分组的异或就将是相应的明文分组的异或。
+</code></pre>
+
+<p>由于zlib压缩第一个字节的明文也能猜到，于是考虑加密上是否有漏洞，但检查后方发现使用没有问题。</p>
+
+<p>后经@zhugejw老师提醒此题名为compression开始重点关注zlib，看了lz77算法发现长度大于3Byte的重复串会被压缩，结合CTR流密码可以知道zlib压缩后的数据长度,找到解题方向：跟加密无关，通过构造数据根据返回的长度，猜解PROBLEM_KEY。如果发送的串与KEY有3位以上相同就会被压缩，于是先写了个脚本爆破4位，然后按位猜解。</p>
+
+<pre><code>import socket,struct
+
+skt=socket.socket()
+skt.connect(("54.234.224.216",4433))
+nonce= skt.recv(8)
+print repr(nonce)
+
+fi = open('pyj.txt', 'a')
+
+data = list("ABCDEFGHIJKLMNOPQRST")
+
+for f1 in 'abcdefghijklmnopqrstuvwxyz_':
+    for f2 in 'abcdefghijklmnopqrstuvwxyz_':
+        for f3 in 'abcdefghijklmnopqrstuvwxyz_':
+            for f4 in 'abcdefghijklmnopqrstuvwxyz_':
+                try:
+                    data[0] = f1[0]
+                    data[1] = f2[0]
+                    data[2] = f3[0]
+                    data[3] = f4[0]
+                    sd=''.join(data)
+                    print sd
+
+                    skt.send(struct.pack('I',len(sd)))
+                    skt.send(sd)
+
+                    ciphertextlen= struct.unpack('I',skt.recv(4))[0]
+                    ciphertext = skt.recv(ciphertextlen)
+                    if ciphertextlen &amp;gt;fi, ciphertextlen, repr(ciphertext)
+                        fi.flush()
+                except:
+                    print 'except'
+                    skt.close()
+                    skt.connect(("54.234.224.216",4433))
+skt.close()
+fi.close()
+</code></pre>
+
+<p>测试时发现即使不发送数据返回的长度也比20个Byte全不同的KEY小，于是可以判断KEY中本身就有重复</p>
+
+<p>暴力跑出了</p>
+
+<blockquote><p>ime ays cri e_s <em>so met me</em><br/>
+等串</p></blockquote>
+
+<p>以此为基准按位猜解跑出 crimes_pays ，但由于key本身含有重复，会影响按位猜解，于是卡住了，最终由@Slipper大神人肉猜解出KEY：<br/>
+<code>crime_sometimes_pays</code></p>
+
+<p>ps:其实对于lz77还是不太明白，个人理解4Byte的数据压缩为3Byte才会导致长度减小，爆破时不知道为什么有3Byte重复就长度减小了，请大牛们指点</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">douniwan5788</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-04-28T00:00:00+08:00" pubdate data-updated="true">Apr 28<span>th</span>, 2013</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ctf/'>CTF</a>, <a class='category' href='/blog/categories/writeup/'>writeup</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://www.blue-lotus.net/www/plaidctf-2013-crypto-compression250-writeup/" data-via="" data-counturl="http://www.blue-lotus.net/www/plaidctf-2013-crypto-compression250-writeup/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/plaidctf-2013-bunyans_revenge-writeup/" title="Previous Post: PlaidCTF 2013 bunyans_revenge writeup">&laquo; PlaidCTF 2013 bunyans_revenge writeup</a>
+      
+      
+        <a class="basic-alignment right" href="/baltctf-2013-binary-500/" title="Next Post: BaltCTF 2013 binary 500">BaltCTF 2013 binary 500 &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-memdump-writeup/">ASIS CTF Memdump Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufo-ctf-2013-reverse-keygenme-writeup/">UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
+      </li>
+    
+      <li class="post">
+        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

