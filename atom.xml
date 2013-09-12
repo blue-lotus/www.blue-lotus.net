@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[blue-lotus]]></title>
+  <link href="http://www.blue-lotus.net/atom.xml" rel="self"/>
+  <link href="http://www.blue-lotus.net/"/>
+  <updated>2013-09-13T01:33:51+08:00</updated>
+  <id>http://www.blue-lotus.net/</id>
+  <author>
+    <name><![CDATA[blue-lotus]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+</feed>
