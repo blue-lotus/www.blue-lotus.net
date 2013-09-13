@@ -3,6 +3,7 @@ title: ASIS CTF memdump writeup
 author: kelwin
 layout: post
 permalink: /asis-ctf-memdump-writeup/
+comment: true
 categories:
   - CTF
   - writeup
