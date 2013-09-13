@@ -86,7 +86,7 @@ We also have some other players from other universities and teams.
   <tr>
     <td align="center" style="vertical-align: baseline;">
       <img src="http://www.blue-lotus.net/wp-content/uploads/2012/10/scdeny.jpg" alt="" width="150px" /><br /> <span>scdeny</span><br /> <span>CS MS</span><br /> <span>Tsinghua University</span>
-    </td></td> 
+    </td> 
    </tr>
 </table>
 
