@@ -82,6 +82,12 @@ We also have some other players from other universities and teams.
       <img src="http://www.blue-lotus.net/wp-content/uploads/2012/10/CK.jpg" alt="" width="150px" /><br /> <span>CasperKid</span><br /> <span>Syclover &#038; Insight-labs</span>
     </td>
    </tr>
+
+  <tr>
+    <td align="center" style="vertical-align: baseline;">
+      <img src="http://www.blue-lotus.net/wp-content/uploads/2012/10/scdeny.jpg" alt="" width="150px" /><br /> <span>scdeny</span><br /> <span>CS MS</span><br /> <span>Tsinghua University</span>
+    </td></td> 
+   </tr>
 </table>
 
  [1]: http://ctftime.org/ctf-wtf/ "Capture The Flag"
