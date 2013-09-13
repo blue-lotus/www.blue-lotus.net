@@ -2,10 +2,10 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
 
   <title><![CDATA[Category: CTF | blue-lotus]]></title>
-  <link href="http://www.blue-lotus.net/www/blog/categories/ctf/atom.xml" rel="self"/>
-  <link href="http://www.blue-lotus.net/www/"/>
-  <updated>2013-09-13T01:55:52+08:00</updated>
-  <id>http://www.blue-lotus.net/www/</id>
+  <link href="http://www.blue-lotus.net//blog/categories/ctf/atom.xml" rel="self"/>
+  <link href="http://www.blue-lotus.net//"/>
+  <updated>2013-09-13T13:09:27+08:00</updated>
+  <id>http://www.blue-lotus.net//</id>
   <author>
     <name><![CDATA[blue-lotus]]></name>
     
@@ -15,9 +15,9 @@
   
   <entry>
     <title type="html"><![CDATA[ASIS CTF Finals 2013 Login]]></title>
-    <link href="http://www.blue-lotus.net/www/asis-ctf-finals-2013-login/"/>
+    <link href="http://www.blue-lotus.net//asis-ctf-finals-2013-login/"/>
     <updated>2013-09-03T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net/www/asis-ctf-finals-2013-login</id>
+    <id>http://www.blue-lotus.net//asis-ctf-finals-2013-login</id>
     <content type="html"><![CDATA[<p><a href="http://blog.deadcat.me/writeup/2013/09/01/asis-ctf-finals-2013-login/">http://blog.deadcat.me/writeup/2013/09/01/asis-ctf-finals-2013-login/</a></p>
 
 <p>Description</p>
@@ -167,9 +167,9 @@ print get_string( '(SELECT IFNULL(CAST(table_name AS CHAR) ,0x20) FROM INFORMATI
   
   <entry>
     <title type="html"><![CDATA[ASIS CTF memdump writeup]]></title>
-    <link href="http://www.blue-lotus.net/www/asis-ctf-memdump-writeup/"/>
+    <link href="http://www.blue-lotus.net//asis-ctf-memdump-writeup/"/>
     <updated>2013-09-01T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net/www/asis-ctf-memdump-writeup</id>
+    <id>http://www.blue-lotus.net//asis-ctf-memdump-writeup</id>
     <content type="html"><![CDATA[<p>This is my first time to solve memory forensic challenge. I learn to use <a href="https://www.volatilesystems.com/default/volatility">volatility</a> from this <a href="http://blog.lse.epita.fr/articles/59-ebctf-2013-for100.html">post</a>.</p>
 
 <p>Indicated from the memory dump strings, we know the system is <code>Ubuntu 12.04</code> with the kernel of <code>vmlinuz-3.5.0-23-generic</code>. After building a profile (the step by step procedure is <a href="http://code.google.com/p/volatility/wiki/LinuxMemoryForensics">here</a>), we can use the commands in volatility.</p>
@@ -228,9 +228,9 @@ ASIS_cb6bb012a8ea07a426254293de2bc0ef
   
   <entry>
     <title type="html"><![CDATA[UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup]]></title>
-    <link href="http://www.blue-lotus.net/www/ufo-ctf-2013-reverse-keygenme-writeup/"/>
+    <link href="http://www.blue-lotus.net//ufo-ctf-2013-reverse-keygenme-writeup/"/>
     <updated>2013-08-08T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net/www/ufo-ctf-2013-reverse-keygenme-writeup</id>
+    <id>http://www.blue-lotus.net//ufo-ctf-2013-reverse-keygenme-writeup</id>
     <content type="html"><![CDATA[<p>I would come back with more details of this challenge.</p>
 
 <p>Here is the approach that I used to generate a keygen: make a DLL and inject it into the target process. The source code of my library is as follows.</p>
@@ -734,9 +734,9 @@ BOOL WINAPI Inject(DWORD dwProcessID)
   
   <entry>
     <title type="html"><![CDATA[DEF CON CTF Qualifier 2013 3dub 3 Writeup]]></title>
-    <link href="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-3dub-3-writeup/"/>
+    <link href="http://www.blue-lotus.net//def-con-ctf-qualifier-2013-3dub-3-writeup/"/>
     <updated>2013-06-18T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-3dub-3-writeup</id>
+    <id>http://www.blue-lotus.net//def-con-ctf-qualifier-2013-3dub-3-writeup</id>
     <content type="html"><![CDATA[<p>First of all, we got a &#8216;secrets&#8217; link and &#8216;log in or create user&#8217; form. When we create and login, the website redirect us to the &#8216;secrets&#8217; page like this</p>
 
 <pre><code>Secrets
@@ -903,9 +903,9 @@ BAh7CSINdHJhY2tpbmd7CCIZSFRUUF9BQ0NFUFRfRU5DT0RJTkciLWVkMmIz%0AY2E5MGE0ZTcyMzQwM
   
   <entry>
     <title type="html"><![CDATA[DEF CON CTF Qualifier 2013 gnireenigne 5 Writeup]]></title>
-    <link href="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-gnireenigne-5-writeup/"/>
+    <link href="http://www.blue-lotus.net//def-con-ctf-qualifier-2013-gnireenigne-5-writeup/"/>
     <updated>2013-06-17T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-gnireenigne-5-writeup</id>
+    <id>http://www.blue-lotus.net//def-con-ctf-qualifier-2013-gnireenigne-5-writeup</id>
     <content type="html"><![CDATA[<p>This is a x64 binary running on Linux. It binds to the first IP of eth0 and accepts connections at port 6823. The client should submit data in the following manner:</p>
 
 <pre><code>4 bytes length | the first block | the second block

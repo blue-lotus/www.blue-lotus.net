@@ -2,10 +2,10 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
 
   <title><![CDATA[blue-lotus]]></title>
-  <link href="http://www.blue-lotus.net/www/atom.xml" rel="self"/>
-  <link href="http://www.blue-lotus.net/www/"/>
-  <updated>2013-09-13T01:55:52+08:00</updated>
-  <id>http://www.blue-lotus.net/www/</id>
+  <link href="http://www.blue-lotus.net//atom.xml" rel="self"/>
+  <link href="http://www.blue-lotus.net//"/>
+  <updated>2013-09-13T13:09:27+08:00</updated>
+  <id>http://www.blue-lotus.net//</id>
   <author>
     <name><![CDATA[blue-lotus]]></name>
     
@@ -15,9 +15,9 @@
   
   <entry>
     <title type="html"><![CDATA[ASIS CTF Finals 2013 Login]]></title>
-    <link href="http://www.blue-lotus.net/www/asis-ctf-finals-2013-login/"/>
+    <link href="http://www.blue-lotus.net//asis-ctf-finals-2013-login/"/>
     <updated>2013-09-03T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net/www/asis-ctf-finals-2013-login</id>
+    <id>http://www.blue-lotus.net//asis-ctf-finals-2013-login</id>
     <content type="html"><![CDATA[<p><a href="http://blog.deadcat.me/writeup/2013/09/01/asis-ctf-finals-2013-login/">http://blog.deadcat.me/writeup/2013/09/01/asis-ctf-finals-2013-login/</a></p>
 
 <p>Description</p>
@@ -167,9 +167,9 @@ print get_string( '(SELECT IFNULL(CAST(table_name AS CHAR) ,0x20) FROM INFORMATI
   
   <entry>
     <title type="html"><![CDATA[ASIS CTF memdump writeup]]></title>
-    <link href="http://www.blue-lotus.net/www/asis-ctf-memdump-writeup/"/>
+    <link href="http://www.blue-lotus.net//asis-ctf-memdump-writeup/"/>
     <updated>2013-09-01T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net/www/asis-ctf-memdump-writeup</id>
+    <id>http://www.blue-lotus.net//asis-ctf-memdump-writeup</id>
     <content type="html"><![CDATA[<p>This is my first time to solve memory forensic challenge. I learn to use <a href="https://www.volatilesystems.com/default/volatility">volatility</a> from this <a href="http://blog.lse.epita.fr/articles/59-ebctf-2013-for100.html">post</a>.</p>
 
 <p>Indicated from the memory dump strings, we know the system is <code>Ubuntu 12.04</code> with the kernel of <code>vmlinuz-3.5.0-23-generic</code>. After building a profile (the step by step procedure is <a href="http://code.google.com/p/volatility/wiki/LinuxMemoryForensics">here</a>), we can use the commands in volatility.</p>
@@ -228,9 +228,9 @@ ASIS_cb6bb012a8ea07a426254293de2bc0ef
   
   <entry>
     <title type="html"><![CDATA[UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup]]></title>
-    <link href="http://www.blue-lotus.net/www/ufo-ctf-2013-reverse-keygenme-writeup/"/>
+    <link href="http://www.blue-lotus.net//ufo-ctf-2013-reverse-keygenme-writeup/"/>
     <updated>2013-08-08T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net/www/ufo-ctf-2013-reverse-keygenme-writeup</id>
+    <id>http://www.blue-lotus.net//ufo-ctf-2013-reverse-keygenme-writeup</id>
     <content type="html"><![CDATA[<p>I would come back with more details of this challenge.</p>
 
 <p>Here is the approach that I used to generate a keygen: make a DLL and inject it into the target process. The source code of my library is as follows.</p>
@@ -734,9 +734,9 @@ BOOL WINAPI Inject(DWORD dwProcessID)
   
   <entry>
     <title type="html"><![CDATA[UFOCTF2013 Web100 FlagStore]]></title>
-    <link href="http://www.blue-lotus.net/www/ufoctf2013-web100-flagstore/"/>
+    <link href="http://www.blue-lotus.net//ufoctf2013-web100-flagstore/"/>
     <updated>2013-07-23T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net/www/ufoctf2013-web100-flagstore</id>
+    <id>http://www.blue-lotus.net//ufoctf2013-web100-flagstore</id>
     <content type="html"><![CDATA[<p>It is a very interesting problem and exhausted our much time and energy.</p>
 
 <p>There are 3 levels.All about sqli.</p>
@@ -753,9 +753,9 @@ BOOL WINAPI Inject(DWORD dwProcessID)
   
   <entry>
     <title type="html"><![CDATA[SIGINT 2013 crypto300 satisfaction]]></title>
-    <link href="http://www.blue-lotus.net/www/sigint-2013-crypto300-satisfaction/"/>
+    <link href="http://www.blue-lotus.net//sigint-2013-crypto300-satisfaction/"/>
     <updated>2013-07-10T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net/www/sigint-2013-crypto300-satisfaction</id>
+    <id>http://www.blue-lotus.net//sigint-2013-crypto300-satisfaction</id>
     <content type="html"><![CDATA[<p><a href="http://slipper.tk/writeup/2013/07/11/sigint-2013-crypto-satisfaction/">http://slipper.tk/writeup/2013/07/11/sigint-2013-crypto-satisfaction/</a></p>
 
 <h1><a href="http://slipper.tk/writeup/2013/07/11/sigint-2013-crypto-satisfaction/">SIGINT 2013 crypto300 satisfaction</a></h1>
@@ -936,9 +936,9 @@ Then I read <a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGIN
   
   <entry>
     <title type="html"><![CDATA[SIGINT 2013 crypto 200 rsa]]></title>
-    <link href="http://www.blue-lotus.net/www/sigint-2013-crypto-200-rsa/"/>
+    <link href="http://www.blue-lotus.net//sigint-2013-crypto-200-rsa/"/>
     <updated>2013-07-10T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net/www/sigint-2013-crypto-200-rsa</id>
+    <id>http://www.blue-lotus.net//sigint-2013-crypto-200-rsa</id>
     <content type="html"><![CDATA[<p><a href="http://slipper.tk/writeup/2013/07/10/sigint-2013-crypto-rsa/">http://slipper.tk/writeup/2013/07/10/sigint-2013-crypto-rsa/</a></p>
 
 <h1><a href="http://slipper.tk/writeup/2013/07/10/sigint-2013-crypto-rsa/">SIGINT2013 crypto200 rsa</a></h1>
@@ -1014,9 +1014,9 @@ if __name__ == &amp;#039;__main__&amp;#039;:
   
   <entry>
     <title type="html"><![CDATA[SIGINT 2013 cloud200 bloat]]></title>
-    <link href="http://www.blue-lotus.net/www/sigint2013-cloud200-bloat/"/>
+    <link href="http://www.blue-lotus.net//sigint2013-cloud200-bloat/"/>
     <updated>2013-07-09T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net/www/sigint2013-cloud200-bloat</id>
+    <id>http://www.blue-lotus.net//sigint2013-cloud200-bloat</id>
     <content type="html"><![CDATA[<p><a href="http://slipper.tk/writeup/2013/07/09/sigint2013-cloud-bloat/">http://slipper.tk/writeup/2013/07/09/sigint2013-cloud-bloat/</a></p>
 
 <h1><a href="http://slipper.tk/writeup/2013/07/09/sigint2013-cloud-bloat/">SIGINT 2013 cloud 200 bloat</a></h1>
@@ -1183,9 +1183,9 @@ SIGINT_d4b0844c
   
   <entry>
     <title type="html"><![CDATA[DEF CON CTF Qualifier 2013 OMGACM 4 Writeup]]></title>
-    <link href="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-omgacm-4-writeup/"/>
+    <link href="http://www.blue-lotus.net//def-con-ctf-qualifier-2013-omgacm-4-writeup/"/>
     <updated>2013-06-18T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-omgacm-4-writeup</id>
+    <id>http://www.blue-lotus.net//def-con-ctf-qualifier-2013-omgacm-4-writeup</id>
     <content type="html"><![CDATA[<h1>Problem Description</h1>
 
 <p>Each problem gives you a circuit board, which will have a dimension, a set of nulls (that trace cannot go through), a feed point, and a set of antenna points.</p>
@@ -1509,9 +1509,9 @@ int main() {
   
   <entry>
     <title type="html"><![CDATA[DEF CON CTF Qualifier 2013 3dub 3 Writeup]]></title>
-    <link href="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-3dub-3-writeup/"/>
+    <link href="http://www.blue-lotus.net//def-con-ctf-qualifier-2013-3dub-3-writeup/"/>
     <updated>2013-06-18T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-3dub-3-writeup</id>
+    <id>http://www.blue-lotus.net//def-con-ctf-qualifier-2013-3dub-3-writeup</id>
     <content type="html"><![CDATA[<p>First of all, we got a &#8216;secrets&#8217; link and &#8216;log in or create user&#8217; form. When we create and login, the website redirect us to the &#8216;secrets&#8217; page like this</p>
 
 <pre><code>Secrets
@@ -1678,9 +1678,9 @@ BAh7CSINdHJhY2tpbmd7CCIZSFRUUF9BQ0NFUFRfRU5DT0RJTkciLWVkMmIz%0AY2E5MGE0ZTcyMzQwM
   
   <entry>
     <title type="html"><![CDATA[Defcon 21 Quals annyong writeup]]></title>
-    <link href="http://www.blue-lotus.net/www/defcon-21-quals-annyong-writeup/"/>
+    <link href="http://www.blue-lotus.net//defcon-21-quals-annyong-writeup/"/>
     <updated>2013-06-17T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net/www/defcon-21-quals-annyong-writeup</id>
+    <id>http://www.blue-lotus.net//defcon-21-quals-annyong-writeup</id>
     <content type="html"><![CDATA[<p>For the annyong service, PIE and ASLR are enabled. It&#8217;s easy to discover a format string vulnerability and a stack overflow vulnerability. By leveraging format string attack, libc address on the stack is leaked. Then we can calculate the <code>system</code>, <code>/bin/sh</code>, and <code>pop rdi; ret</code> gadget address in libc. Luckily we have same libc edition with the remote server and get the offsets correctly, or we could get the right libc address by using a brute-force attack in a small range. Then we got a shell by overwritten the stack.</p>
 
 <p>Our code is as below:</p>
@@ -1731,9 +1731,9 @@ interact(s)
   
   <entry>
     <title type="html"><![CDATA[DEF CON CTF Qualifier 2013 OMGACM 3 Writeup]]></title>
-    <link href="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-omgacm-3-writeup/"/>
+    <link href="http://www.blue-lotus.net//def-con-ctf-qualifier-2013-omgacm-3-writeup/"/>
     <updated>2013-06-17T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-omgacm-3-writeup</id>
+    <id>http://www.blue-lotus.net//def-con-ctf-qualifier-2013-omgacm-3-writeup</id>
     <content type="html"><![CDATA[<p>DEF CON CTF Qualifier 2013 OMGACM 3 Writeup</p>
 
 <h2>Problem Description</h2>
@@ -2025,9 +2025,9 @@ void work()
   
   <entry>
     <title type="html"><![CDATA[DEF CON CTF Qualifier 2013 OMGACM 2 Writeup]]></title>
-    <link href="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-omgacm-2-writeup/"/>
+    <link href="http://www.blue-lotus.net//def-con-ctf-qualifier-2013-omgacm-2-writeup/"/>
     <updated>2013-06-17T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-omgacm-2-writeup</id>
+    <id>http://www.blue-lotus.net//def-con-ctf-qualifier-2013-omgacm-2-writeup</id>
     <content type="html"><![CDATA[<p>DEF CON CTF Qualifier 2013 OMGACM 2 Writeup</p>
 
 <p>Text adventures are one of the oldest types of computer games and form a subset of the adventure genre.<br/>
@@ -2330,9 +2330,9 @@ while True:
   
   <entry>
     <title type="html"><![CDATA[DEF CON CTF Qualifier 2013 OMGACM 1 Writeup]]></title>
-    <link href="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-omgacm-1-writeup/"/>
+    <link href="http://www.blue-lotus.net//def-con-ctf-qualifier-2013-omgacm-1-writeup/"/>
     <updated>2013-06-17T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-omgacm-1-writeup</id>
+    <id>http://www.blue-lotus.net//def-con-ctf-qualifier-2013-omgacm-1-writeup</id>
     <content type="html"><![CDATA[<p>We are given several 8-puzzles and are required to give a sequence of actions that leads</p>
 
 <p>from the initial state to the goal state.</p>
@@ -2513,9 +2513,9 @@ end
   
   <entry>
     <title type="html"><![CDATA[DEF CON CTF Qualifier 2013 gnireenigne 5 Writeup]]></title>
-    <link href="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-gnireenigne-5-writeup/"/>
+    <link href="http://www.blue-lotus.net//def-con-ctf-qualifier-2013-gnireenigne-5-writeup/"/>
     <updated>2013-06-17T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-gnireenigne-5-writeup</id>
+    <id>http://www.blue-lotus.net//def-con-ctf-qualifier-2013-gnireenigne-5-writeup</id>
     <content type="html"><![CDATA[<p>This is a x64 binary running on Linux. It binds to the first IP of eth0 and accepts connections at port 6823. The client should submit data in the following manner:</p>
 
 <pre><code>4 bytes length | the first block | the second block
@@ -2754,9 +2754,9 @@ print s.recv(1024)
   
   <entry>
     <title type="html"><![CDATA[DEF CON CTF Qualifier 2013 3dub 5 Writeup]]></title>
-    <link href="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-3dub-5-writeup/"/>
+    <link href="http://www.blue-lotus.net//def-con-ctf-qualifier-2013-3dub-5-writeup/"/>
     <updated>2013-06-17T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-3dub-5-writeup</id>
+    <id>http://www.blue-lotus.net//def-con-ctf-qualifier-2013-3dub-5-writeup</id>
     <content type="html"><![CDATA[<p>This task was solved by <em>aay</em> soon after the the problem came up.ym.</p>
 
 <p>The initial intention of the organizer is that the vulnerability is in session and the cookie is decrypt byte per byte so we can post some username like &#8216;admiX&#8217; and brute force the ciphertext of the last letter to get the admin&#8217;s session.However there&#8217;s another quick way to achieve the goal.</p>
@@ -2814,9 +2814,9 @@ cookies[:verification] = params[:verification]
   
   <entry>
     <title type="html"><![CDATA[DEF CON CTF Qualifier 2013 3dub 4 Writeup]]></title>
-    <link href="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-3dub-4-writeup/"/>
+    <link href="http://www.blue-lotus.net//def-con-ctf-qualifier-2013-3dub-4-writeup/"/>
     <updated>2013-06-17T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-3dub-4-writeup</id>
+    <id>http://www.blue-lotus.net//def-con-ctf-qualifier-2013-3dub-4-writeup</id>
     <content type="html"><![CDATA[<p>The webpage is like this</p>
 
 <pre><code>Admin Files
@@ -2941,9 +2941,9 @@ while($i &amp;lt; 2000)
   
   <entry>
     <title type="html"><![CDATA[DEF CON CTF Qualifier 2013 3dub 2 Writeup]]></title>
-    <link href="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-3dub-2-writeup/"/>
+    <link href="http://www.blue-lotus.net//def-con-ctf-qualifier-2013-3dub-2-writeup/"/>
     <updated>2013-06-17T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-3dub-2-writeup</id>
+    <id>http://www.blue-lotus.net//def-con-ctf-qualifier-2013-3dub-2-writeup</id>
     <content type="html"><![CDATA[<p>This is just another appetizer.</p>
 
 <p>URL is</p>
@@ -2991,9 +2991,9 @@ logged in as keys
   
   <entry>
     <title type="html"><![CDATA[DEF CON CTF Qualifier 2013 3dub 1 Writeup]]></title>
-    <link href="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-3dub-1-writeup/"/>
+    <link href="http://www.blue-lotus.net//def-con-ctf-qualifier-2013-3dub-1-writeup/"/>
     <updated>2013-06-17T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-3dub-1-writeup</id>
+    <id>http://www.blue-lotus.net//def-con-ctf-qualifier-2013-3dub-1-writeup</id>
     <content type="html"><![CDATA[<p>This is just a appetizer.</p>
 
 <p>URL is</p>
@@ -3018,9 +3018,9 @@ admin login disabled
   
   <entry>
     <title type="html"><![CDATA[secuinside CTF 2013 quals movie_talk writeup]]></title>
-    <link href="http://www.blue-lotus.net/www/secuinside-ctf-2013-quals-movie_talk-writeup/"/>
+    <link href="http://www.blue-lotus.net//secuinside-ctf-2013-quals-movie_talk-writeup/"/>
     <updated>2013-06-11T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net/www/secuinside-ctf-2013-quals-movie_talk-writeup</id>
+    <id>http://www.blue-lotus.net//secuinside-ctf-2013-quals-movie_talk-writeup</id>
     <content type="html"><![CDATA[<p>The program is a local console application that maintain information about movies. It provides add, delete, list operations for users. We noticed that there is a SIGQUIT(number 3) handler to free all allocated data structure of movies, but it failed to clean the pointers of movies, which leads to a use after free bug. Data structure of a movie is as below:</p>
 
 <pre><code>struct Movie
@@ -3074,9 +3074,9 @@ time.sleep(1)
   
   <entry>
     <title type="html"><![CDATA[Secuinside 2013 save_the_zombie writeup]]></title>
-    <link href="http://www.blue-lotus.net/www/secuinside-2013-save_the_zombie-writeup/"/>
+    <link href="http://www.blue-lotus.net//secuinside-2013-save_the_zombie-writeup/"/>
     <updated>2013-06-09T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net/www/secuinside-2013-save_the_zombie-writeup</id>
+    <id>http://www.blue-lotus.net//secuinside-2013-save_the_zombie-writeup</id>
     <content type="html"><![CDATA[<p>Two binaries are provided for this task, which are <em>Apache2</em> and <em>cli.exe</em>. <em>Apache2</em> is an ELF running under Linux, which is obviously packed, therefore static analysis seems impossible.</p>
 
 <p>Really? Let&#8217;s statically analyze the core-dump. Run <em>Apache2</em>, let gdb attach to the process, and execute <strong>generate-core-file</strong>. A core-dump of the target process is generated, which contains all unpacked instructions. Now it&#8217;s time for IDA <img src='http://www.blue-lotus.net/wp-includes/images/smilies/icon_biggrin.gif' alt=':D' class='wp-smiley' /> .</p>

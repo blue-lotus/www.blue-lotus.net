@@ -2,10 +2,10 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
 
   <title><![CDATA[Category: Uncategorized | blue-lotus]]></title>
-  <link href="http://www.blue-lotus.net/www/blog/categories/uncategorized/atom.xml" rel="self"/>
-  <link href="http://www.blue-lotus.net/www/"/>
-  <updated>2013-09-13T01:55:52+08:00</updated>
-  <id>http://www.blue-lotus.net/www/</id>
+  <link href="http://www.blue-lotus.net//blog/categories/uncategorized/atom.xml" rel="self"/>
+  <link href="http://www.blue-lotus.net//"/>
+  <updated>2013-09-13T13:09:27+08:00</updated>
+  <id>http://www.blue-lotus.net//</id>
   <author>
     <name><![CDATA[blue-lotus]]></name>
     
@@ -15,9 +15,9 @@
   
   <entry>
     <title type="html"><![CDATA[UFOCTF2013 Web100 FlagStore]]></title>
-    <link href="http://www.blue-lotus.net/www/ufoctf2013-web100-flagstore/"/>
+    <link href="http://www.blue-lotus.net//ufoctf2013-web100-flagstore/"/>
     <updated>2013-07-23T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net/www/ufoctf2013-web100-flagstore</id>
+    <id>http://www.blue-lotus.net//ufoctf2013-web100-flagstore</id>
     <content type="html"><![CDATA[<p>It is a very interesting problem and exhausted our much time and energy.</p>
 
 <p>There are 3 levels.All about sqli.</p>
@@ -34,9 +34,9 @@
   
   <entry>
     <title type="html"><![CDATA[SIGINT 2013 crypto300 satisfaction]]></title>
-    <link href="http://www.blue-lotus.net/www/sigint-2013-crypto300-satisfaction/"/>
+    <link href="http://www.blue-lotus.net//sigint-2013-crypto300-satisfaction/"/>
     <updated>2013-07-10T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net/www/sigint-2013-crypto300-satisfaction</id>
+    <id>http://www.blue-lotus.net//sigint-2013-crypto300-satisfaction</id>
     <content type="html"><![CDATA[<p><a href="http://slipper.tk/writeup/2013/07/11/sigint-2013-crypto-satisfaction/">http://slipper.tk/writeup/2013/07/11/sigint-2013-crypto-satisfaction/</a></p>
 
 <h1><a href="http://slipper.tk/writeup/2013/07/11/sigint-2013-crypto-satisfaction/">SIGINT 2013 crypto300 satisfaction</a></h1>
@@ -217,9 +217,9 @@ Then I read <a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGIN
   
   <entry>
     <title type="html"><![CDATA[SIGINT 2013 crypto 200 rsa]]></title>
-    <link href="http://www.blue-lotus.net/www/sigint-2013-crypto-200-rsa/"/>
+    <link href="http://www.blue-lotus.net//sigint-2013-crypto-200-rsa/"/>
     <updated>2013-07-10T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net/www/sigint-2013-crypto-200-rsa</id>
+    <id>http://www.blue-lotus.net//sigint-2013-crypto-200-rsa</id>
     <content type="html"><![CDATA[<p><a href="http://slipper.tk/writeup/2013/07/10/sigint-2013-crypto-rsa/">http://slipper.tk/writeup/2013/07/10/sigint-2013-crypto-rsa/</a></p>
 
 <h1><a href="http://slipper.tk/writeup/2013/07/10/sigint-2013-crypto-rsa/">SIGINT2013 crypto200 rsa</a></h1>
@@ -295,9 +295,9 @@ if __name__ == &amp;#039;__main__&amp;#039;:
   
   <entry>
     <title type="html"><![CDATA[SIGINT 2013 cloud200 bloat]]></title>
-    <link href="http://www.blue-lotus.net/www/sigint2013-cloud200-bloat/"/>
+    <link href="http://www.blue-lotus.net//sigint2013-cloud200-bloat/"/>
     <updated>2013-07-09T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net/www/sigint2013-cloud200-bloat</id>
+    <id>http://www.blue-lotus.net//sigint2013-cloud200-bloat</id>
     <content type="html"><![CDATA[<p><a href="http://slipper.tk/writeup/2013/07/09/sigint2013-cloud-bloat/">http://slipper.tk/writeup/2013/07/09/sigint2013-cloud-bloat/</a></p>
 
 <h1><a href="http://slipper.tk/writeup/2013/07/09/sigint2013-cloud-bloat/">SIGINT 2013 cloud 200 bloat</a></h1>
@@ -464,9 +464,9 @@ SIGINT_d4b0844c
   
   <entry>
     <title type="html"><![CDATA[DEF CON CTF Qualifier 2013 OMGACM 4 Writeup]]></title>
-    <link href="http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-omgacm-4-writeup/"/>
+    <link href="http://www.blue-lotus.net//def-con-ctf-qualifier-2013-omgacm-4-writeup/"/>
     <updated>2013-06-18T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net/www/def-con-ctf-qualifier-2013-omgacm-4-writeup</id>
+    <id>http://www.blue-lotus.net//def-con-ctf-qualifier-2013-omgacm-4-writeup</id>
     <content type="html"><![CDATA[<h1>Problem Description</h1>
 
 <p>Each problem gives you a circuit board, which will have a dimension, a set of nulls (that trace cannot go through), a feed point, and a set of antenna points.</p>
