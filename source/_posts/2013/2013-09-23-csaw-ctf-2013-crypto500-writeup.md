@@ -14,7 +14,7 @@ We’ve found the source to the Arstotzka spies rendevous server, we must find o
 
 So we have to crack sha512 puzzle and calc correct hash. At first i was trying to calculate sEphemeralPriv out, but it seems impossible. after some try, I realized that you can just use "n^m mod === something".
 
-Code:
+## Code
 
 ~~~
 #!/usr/bin/python
