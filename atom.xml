@@ -4,7 +4,7 @@
   <title><![CDATA[blue-lotus]]></title>
   <link href="http://www.blue-lotus.net//atom.xml" rel="self"/>
   <link href="http://www.blue-lotus.net//"/>
-  <updated>2013-09-23T23:50:16+08:00</updated>
+  <updated>2013-09-23T23:54:40+08:00</updated>
   <id>http://www.blue-lotus.net//</id>
   <author>
     <name><![CDATA[blue-lotus]]></name>
@@ -23,7 +23,7 @@
 
 <p>So we have to crack sha512 puzzle and calc correct hash. At first i was trying to calculate sEphemeralPriv out, but it seems impossible. after some try, I realized that you can just use “n^m mod === something”.</p>
 
-<p>Code:</p>
+<h2 id="code">Code</h2>
 
 <div><div class="CodeRay">
   <div class="code"><pre><span class="comment">#!/usr/bin/python</span>
