@@ -169,3 +169,19 @@ aside.sidebar a {
 ul, ol {
     margin-left: 2em;
 }
+
+@import "custom/github";
+/* overrides of the lousy styles from _syntax.scss */
+.CodeRay pre, p code, li code {
+  background: #efefef;
+  color: #000;
+  border: 1px solid #565656;
+  border-top-color: #cbcbcb;
+  border-left-color: #a5a5a5;
+  border-right-color: #a5a5a5;
+}
+
+/* fixes issue where the whole line wouldn't get colored in a diff */
+.CodeRay span.insert, .CodeRay span.change, .CodeRay span.delete {
+	width: auto;
+}
