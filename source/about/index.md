@@ -4,7 +4,7 @@ author: kelwin
 layout: page
 ---
 
-Blue-lotus is a security research team in Tsinghua University. We have played several famous [Capture The Flag][1](CTF) games around the world([Defcon][2], [Hack.LU][3], [iCTF][4], [RuCTFE][5]) in the last few years under the team name of blue-lotus. You can find our rankings  in [CTFtime][6].
+Blue-lotus is a security research team in Tsinghua University. We have played several famous [Capture The Flag](http://ctftime.org/ctf-wtf/) games around the world([Defcon](https://www.defcon.org/), [Hack.LU](http://2012.hack.lu/), [iCTF](http://ictf.cs.ucsb.edu/), [RuCTFE](http://ructf.org/e/2012/)) in the last few years under the team name of blue-lotus. You can find our rankings  in [CTFtime](http://ctftime.org/team/1941/).
 
 We also have some other players from other universities and teams.
 
@@ -90,9 +90,3 @@ We also have some other players from other universities and teams.
    </tr>
 </table>
 
- [1]: http://ctftime.org/ctf-wtf/ "Capture The Flag"
- [2]: https://www.defcon.org/ "Defcon"
- [3]: http://2012.hack.lu/ "Hack.LU"
- [4]: http://ictf.cs.ucsb.edu/ "iCTF"
- [5]: http://ructf.org/e/2012/
- [6]: http://ctftime.org/team/1941/ "CTFtime"
