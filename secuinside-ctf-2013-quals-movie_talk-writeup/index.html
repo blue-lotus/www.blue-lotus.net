@@ -86,7 +86,7 @@
 };
 </code></pre>
 
-<p>For each movie, the memories for the <code>Movie</code> struct and <code>Movie-&gt;name</code> are allocated on the heap. First, we can add a movie. Then, we add the second. However, at the moment before the program prompt to get movie name, we send SIGQUIT and get the first movie structure freed. Then the program get back to receive the second movie&#8217;s name. If we input a string with a appropriate length, the allocated chunk for the second movie&#8217;s name could be the same as the first movie&#8217;s struct, which has just been freed. Luckily, the pointer of the first movie still points to the original chunk. Thus, the first 4 bytes of the second movie&#8217;s name will become the first movie&#8217;s handler, which can be used controlled.</p>
+<p>For each movie, the memories for the <code>Movie</code> struct and <code>Movie-&gt;name</code> are allocated on the heap. First, we can add a movie. Then, we add the second. However, at the moment before the program prompt to get movie name, we send SIGQUIT and get the first movie structure freed. Then the program get back to receive the second movie’s name. If we input a string with a appropriate length, the allocated chunk for the second movie’s name could be the same as the first movie’s struct, which has just been freed. Luckily, the pointer of the first movie still points to the original chunk. Thus, the first 4 bytes of the second movie’s name will become the first movie’s handler, which can be used controlled.</p>
 
 <p>We use an <code>add esp</code> gadget to migrate the stack to a very high position of the stack. Then we put a lot of common <code>ret2libc</code> combinations <code>system|system|"/bin/sh"|"/bin/sh"</code> in an environment variable, which is right in the higher part of the stack. If the <code>add esp</code> gadget migrate the stack top and hit the one of the <code>system</code> addresses in the environment variable, a shell will be spawned.</p>
 
@@ -183,6 +183,10 @@ time.sleep(1)
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -196,10 +200,6 @@ time.sleep(1)
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

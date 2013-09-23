@@ -9,7 +9,7 @@
   <meta name="author" content="blue-lotus">
 
   
-  <meta name="description" content="This is a web blogging system written using nodejs. After some play and test, We find out that, it&#8217;s a blog posting system, people can read &hellip;">
+  <meta name="description" content="This is a web blogging system written using nodejs. After some play and test, We find out that, it’s a blog posting system, people can read posts and &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -76,15 +76,15 @@
 
 <div class="entry-content"><p>This is a web blogging system written using nodejs.</p>
 
-<p>After some play and test, We find out that, it&#8217;s a blog posting system, people can read posts and upload posts.</p>
+<p>After some play and test, We find out that, it’s a blog posting system, people can read posts and upload posts.</p>
 
-<p>Then We carefully read through its core logic code. The code reveals that there is a &#8220;store&#8221; interface for iCTF servers to push flags to the system. And the there is a dir called &#8220;flags&#8221;, so our goal is to hack the web and capture the flags from the &#8220;flags&#8221; directory.</p>
+<p>Then We carefully read through its core logic code. The code reveals that there is a “store” interface for iCTF servers to push flags to the system. And the there is a dir called “flags”, so our goal is to hack the web and capture the flags from the “flags” directory.</p>
 
-<p>Reviewing the code, we know that, when users create a post, the blogging system will first store its content in a plain text file, then store a metadata file using &#8220;.metadata&#8221; as extended filename. And the metadata file only contains the length of the post surrounded by brackets, such as &#8220;[36]&#8220;.</p>
+<p>Reviewing the code, we know that, when users create a post, the blogging system will first store its content in a plain text file, then store a metadata file using “.metadata” as extended filename. And the metadata file only contains the length of the post surrounded by brackets, such as “[36]“.</p>
 
-<p>Soon after that, we noted that, in &#8220;metadata.js&#8221;, it exports a function called checkfile, which do metafile checking by execute the metadata file as javascript in a new context. Haha, it&#8217;s time for us to show our <a href="http://en.wikipedia.org/wiki/Arbitrary_code_execution">RCE</a> skills!</p>
+<p>Soon after that, we noted that, in “metadata.js”, it exports a function called checkfile, which do metafile checking by execute the metadata file as javascript in a new context. Haha, it’s time for us to show our <a href="http://en.wikipedia.org/wiki/Arbitrary_code_execution">RCE</a> skills!</p>
 
-<p>The solution is straightforward now. First we upload a random post to the server, say &#8220;abc&#8221;. At this time, the server will write abc and abc.metadata in the posts dir. Then we can upload a file using abc.metadata as the name, so the real metadata of the abc will be overwritten. The content of the newly uploaded abc.metadata is some javascript code, which will read file content from flags dir and store them in posts dir, say, stored as flag and flag.metadata.</p>
+<p>The solution is straightforward now. First we upload a random post to the server, say “abc”. At this time, the server will write abc and abc.metadata in the posts dir. Then we can upload a file using abc.metadata as the name, so the real metadata of the abc will be overwritten. The content of the newly uploaded abc.metadata is some javascript code, which will read file content from flags dir and store them in posts dir, say, stored as flag and flag.metadata.</p>
 
 <p>After all of above prepared, we just fire a hit to get post for abc, it will cause the abc.metadata executed, so our javascript code will store the flag in posts dir, then we can visit that post to get the flag.</p>
 
@@ -132,9 +132,10 @@
     return {'FLAG' : self.flag }
 </code></pre>
 
-<p>Knowing the exploit, it&#8217;s easy now to fix. The best way is to modify the checkfile function in metadata.js to remove the <a href="http://en.wikipedia.org/wiki/Arbitrary_code_execution">RCE</a> problem. Actually we fix this problem by disable uploading of posts end with &#8220;.metadata&#8221;, in this way we only need to modify one line, but may be less secure.</p>
+<p>Knowing the exploit, it’s easy now to fix. The best way is to modify the checkfile function in metadata.js to remove the <a href="http://en.wikipedia.org/wiki/Arbitrary_code_execution">RCE</a> problem. Actually we fix this problem by disable uploading of posts end with “.metadata”, in this way we only need to modify one line, but may be less secure.</p>
 
 <p>Many thanks to Chao Liu who showed expert level hacking skills working with me, he inspired me with ideas, and helped me write the exploit code.</p>
+
 </div>
 
 
@@ -196,6 +197,10 @@
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -209,10 +214,6 @@
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

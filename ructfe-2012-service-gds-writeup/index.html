@@ -80,7 +80,7 @@
 
 <p>Keys are pushed into PNR database, which is located at /home/gds/pnrs.db. After some analysis of the binary under the help of IDA, we found a vulnerability that we could exploit. Simply type command *RT * after logging in, and you could retrive every single PNRs in database, including keys.</p>
 
-<p>Now as we have the source code (I&#8217;m not on the mail list, so I found the code snippet right before I write this writeup, shiiiiiit), the vulnerability is more than obvious. The command <em>RT * is first converted into a *GDSCommand</em> instance, with no parameters (m_params is empty). Here is the definition of <em>GDSCommand</em>.</p>
+<p>Now as we have the source code (I’m not on the mail list, so I found the code snippet right before I write this writeup, shiiiiiit), the vulnerability is more than obvious. The command <em>RT * is first converted into a *GDSCommand</em> instance, with no parameters (m_params is empty). Here is the definition of <em>GDSCommand</em>.</p>
 
 <pre><code>class GDSCommand {
 public:
@@ -93,7 +93,7 @@ protected:
 };
 </code></pre>
 
-<p>And let&#8217;s have a look at <em>GDSPnrDatabase::compareWithTemplate(const GDSPnr&amp; f, const GDSPnr&amp; templ)</em>:</p>
+<p>And let’s have a look at <em>GDSPnrDatabase::compareWithTemplate(const GDSPnr&amp; f, const GDSPnr&amp; templ)</em>:</p>
 
 <pre><code>bool GDSPnrDatabase::compareWithTemplate( const GDSPnr&amp; f, const GDSPnr&amp; templ )
 {
@@ -107,7 +107,7 @@ protected:
 }
 </code></pre>
 
-<p>The argument <em>templ</em> contains the argument in our command <em>RT <unique ID></em>. The unique ID is retrived by <em>getParam(1);</em>, and <em>getParam()</em> is defined as follows:</p>
+<p>The argument <em>templ</em> contains the argument in our command *RT <unique>*. The unique ID is retrived by *getParam(1);*, and *getParam()* is defined as follows:</unique></p>
 
 <pre><code>QString GDSCommand::getParam( int i )
 {
@@ -115,9 +115,10 @@ protected:
 }
 </code></pre>
 
-<p>If <em>i</em> is out of bounds, then <a href="http://doc.qt.digia.com/qt/qlist.html#value">a default-constructed value is returned</a>. Well, that&#8217;s why we could retrieve every PNRs by typing *RT *, where no parameters are provided.</p>
+<p>If <em>i</em> is out of bounds, then <a href="http://doc.qt.digia.com/qt/qlist.html#value">a default-constructed value is returned</a>. Well, that’s why we could retrieve every PNRs by typing *RT *, where no parameters are provided.</p>
 
 <p>BTW: We need a VPS in Korea or Russia for proxy next time.</p>
+
 </div>
 
 
@@ -179,6 +180,10 @@ protected:
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -192,10 +197,6 @@ protected:
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

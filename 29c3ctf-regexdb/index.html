@@ -74,14 +74,14 @@
   </header>
 
 
-<div class="entry-content"><h2>Problem Link: <a href="https://29c3ctf.aachen.ccc.de/challenges/16/">regexdb</a></h2>
+<div class="entry-content"><h2 id="problem-link-regexdb1">Problem Link: <a href="https://29c3ctf.aachen.ccc.de/challenges/16/">regexdb</a></h2>
 
 <pre><code>**Description**
 
 Ever played Googlewhack? Well, this is a bit [easier][2] and gives you more power, enjoy.
 </code></pre>
 
-<h2>Quote From google shared doc:</h2>
+<h2 id="quote-from-google-shared-doc">Quote From google shared doc:</h2>
 
 <pre><code>题目给的提示是googlewhack，这个的意思就是查询时仅返回一条结果。
 
@@ -91,7 +91,7 @@ Ever played Googlewhack? Well, this is a bit [easier][2] and gives you more powe
 输入 - . - 返回结果是： results: 1: 29C3_NotAKey
 </code></pre>
 
-<h2>Some useful information:</h2>
+<h2 id="some-useful-information">Some useful information:</h2>
 
 <pre><code>Query language “analysis” (Jay):
 
@@ -101,7 +101,7 @@ Ever played Googlewhack? Well, this is a bit [easier][2] and gives you more powe
 \-  ^ is BEGINNING OF STRING operator
 </code></pre>
 
-<h2>Examples</h2>
+<h2 id="examples">Examples</h2>
 
 <pre><code>** - 18 results (total in db)
 *29C3* - 12 results
@@ -137,26 +137,26 @@ Key: 29C3_??        length 40
 Key: 29C3_??        length 40
 </pre>
 
-
 <p>Then we know the answer is one of the last 2 key.</p>
 
 <p>(after got the flag,we know that they are both the keys)</p>
 
 <p>Construct the regex expression <code>^.{$left}[$query_set].{$right}$</code></p>
 
-<p>Here we need $left+$right equal to 39 and find the unique $query_set,then it&#8217;s the answer.</p>
+<p>Here we need $left+$right equal to 39 and find the unique $query_set,then it’s the answer.</p>
 
 <p>We can simply use escape grammar to do this. It does not support [a-zA-Z] grammar,</p>
 
 <p>so we have to write all the query characters.</p>
 
-<p>Starts from <code>$query="\1\2...\7f"</code>,check the result wether include character &#8217;2&#8242;</p>
+<p>Starts from <code>$query="\1\2...\7f"</code>,check the result wether include character ’2′</p>
 
 <p>Binary search here is a better choice.</p>
 
 <p>After all above, we got the answer:</p>
 
 <p><code>Key: 29C3_Well.This/Is#Not+The|Wrong?Key</code></p>
+
 </div>
 
 
@@ -218,6 +218,10 @@ Key: 29C3_??        length 40
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -231,10 +235,6 @@ Key: 29C3_??        length 40
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

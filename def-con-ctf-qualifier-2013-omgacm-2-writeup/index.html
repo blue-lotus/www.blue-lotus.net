@@ -76,16 +76,16 @@
 
 <div class="entry-content"><p>DEF CON CTF Qualifier 2013 OMGACM 2 Writeup</p>
 
-<p>Text adventures are one of the oldest types of computer games and form a subset of the adventure genre.<br/>
+<p>Text adventures are one of the oldest types of computer games and form a subset of the adventure genre.<br />
 After walking around for a while, we find that we need to go all the way north and reach a room with two jugs.</p>
 
-<p><code>look red jug</code>, <code>look blue jug</code> and <code>look inscription</code> gives the detail of a water-pouring problem with two jugs and<br/>
-we are required to give a solution in limited time and trials. One insight is that once we decide to pour water from the red jug to the blue jug,<br/>
-there will be no sense to pour water in the opposite direction (from the blue jug to the red jug) in later actions.<br/>
-What we can do is emptying the blue jug, filling the red jug and pouring water from the red jug to the blue jug.<br/>
+<p><code>look red jug</code>, <code>look blue jug</code> and <code>look inscription</code> gives the detail of a water-pouring problem with two jugs and<br />
+we are required to give a solution in limited time and trials. One insight is that once we decide to pour water from the red jug to the blue jug,<br />
+there will be no sense to pour water in the opposite direction (from the blue jug to the red jug) in later actions.<br />
+What we can do is emptying the blue jug, filling the red jug and pouring water from the red jug to the blue jug.<br />
 We can thus simulate the two cases (from red to blue and from blue to red) separately and take the case with the smaller actions.</p>
 
-<p>NB. we need to send a bunch of actions at once to reduce time spent on network transmission.<br/>
+<p>NB. we need to send a bunch of actions at once to reduce time spent on network transmission.<br />
 It seems that we can only send two packets at a mission. Here is the program:</p>
 
 <pre><code>require 'socket'
@@ -179,7 +179,7 @@ loop do
 end
 </code></pre>
 
-<p>Check out <a href="http://ascii.io/a/3641">http://ascii.io/a/3641</a> to understand the entire flow of the program.</p>
+<p>Check out http://ascii.io/a/3641 to understand the entire flow of the program.</p>
 
 <p>And the very program we used in the contest:</p>
 
@@ -432,6 +432,10 @@ while True:
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -445,10 +449,6 @@ while True:
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

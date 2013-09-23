@@ -103,7 +103,7 @@ void main(void)
 }
 </code></pre>
 
-<p>Obviously, it contains a basic stack overflow bug and we can only overwrite return address of <code>main</code> function. What&#8217;s worse, the first BUFSIZE bytes of buffer is set to 0 before return of <code>main</code>. However, a call of <code>printf</code> moves the input buffer to the stdout buffer. We can use a <code>leave ret</code> gadget to migrate the stack to the stdout buffer. So suppose we know base address, we can figure out the address of stdout buffer and perform a ret2libc attack using <code>system</code> function.</p>
+<p>Obviously, it contains a basic stack overflow bug and we can only overwrite return address of <code>main</code> function. What’s worse, the first BUFSIZE bytes of buffer is set to 0 before return of <code>main</code>. However, a call of <code>printf</code> moves the input buffer to the stdout buffer. We can use a <code>leave ret</code> gadget to migrate the stack to the stdout buffer. So suppose we know base address, we can figure out the address of stdout buffer and perform a ret2libc attack using <code>system</code> function.</p>
 
 <p>Pwnme forks a child process for each connection, so the base address will be the same with the parent process. Luckily, randomization on x86 Ubuntu is only 9-bits. We can perform a brute-force attack on the base address.</p>
 
@@ -214,6 +214,10 @@ while i &lt; len(bases):
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -227,10 +231,6 @@ while i &lt; len(bases):
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

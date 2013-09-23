@@ -74,7 +74,7 @@
   </header>
 
 
-<div class="entry-content"><h1>Problem Description</h1>
+<div class="entry-content"><h1 id="problem-description">Problem Description</h1>
 
 <p>Each problem gives you a circuit board, which will have a dimension, a set of nulls (that trace cannot go through), a feed point, and a set of antenna points.</p>
 
@@ -82,11 +82,11 @@
 
 <p>The distance of these traces must also be equal for all antenna points.</p>
 
-<h1>Our Solution</h1>
+<h1 id="our-solution">Our Solution</h1>
 
 <p>Since we intuitively classify this problem as NP-Complete, we resort to iterative deepening depth-first search for solving it.</p>
 
-<p>In our algorithm, we choose to &#8220;grow&#8221; the traces from antenna points, which means that all the traces simultaneously start from their respective antenna point and go one step further one by one.</p>
+<p>In our algorithm, we choose to “grow” the traces from antenna points, which means that all the traces simultaneously start from their respective antenna point and go one step further one by one.</p>
 
 <p>This strategy forces that all the traces will be equal length with each other, thus many unnecessary states are avoided.</p>
 
@@ -95,29 +95,27 @@
 <p>More specifically, in order to record the current state, we use:</p>
 
 <ol>
-<li>Nine bool variables for each point: one for the point and 8 for adjacent edges;</li>
-<li>One pair &lt; int, int > (one for 1 and the other for sqrt 2) variable for each point to store the distance from this point to the corresponding antenna point if it has been covered by a trace;</li>
-<li>Current &#8220;growing&#8221; point for each trace;</li>
-<li>Which trace’s turn is it to grow in this iteration;</li>
-<li>The final distance, if one of the traces has reached the feed point;</li>
+  <li>Nine bool variables for each point: one for the point and 8 for adjacent edges; </li>
+  <li>One pair &lt; int, int &gt; (one for 1 and the other for sqrt 2) variable for each point to store the distance from this point to the corresponding antenna point if it has been covered by a trace; </li>
+  <li>Current “growing” point for each trace; </li>
+  <li>Which trace’s turn is it to grow in this iteration; </li>
+  <li>The final distance, if one of the traces has reached the feed point; </li>
 </ol>
-
 
 <p>And we also use a set of pruning tricks to accelerate the algorithm.</p>
 
 <ol>
-<li>Iterative deepening on length of each path;</li>
-<li>Limit the depth of dfs to be at most 30. (This ought to have been another iterative deepening argument, but we hard code it with an empirical number for simplifying the code);</li>
-<li>Preprocess the minimal distance from each point to the feed point and combine this information with iterative deepening threshold for further pruning;</li>
-<li>If one of the trace has already reached the feed point, use the distance for pruning.</li>
+  <li>Iterative deepening on length of each path; </li>
+  <li>Limit the depth of dfs to be at most 30. (This ought to have been another iterative deepening argument, but we hard code it with an empirical number for simplifying the code); </li>
+  <li>Preprocess the minimal distance from each point to the feed point and combine this information with iterative deepening threshold for further pruning; </li>
+  <li>If one of the trace has already reached the feed point, use the distance for pruning. </li>
 </ol>
-
 
 <p>Here is another tip:</p>
 
 <p>The intersections will not only happen at points but also in small squares, you may need to double check this.</p>
 
-<h1>Code</h1>
+<h1 id="code">Code</h1>
 
 <pre><code>#include &lt;stdio.h&gt;
 #include &lt;stdlib.h&gt;
@@ -387,7 +385,7 @@ int main() {
 }
 </code></pre>
 
-<h1>Result</h1>
+<h1 id="result">Result</h1>
 
 <p>You can check out <a href="http://ascii.io/a/3644">http://ascii.io/a/3644</a> for the result.</p>
 
@@ -453,6 +451,10 @@ int main() {
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -466,10 +468,6 @@ int main() {
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

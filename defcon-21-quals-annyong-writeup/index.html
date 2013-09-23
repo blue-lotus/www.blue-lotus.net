@@ -9,7 +9,7 @@
   <meta name="author" content="blue-lotus">
 
   
-  <meta name="description" content="For the annyong service, PIE and ASLR are enabled. It&#8217;s easy to discover a format string vulnerability and a stack overflow vulnerability. By &hellip;">
+  <meta name="description" content="For the annyong service, PIE and ASLR are enabled. It’s easy to discover a format string vulnerability and a stack overflow vulnerability. By &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -74,7 +74,7 @@
   </header>
 
 
-<div class="entry-content"><p>For the annyong service, PIE and ASLR are enabled. It&#8217;s easy to discover a format string vulnerability and a stack overflow vulnerability. By leveraging format string attack, libc address on the stack is leaked. Then we can calculate the <code>system</code>, <code>/bin/sh</code>, and <code>pop rdi; ret</code> gadget address in libc. Luckily we have same libc edition with the remote server and get the offsets correctly, or we could get the right libc address by using a brute-force attack in a small range. Then we got a shell by overwritten the stack.</p>
+<div class="entry-content"><p>For the annyong service, PIE and ASLR are enabled. It’s easy to discover a format string vulnerability and a stack overflow vulnerability. By leveraging format string attack, libc address on the stack is leaked. Then we can calculate the <code>system</code>, <code>/bin/sh</code>, and <code>pop rdi; ret</code> gadget address in libc. Luckily we have same libc edition with the remote server and get the offsets correctly, or we could get the right libc address by using a brute-force attack in a small range. Then we got a shell by overwritten the stack.</p>
 
 <p>Our code is as below:</p>
 
@@ -180,6 +180,10 @@ interact(s)
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -193,10 +197,6 @@ interact(s)
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

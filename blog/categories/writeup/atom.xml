@@ -4,7 +4,7 @@
   <title><![CDATA[Category: writeup | blue-lotus]]></title>
   <link href="http://www.blue-lotus.net//blog/categories/writeup/atom.xml" rel="self"/>
   <link href="http://www.blue-lotus.net//"/>
-  <updated>2013-09-14T00:56:02+08:00</updated>
+  <updated>2013-09-23T23:50:16+08:00</updated>
   <id>http://www.blue-lotus.net//</id>
   <author>
     <name><![CDATA[blue-lotus]]></name>
@@ -12,6 +12,130 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[CSAW CTF 2013 crypto500 writeup]]></title>
+    <link href="http://www.blue-lotus.net//csaw-ctf-2013-crypto500-writeup/"/>
+    <updated>2013-09-23T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net//csaw-ctf-2013-crypto500-writeup</id>
+    <content type="html"><![CDATA[<h2 id="problem-description">Problem Description</h2>
+<p>We’ve found the source to the Arstotzka spies rendevous server, we must find out their new vault key. Source code is <a href="http://shell-storm.org/repo/CTF/CSAW-2013/Crypto/slurp-500/slurp.py">here</a>.</p>
+
+<p>So we have to crack sha512 puzzle and calc correct hash. At first i was trying to calculate sEphemeralPriv out, but it seems impossible. after some try, I realized that you can just use “n^m mod === something”.</p>
+
+<p>Code:</p>
+
+<div><div class="CodeRay">
+  <div class="code"><pre><span class="comment">#!/usr/bin/python</span>
+<span class="keyword">import</span> <span class="include">os</span>
+<span class="keyword">import</span> <span class="include">sys</span>
+<span class="keyword">import</span> <span class="include">time</span>
+<span class="keyword">import</span> <span class="include">struct</span>
+<span class="keyword">import</span> <span class="include">socket</span>
+<span class="keyword">import</span> <span class="include">telnetlib</span>
+<span class="keyword">import</span> <span class="include">random</span>,<span class="include">hashlib</span>,<span class="include">base64</span>
+<span class="keyword">from</span> <span class="include">hashlib</span> <span class="keyword">import</span> <span class="include">sha512</span>,<span class="include">sha1</span>
+
+<span class="keyword">def</span> <span class="function">hashToInt</span>(*params):
+    sha=sha512()
+    <span class="keyword">for</span> el <span class="keyword">in</span> params:
+        sha.update(<span class="string"><span class="delimiter">&quot;</span><span class="content">%r</span><span class="delimiter">&quot;</span></span>%el)
+    <span class="keyword">return</span> <span class="predefined">int</span>(sha.hexdigest(), <span class="integer">16</span>)
+
+
+<span class="keyword">def</span> <span class="function">gs</span>(num):
+    <span class="keyword">return</span> hashlib.sha1(num).digest()
+
+<span class="keyword">def</span> <span class="function">crack</span>(sha_p):
+    <span class="keyword">print</span> <span class="string"><span class="delimiter">&quot;</span><span class="content">crack:</span><span class="delimiter">&quot;</span></span>,sha_p
+    ss=<span class="string"><span class="delimiter">&quot;</span><span class="delimiter">&quot;</span></span>
+    ret=<span class="integer">0</span>
+    <span class="keyword">for</span> keylen <span class="keyword">in</span> <span class="predefined">range</span>(<span class="integer">10</span>,<span class="integer">40</span>):
+        <span class="keyword">for</span> add_1 <span class="keyword">in</span> <span class="predefined">range</span> (<span class="integer">0</span>,<span class="integer">140</span>):
+            <span class="keyword">for</span> add_2 <span class="keyword">in</span> <span class="predefined">range</span> (<span class="integer">10</span>,<span class="integer">140</span>):
+                <span class="keyword">for</span> add_3 <span class="keyword">in</span> <span class="predefined">range</span> (<span class="integer">0</span>,<span class="integer">155</span>):
+                    <span class="keyword">for</span> add_4 <span class="keyword">in</span> <span class="predefined">range</span> (<span class="integer">0</span>,<span class="integer">155</span>):
+                        <span class="keyword">for</span> add_5 <span class="keyword">in</span> <span class="predefined">range</span> (<span class="integer">0</span>,<span class="integer">155</span>):
+                            new_msg=sha_p+<span class="predefined">chr</span>(add_1)+<span class="predefined">chr</span>(add_2)+<span class="predefined">chr</span>(add_3)+<span class="predefined">chr</span>(add_4)+<span class="predefined">chr</span>(add_5)
+                        <span class="keyword">if</span> gs(new_msg)[-<span class="integer">3</span>:]==<span class="string"><span class="delimiter">&quot;</span><span class="char">\xff</span><span class="char">\xff</span><span class="char">\xff</span><span class="delimiter">&quot;</span></span>:
+                            <span class="keyword">print</span> <span class="string"><span class="delimiter">&quot;</span><span class="content">got one %s</span><span class="delimiter">&quot;</span></span>%<span class="predefined">len</span>(new_msg)
+                            <span class="keyword">if</span> <span class="predefined">len</span>(new_msg)==<span class="integer">21</span>:
+                                ss=new_msg
+                                <span class="keyword">print</span> <span class="string"><span class="delimiter">&quot;</span><span class="content">WE CRACK THE PUZZLE %d</span><span class="char">\n</span><span class="delimiter">&quot;</span></span>%<span class="predefined">len</span>(ss)
+                                ret=<span class="integer">1</span>
+                                <span class="keyword">return</span> (ret,ss)
+
+<span class="keyword">return</span> (ret,ss)
+
+<span class="comment">#s = socket.create_connection(('128.238.66.222',7788))</span>
+s = socket.create_connection((<span class="string"><span class="delimiter">'</span><span class="content">127.0.0.1</span><span class="delimiter">'</span></span>,<span class="integer">7788</span>))
+se=<span class="string"><span class="delimiter">&quot;</span><span class="delimiter">&quot;</span></span>
+<span class="keyword">for</span> i <span class="keyword">in</span> <span class="predefined">range</span>(<span class="integer">1</span>,<span class="integer">100</span>):
+    ss=s.recv(<span class="integer">1000</span>)
+    <span class="keyword">print</span> ss
+    sha_p=ss[<span class="predefined">len</span>(ss)-<span class="integer">16</span>:]
+    new_msg=crack(sha_p[-<span class="integer">16</span>:])
+    <span class="keyword">if</span> new_msg[<span class="integer">0</span>]:
+        se=new_msg[<span class="integer">1</span>]
+        <span class="keyword">print</span> <span class="string"><span class="delimiter">&quot;</span><span class="content">send:</span><span class="delimiter">&quot;</span></span>,se,hashlib.sha1(se).digest()[-<span class="integer">3</span>:]
+        <span class="keyword">break</span>
+
+
+s.send(se)
+<span class="comment">#raw_input()</span>
+N = <span class="integer">59244860562241836037412967740090202129129493209028128777608075105340045576269119581606482976574497977007826166502644772626633024570441729436559376092540137133423133727302575949573761665758712151467911366235364142212961105408972344133228752133405884706571372774484384452551216417305613197930780130560424424943100169162129296770713102943256911159434397670875927197768487154862841806112741324720583453986631649607781487954360670817072076325212351448760497872482740542034951413536329940050886314722210271560696533722492893515961159297492975432439922689444585637489674895803176632819896331235057103813705143408943511591629</span>
+
+index=<span class="integer">28483644508750028902258833085453121291738558908844640378204850915473006274236033891815596646870094954832384471913373171061099388958373536383247454431214837805096635029244738399662911119306089493137122381562794483801525427601711736403424013966624957471463169984161438593701202381673774894874606950326837142168801614196218030413825361835813060325642766963973454456577907567314093695138863251603368180581162185039224604662844750924047132242103613509637088222461132023037724162558095265336717907895786691004801515830247270579025866384571194244368350362690250445425121639616294300827554006418861422621428030154329451920623</span><span class="comment">#17095359415354811031956139176232822755293333580176796651092816713929142596363160518183074582333639666374490434453616522976528693318889544211598801485465809374370977363040240176466544504447562622451988654983833567639785357067606037932165650485806709538575591881306056180364137612491852807151445333929946180083335184143784040034635507293616742432550220001472750029503246943474764484598756871323795898352813684410952415776064654304191774216122857994311730048413954488815342894838841918071841785821830683677234982197021652871796420412165927837273704381564043458200253387672509280296033910910416083249362331740208987494679</span>
+
+cEphemeral=<span class="integer">1</span>
+send_num1=<span class="predefined">str</span>(<span class="predefined">hex</span>(index))[<span class="integer">2</span>:][:-<span class="integer">1</span>]
+send_num2=<span class="predefined">str</span>(<span class="predefined">hex</span>(cEphemeral))[<span class="integer">2</span>:]
+
+s.send(struct.pack(<span class="string"><span class="delimiter">&quot;</span><span class="content">H</span><span class="delimiter">&quot;</span></span>,<span class="predefined">len</span>(send_num1)))
+s.send(send_num1)<span class="comment">#send numberc index--&gt;base number</span>
+
+<span class="keyword">print</span> <span class="string"><span class="delimiter">&quot;</span><span class="content">1:</span><span class="delimiter">&quot;</span></span>,s.recv(<span class="integer">72</span>)
+<span class="keyword">print</span> <span class="string"><span class="delimiter">&quot;</span><span class="content">2:</span><span class="delimiter">&quot;</span></span>,s.recv(<span class="integer">60</span>)
+
+s.send(struct.pack(<span class="string"><span class="delimiter">&quot;</span><span class="content">H</span><span class="delimiter">&quot;</span></span>,<span class="predefined">len</span>(send_num2)))
+s.send(send_num2)<span class="comment">#send number cEphemeral</span>
+
+salt=<span class="predefined">int</span>(s.recv(<span class="integer">128</span>),<span class="integer">16</span>)
+sEphemeral=<span class="predefined">long</span>(<span class="predefined">int</span>(s.recv(<span class="integer">514</span>),<span class="integer">16</span>))
+                          
+<span class="comment">#print &quot;3:salt:&quot;,salt</span>
+<span class="comment">#print &quot;4:sEphemeral:&quot;,sEphemeral</span>
+tmp=hashToInt(salt,<span class="string"><span class="delimiter">&quot;</span><span class="delimiter">&quot;</span></span>)
+storedKey = <span class="predefined">pow</span>(index,tmp , N)
+cq_sEphemeral=(<span class="integer">3</span> * storedKey) % N
+tmp1=(sEphemeral-cq_sEphemeral)%N
+
+
+<span class="comment">#agreedKey_withouthash = (cEphemeral * index^[sha512(salt, password) * slush])^sEphemeralPriv mod Nwhoami</span>
+<span class="comment">#   cEphemeral=1  --&gt;</span>
+<span class="comment">#agreedKey_withouthash = (index^[sha512(salt, password) * slush])^sEphemeralPriv mod N</span>
+<span class="comment">#cause cEphemeral^^3 mod N =1</span>
+<span class="comment">#so if sha512(salt, password) * slush * sEphemeralPriv mod 3 == 0</span>
+<span class="comment">#agreedKey_withouthash = 1</span>
+<span class="comment">#so we don't need to know sEphemeralPriv</span>
+
+slush = hashToInt(cEphemeral, sEphemeral)
+salt=hashToInt(index)
+agreedKey=hashToInt(<span class="integer">1L</span>)
+gennedKey=hashToInt(hashToInt(N) ^ hashToInt(index), hashToInt(index), salt,<span class="predefined">int</span>(cEphemeral), <span class="predefined">long</span>(sEphemeral), agreedKey)
+send_num3=<span class="predefined">str</span>(<span class="predefined">hex</span>(gennedKey))[<span class="integer">2</span>:][:-<span class="integer">1</span>]
+s.send(struct.pack(<span class="string"><span class="delimiter">&quot;</span><span class="content">H</span><span class="delimiter">&quot;</span></span>,<span class="predefined">len</span>(send_num3)))
+s.send(send_num3)
+
+
+<span class="keyword">print</span> s.recv(<span class="integer">1000</span>)
+<span class="keyword">print</span> s.recv(<span class="integer">1000</span>)<span class="comment">#--&gt;flag recv</span>
+<span class="keyword">print</span> s.recv(<span class="integer">1000</span>)
+</pre></div>
+</div>
+</div>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[ASIS CTF Finals 2013 Login]]></title>
@@ -51,7 +175,7 @@ sqli_db
 test
 </code></pre>
 
-<p>Obviously, sqli_db is suspicious, let&#8217;s see what it has.</p>
+<p>Obviously, sqli_db is suspicious, let’s see what it has.</p>
 
 <pre><code>users
 </code></pre>
@@ -64,12 +188,12 @@ user_email
 user_password_hash
 </code></pre>
 
-<p>At the beginning, we trying to fetch some data from it, but it is empty, some time later, we fetch a string from user&#95;password&#95;hash.</p>
+<p>At the beginning, we trying to fetch some data from it, but it is empty, some time later, we fetch a string from user_password_hash.</p>
 
 <pre><code>$2y$10$gyI0vxnE3ZncmdLNGVmwTew/aPwBZPY4cEMCRENAjN4?0l8iu9O5R6iW
 </code></pre>
 
-<p>Just google &#8220;$2y$10&#8243;, we find it is the head of PHP blowfish hash, but it seems that there is no way to get the original value from it.</p>
+<p>Just google “$2y$10″, we find it is the head of PHP blowfish hash, but it seems that there is no way to get the original value from it.</p>
 
 <p>At that time, the admin give a hint on this problem:</p>
 
@@ -162,6 +286,7 @@ print get_string( '(SELECT IFNULL(CAST(table_name AS CHAR) ,0x20) FROM INFORMATI
 <p>a.php</p>
 
 <p>Founded from <a href="http://pastebin.com/y9GKtx0b">pastebin</a></p>
+
 ]]></content>
   </entry>
   
@@ -222,7 +347,8 @@ $ python asis-ctf.py
 ASIS_cb6bb012a8ea07a426254293de2bc0ef
 </code></pre>
 
-<p>The ELF file asis-ctf I got from the mem.dump is still not able to run, that&#8217;s why RE is still needed. Does anyone have an idea to extract an runnable asis-ctf from the memory? Please tell me;&ndash;)</p>
+<p>The ELF file asis-ctf I got from the mem.dump is still not able to run, that’s why RE is still needed. Does anyone have an idea to extract an runnable asis-ctf from the memory? Please tell me;-)</p>
+
 ]]></content>
   </entry>
   
@@ -737,7 +863,7 @@ BOOL WINAPI Inject(DWORD dwProcessID)
     <link href="http://www.blue-lotus.net//def-con-ctf-qualifier-2013-3dub-3-writeup/"/>
     <updated>2013-06-18T00:00:00+08:00</updated>
     <id>http://www.blue-lotus.net//def-con-ctf-qualifier-2013-3dub-3-writeup</id>
-    <content type="html"><![CDATA[<p>First of all, we got a &#8216;secrets&#8217; link and &#8216;log in or create user&#8217; form. When we create and login, the website redirect us to the &#8216;secrets&#8217; page like this</p>
+    <content type="html"><![CDATA[<p>First of all, we got a ‘secrets’ link and ‘log in or create user’ form. When we create and login, the website redirect us to the ‘secrets’ page like this</p>
 
 <pre><code>Secrets
 name    owner   actions
@@ -746,11 +872,11 @@ nothing asdf    show
 new secret
 </code></pre>
 
-<p>we&#8217;ve got some links to see secrets owned by other users, include the &#8216;admin&#8217;, or easily add a new secret ourselves.</p>
+<p>we’ve got some links to see secrets owned by other users, include the ‘admin’, or easily add a new secret ourselves.</p>
 
-<p>Having a try to open the <a href="http://hypeman.shallweplayaga.me/secrets/0">admin&#8217;s secret</a>, we got a 500 Error Page with some error stack, which powered by the Ruby framework &#8216;Sinatra&#8217;.</p>
+<p>Having a try to open the <a href="http://hypeman.shallweplayaga.me/secrets/0">admin’s secret</a>, we got a 500 Error Page with some error stack, which powered by the Ruby framework ‘Sinatra’.</p>
 
-<p>From the very first sight of the page, it said &#8216;unauthorized&#8217; as the error message and a piece of source code was provided</p>
+<p>From the very first sight of the page, it said ‘unauthorized’ as the error message and a piece of source code was provided</p>
 
 <pre><code>end
 
@@ -769,7 +895,7 @@ helpers do
     return nil unless session[:user_name]
 </code></pre>
 
-<p>It meant that I&#8217;m not she secret&#8217;s holder. then have a look at the whole page, and you would find some environment variable in the &#8216;Rack ENV&#8217; section, partly like</p>
+<p>It meant that I’m not she secret’s holder. then have a look at the whole page, and you would find some environment variable in the ‘Rack ENV’ section, partly like</p>
 
 <p>rack.session</p>
 
@@ -787,9 +913,9 @@ helpers do
 
 <p><code>{"rack.session"=&gt;"BAh7CUkiD3Nlc3Npb25faWQGOgZFRiJFMzUzYzY2NTI1YTAxZmEwYjM4NTZj\nYjlmMzRhYWUyYWE5YTM2YWQ0Y2RlMDJkYWVhMGNjZmJhZjU2NmRkYmI1YUki\nDXRyYWNraW5nBjsARnsISSIUSFRUUF9VU0VSX0FHRU5UBjsARiItOWMxZjdm\nOWYxYmY5ZDUwZWM5MTc2ZTZhODA1MzY4ZTMwZTlkNDhiYkkiGUhUVFBfQUND\nRVBUX0VOQ09ESU5HBjsARiItZWQyYjNjYTkwYTRlNzIzNDAyMzY3YTFkMTdj\nOGIyODM5Mjg0MjM5OEkiGUhUVFBfQUNDRVBUX0xBTkdVQUdFBjsARiItY2E0\nYWVlMGU4MTIxNGFkZGM1ZmIxMjg3N2NmOWU1YzhiOGJlYjdkNkkiCWNzcmYG\nOwBGIkU1ZjZkODViN2UxYjBhNDhjOGE4N2U0MjgwM2FjMTY2Y2Y3ZDYwMTIx\nYWZkMjRiYTkzN2JmNjVmYTRmODk4OWM2SSIOdXNlcl9uYW1lBjsARkkiCXRl\nc3QGOwBU\n--d637305e23d6693f3ebe276b292293c7ff0b72e6"}</code></p>
 
-<p>we&#8217;ve got some message:</p>
+<p>we’ve got some message:</p>
 
-<p>the cookie <code>rack.session</code> is some way encoded of <code>rack.session.unpacked_cookie_data</code>, which is totally the same as env variable <code>rack.session</code>, and the coder mybe <code>Rack::Session::Cookie::Base64::Marshal</code>, secret (if any) maybe &#8216;wroashsoxDiculReejLykUssyifabEdGhovHabno&#8217;</p>
+<p>the cookie <code>rack.session</code> is some way encoded of <code>rack.session.unpacked_cookie_data</code>, which is totally the same as env variable <code>rack.session</code>, and the coder mybe <code>Rack::Session::Cookie::Base64::Marshal</code>, secret (if any) maybe ‘wroashsoxDiculReejLykUssyifabEdGhovHabno’</p>
 
 <p>By seeking the source code of rack, we found this(<a href="https://github.com/rack/rack/blob/master/lib/rack/session/cookie.rb">https://github.com/rack/rack/blob/master/lib/rack/session/cookie.rb</a>)</p>
 
@@ -813,15 +939,14 @@ end
 end
 </code></pre>
 
-<p>Meanwhile, we knew the whole process of the session checking. thus, I&#8217;ve wrote a ruby script to figure out this stuff with this way</p>
+<p>Meanwhile, we knew the whole process of the session checking. thus, I’ve wrote a ruby script to figure out this stuff with this way</p>
 
 <ul>
-<li>unpack(decode) the cookie to origin session data</li>
-<li>modify session_data.user_name to &#8216;admin&#8217;</li>
-<li>repack(encode) the session data to cookie string format</li>
-<li>calculate a new digest of the session data then build the cookie</li>
+  <li>unpack(decode) the cookie to origin session data</li>
+  <li>modify session_data.user_name to ‘admin’</li>
+  <li>repack(encode) the session data to cookie string format</li>
+  <li>calculate a new digest of the session data then build the cookie</li>
 </ul>
-
 
 <p>codes below for example</p>
 
@@ -888,257 +1013,19 @@ cookie is
 BAh7CSINdHJhY2tpbmd7CCIZSFRUUF9BQ0NFUFRfRU5DT0RJTkciLWVkMmIz%0AY2E5MGE0ZTcyMzQwMjM2N2ExZDE3YzhiMjgzOTI4NDIzOTgiFEhUVFBfVVNF%0AUl9BR0VOVCItOWMxZjdmOWYxYmY5ZDUwZWM5MTc2ZTZhODA1MzY4ZTMwZTlk%0ANDhiYiIZSFRUUF9BQ0NFUFRfTEFOR1VBR0UiLWNhNGFlZTBlODEyMTRhZGRj%0ANWZiMTI4NzdjZjllNWM4YjhiZWI3ZDYiCWNzcmYiRTVmNmQ4NWI3ZTFiMGE0%0AOGM4YTg3ZTQyODAzYWMxNjZjZjdkNjAxMjFhZmQyNGJhOTM3YmY2NWZhNGY4%0AOTg5YzYiD3Nlc3Npb25faWQiRTM1M2M2NjUyNWEwMWZhMGIzODU2Y2I5ZjM0%0AYWFlMmFhOWEzNmFkNGNkZTAyZGFlYTBjY2ZiYWY1NjZkZGJiNWEiDnVzZXJf%0AbmFtZSIKYWRtaW4=%0A--4bd0a545e155460f804aff9df3e80e20fdffa07f
 </code></pre>
 
-<p>then modify the cookie with the new value, using any tool you like such as Firebug(for Firefox), WebInspector(for Webkit Based Browser), Fiddler(under IE7), Burpsuite(Java Based for any platform), I&#8217;d like to use the Javascript Console in Chrome:</p>
+<p>then modify the cookie with the new value, using any tool you like such as Firebug(for Firefox), WebInspector(for Webkit Based Browser), Fiddler(under IE7), Burpsuite(Java Based for any platform), I’d like to use the Javascript Console in Chrome:</p>
 
 <pre><code>document.cookie='rack.session=xxx;'
 </code></pre>
 
-<p>refresh the page, and enjoy <img src='http://www.blue-lotus.net/wp-includes/images/smilies/icon_smile.gif' alt=':)' class='wp-smiley' /></p>
+<p>refresh the page, and enjoy <img src="http://www.blue-lotus.net/wp-includes/images/smilies/icon_smile.gif" alt=":)" class="wp-smiley" /> </p>
 
-<blockquote><p>key</p>
+<blockquote>
+  <p>key</p>
 
-<p>watch out for this Etdeksogav</p></blockquote>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[DEF CON CTF Qualifier 2013 gnireenigne 5 Writeup]]></title>
-    <link href="http://www.blue-lotus.net//def-con-ctf-qualifier-2013-gnireenigne-5-writeup/"/>
-    <updated>2013-06-17T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net//def-con-ctf-qualifier-2013-gnireenigne-5-writeup</id>
-    <content type="html"><![CDATA[<p>This is a x64 binary running on Linux. It binds to the first IP of eth0 and accepts connections at port 6823. The client should submit data in the following manner:</p>
+  <p>watch out for this Etdeksogav</p>
+</blockquote>
 
-<pre><code>4 bytes length | the first block | the second block
-</code></pre>
-
-<p>The two blocks have identical sizes, and the first field indicates the total size of two blocks. The total size should be between 48 and 1024.</p>
-
-<p>After that, our input will be checked against two hashing algorithms. The first one is a standard MD5, and the MD5 values of two blocks cannot be identical, otherwise no key will be printed. The second one is an unknown hashing algorithm. When we found a collision in the second hashing algorithm, we could finally get the key.</p>
-
-<p>We spent some time to fully reverse that algorithm:</p>
-
-<pre><code>unsigned char BOX_[256] = { 0x07, 0x00, 0x00, 0x00, 0x0c, 0x00, 0x00, 0x00,
-    0x11, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00,
-    0x07, 0x00, 0x00, 0x00, 0x0c, 0x00, 0x00, 0x00,
-    0x11, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00,
-    0x07, 0x00, 0x00, 0x00, 0x0c, 0x00, 0x00, 0x00,
-    0x11, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00,
-    0x07, 0x00, 0x00, 0x00, 0x0c, 0x00, 0x00, 0x00,
-    0x11, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00,
-    0x05, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00,
-    0x0e, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00,
-    0x05, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00,
-    0x0e, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00,
-    0x05, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00,
-    0x0e, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00,
-    0x05, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00,
-    0x0e, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00,
-    0x04, 0x00, 0x00, 0x00, 0x0b, 0x00, 0x00, 0x00,
-    0x10, 0x00, 0x00, 0x00, 0x17, 0x00, 0x00, 0x00,
-    0x04, 0x00, 0x00, 0x00, 0x0b, 0x00, 0x00, 0x00,
-    0x10, 0x00, 0x00, 0x00, 0x17, 0x00, 0x00, 0x00,
-    0x04, 0x00, 0x00, 0x00, 0x0b, 0x00, 0x00, 0x00,
-    0x10, 0x00, 0x00, 0x00, 0x17, 0x00, 0x00, 0x00,
-    0x04, 0x00, 0x00, 0x00, 0x0b, 0x00, 0x00, 0x00,
-    0x10, 0x00, 0x00, 0x00, 0x17, 0x00, 0x00, 0x00,
-    0x06, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00,
-    0x0f, 0x00, 0x00, 0x00, 0x15, 0x00, 0x00, 0x00,
-    0x06, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00,
-    0x0f, 0x00, 0x00, 0x00, 0x15, 0x00, 0x00, 0x00,
-    0x06, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00,
-    0x0f, 0x00, 0x00, 0x00, 0x15, 0x00, 0x00, 0x00,
-    0x06, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00,
-    0x0f, 0x00, 0x00, 0x00, 0x15, 0x00, 0x00, 0x00};
-
-void calc_hash(unsigned char* input, unsigned int size, unsigned char* output)
-{
-    unsigned int* BOX = (unsigned int*)BOX_;
-    unsigned char *buffer_ptr = NULL;
-
-    unsigned char IV[] = {0x68, 0x69, 0x20, 0x6D, 0x79, 0x20, 0x6E, 0x61, 0x6D, 0x65, 0x20, 0x69, 0x73, 0x20, 0x69, 0x74};
-
-    unsigned int counter_1 = 0;
-    unsigned int ctr = 0;
-
-    ctr = size + 1;
-    while((ctr &amp; 0x3f) != 0x38)
-    {
-        ++ctr;
-    }
-    buffer_ptr = (unsigned char*)malloc(ctr + 8);
-    memcpy(buffer_ptr, input, size);
-    *(buffer_ptr + size) = 0x80;
-    unsigned int input_size_2 = size + 1;
-
-    unsigned int buffer_A[2000] = {0};
-
-    unsigned int string_1, string_2, string_3, string_4, string_5, ctr_3, string_6;
-
-    while(ctr &gt; input_size_2)
-    {
-        *(buffer_ptr + input_size_2) = 0;
-        ++input_size_2;
-    }
-
-    unsigned int a_ = size &lt;&lt; 3;
-    unsigned char* b_ = buffer_ptr + ctr;
-    *b_ = (unsigned char)a_;
-    *(b_ + 1) = (unsigned char)(a_ &gt;&gt; 8);
-    *(b_ + 2) = (unsigned char)(a_ &gt;&gt; 16);
-    *(b_ + 3) = (unsigned char)(a_ &gt;&gt; 24);
-
-    unsigned int c_ = size &gt;&gt; 0x1d;
-    unsigned char* d_ = buffer_ptr + ctr + 4;
-    *d_ = (unsigned char)c_;
-    *(d_ + 1) = (unsigned char)(c_ &gt;&gt; 8);
-    *(d_ + 2) = (unsigned char)(c_ &gt;&gt; 16);
-    *(d_ + 3) = (unsigned char)(c_ &gt;&gt; 24);
-    input_size_2 = 0;
-
-    while(ctr &gt; input_size_2)
-    {
-        // 0x40248f
-        unsigned int ctr_2 = 0;
-        while(ctr_2 &lt;= 15)
-        {
-            // 0x402498
-            unsigned char* e_ = buffer_ptr + input_size_2 + (ctr_2 &lt;&lt; 2);
-            unsigned int c = *(e_);
-            unsigned int d = *(e_ + 1);
-            d = d &lt;&lt; 8;
-            d = d | c;
-            c = *(e_ + 2) &lt;&lt; 16;
-            d = d | c;
-            c = *(e_ + 3) &lt;&lt; 24;
-            c = c | d;
-            buffer_A[ctr_2] = c;
-            ++ctr_2;
-        }
-        string_1 = *(unsigned int*)IV;
-        string_2 = *(unsigned int*)(IV + 4);
-        string_3 = *(unsigned int*)(IV + 8);
-        string_4 = *(unsigned int*)(IV + 12);
-
-        ctr_2 = 0;
-        while(ctr_2 &lt;= 63)
-        {
-            // 0x402535
-            if(ctr_2 &lt;= 0xf)
-            {
-                string_5 = (~string_2 &amp; string_4) | (string_3 &amp; string_2);
-                ctr_3 = ctr_2;
-            }
-            // 0x402558
-            else if(ctr_2 &lt;= 0x1f)
-            {
-                string_5 = (~string_4 &amp; string_3) | (string_4 &amp; string_2);
-                ctr_3 = ((ctr_2 &lt;&lt; 2) + ctr_2 + 1) &amp; 0xf;
-            }
-            // 0x402588
-            else if(ctr_2 &lt;= 0x2f)
-            {
-                string_5 = (string_3 ^ string_2) ^ string_4;
-                ctr_3 = (ctr_2 * 3 + 5) &amp; 0xf;
-            }
-            else
-            {
-                // 0x4025b0
-                string_5 = (~string_4 | string_2) ^ string_3;
-                ctr_3 = ((ctr_2 &lt;&lt; 3) - ctr_2) &amp; 0xf;
-            }
-
-            // 0x4025ce
-            string_6 = string_4;
-            string_4 = string_3;
-            string_3 = string_2;
-            unsigned int ebx = string_1 + string_5;
-            double sin_result = sin((double)(ctr_2 + 1));
-            double d = sin_result * sin_result;
-            double e = sqrt(d) * 4.294967296e9;
-            unsigned long y = ebx + (unsigned long)e + buffer_A[ctr_3];
-            ebx = (y &lt;&lt; (BOX[ctr_2] &amp; 0xff));
-            d = sin((double)(ctr_2 + 1));
-            d = d * d;
-            e = sqrt(d) * 4.294967296e9;
-            unsigned int x1 = string_5 + string_1 + (unsigned long)e + buffer_A[ctr_3];
-            unsigned int x2 = 0x20 - BOX[ctr_2];
-            string_2 = string_2 + ((x1 &gt;&gt; (x2 &amp; 0xff)) | ebx);
-            string_1 = string_6;
-            ++ctr_2;
-        }
-        unsigned int x = *(unsigned int*)IV;
-        x += string_1;
-        *(unsigned int*)IV = x;
-        x = *(unsigned int*)(IV + 4);
-        x += string_2;
-        *(unsigned int*)(IV + 4) = x;
-        x = *(unsigned int*)(IV + 8);
-        x += string_3;
-        *(unsigned int*)(IV + 8) = x;
-        x = *(unsigned int*)(IV + 12);
-        x += string_4;
-        *(unsigned int*)(IV + 12) = x;
-        input_size_2 += 0x40;
-    }
-
-    free(buffer_ptr);
-    memcpy(output, IV, 16);
-    return;
-}
-</code></pre>
-
-<p>According to <a href="http://en.wikipedia.org/wiki/Md5#Pseudocode">Wikipedia</a>, it is a revised MD5. The IV is changed to &#8220;hi my name is it&#8221;. To find a collision, you may download and compile <a href="http://dl.packetstormsecurity.net/crypt/md/md5coll.c">md5coll</a> by Patrick Stach, and execute it with new IV.</p>
-
-<pre><code>fish@fish-Linux-Mint-13 ~/defconctf/tastycloud $ ./md5coll-optimized 0x6d206968 0x616e2079 0x6920656d 0x74692073
-block #1 done
-block #2 done
-unsigned int m0[32] = {
-0xf5ff5286, 0xd5187d3b, 0x30dd0e80, 0xca85cc02, 
-0x9747a14e, 0xc832351a, 0xcd333352, 0x16602937, 
-0x0632ecc1, 0x62b34dff, 0x83aee8f3, 0xd2c11b1d, 
-0x098950f8, 0x37dbacfa, 0x85abc37e, 0x1aac555a, 
-0x7ac11e49, 0x050463bb, 0xd3c58401, 0xd4d5dd63, 
-0xc6761a4f, 0x0dd022c4, 0x16696944, 0xe02da950, 
-0x747aeff5, 0x487cf5cc, 0xaae46a9a, 0x3e9ed485, 
-0xfd2968ee, 0x025bcaa4, 0x68f2289f, 0x4d353e49, 
-};
-
-unsigned int m1[32] = {
-0xf5ff5286, 0xd5187d3b, 0x30dd0e80, 0xca85cc02, 
-0x1747a14e, 0xc832351a, 0xcd333352, 0x16602937, 
-0x0632ecc1, 0x62b34dff, 0x83aee8f3, 0xd2c19b1d, 
-0x098950f8, 0x37dbacfa, 0x05abc37e, 0x1aac555a, 
-0x7ac11e49, 0x050463bb, 0xd3c58401, 0xd4d5dd63, 
-0x46761a4f, 0x0dd022c4, 0x16696944, 0xe02da950, 
-0x747aeff5, 0x487cf5cc, 0xaae46a9a, 0x3e9e5485, 
-0xfd2968ee, 0x025bcaa4, 0xe8f2289f, 0x4d353e49, 
-};
-</code></pre>
-
-<p>So here is the final Python script to get the key.</p>
-
-<pre><code>import sys, os, time, struct, socket
-
-HOST = "tastycloud.shallweplayaga.me"
-PORT = 6283
-
-data1 = "\x86\x52\xff\xf5\x3b\x7d\x18\xd5\x80\x0e\xdd\x30\x02\xcc\x85\xca\x4e\xa1\x47\x97\x1a\x35\x32\xc8\x52\x33\x33\xcd\x37\x29\x60\x16\xc1\xec\x32\x06\xff\x4d\xb3\x62\xf3\xe8\xae\x83\x1d\x1b\xc1\xd2\xf8\x50\x89\x09\xfa\xac\xdb\x37\x7e\xc3\xab\x85\x5a\x55\xac\x1a\x49\x1e\xc1\x7a\xbb\x63\x04\x05\x01\x84\xc5\xd3\x63\xdd\xd5\xd4\x4f\x1a\x76\xc6\xc4\x22\xd0\x0d\x44\x69\x69\x16\x50\xa9\x2d\xe0\xf5\xef\x7a\x74\xcc\xf5\x7c\x48\x9a\x6a\xe4\xaa\x85\xd4\x9e\x3e\xee\x68\x29\xfd\xa4\xca\x5b\x02\x9f\x28\xf2\x68\x49\x3e\x35\x4d"
-data2 = "\x86\x52\xff\xf5\x3b\x7d\x18\xd5\x80\x0e\xdd\x30\x02\xcc\x85\xca\x4e\xa1\x47\x17\x1a\x35\x32\xc8\x52\x33\x33\xcd\x37\x29\x60\x16\xc1\xec\x32\x06\xff\x4d\xb3\x62\xf3\xe8\xae\x83\x1d\x9b\xc1\xd2\xf8\x50\x89\x09\xfa\xac\xdb\x37\x7e\xc3\xab\x05\x5a\x55\xac\x1a\x49\x1e\xc1\x7a\xbb\x63\x04\x05\x01\x84\xc5\xd3\x63\xdd\xd5\xd4\x4f\x1a\x76\x46\xc4\x22\xd0\x0d\x44\x69\x69\x16\x50\xa9\x2d\xe0\xf5\xef\x7a\x74\xcc\xf5\x7c\x48\x9a\x6a\xe4\xaa\x85\x54\x9e\x3e\xee\x68\x29\xfd\xa4\xca\x5b\x02\x9f\x28\xf2\xe8\x49\x3e\x35\x4d"
-
-s = socket.socket()
-s.connect((HOST, PORT))
-size = len(data1) + len(data2)
-
-s.send(struct.pack("I",size))
-s.send(data1)
-s.send(data2)
-
-print s.recv(1024)
-</code></pre>
-
-<p>Run the script, we get the key: <strong>pringlelingus and redbull without a cause</strong></p>
-
-<p>This is one of the few challenges that we didn&#8217;t manage to solve during the game. It&#8217;s a pity as we finally noticed the final hashing algorithm is a revised MD5, however we have no time to construct a collision. It&#8217;s all my fault that I didn&#8217;t realized it was a MD5 as soon as possible <img src='http://www.blue-lotus.net/wp-includes/images/smilies/icon_razz.gif' alt=':P' class='wp-smiley' /> . Many thanks to NWMonster, Slipper and cq for their precious help.</p>
 ]]></content>
   </entry>
   

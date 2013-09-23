@@ -1,0 +1,326 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>CSAW CTF 2013 crypto500 writeup - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="Problem Description
+We’ve found the source to the Arstotzka spies rendevous server, we must find out their new vault key. Source code is here. So we &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net//csaw-ctf-2013-crypto500-writeup">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <div id="header-inner">
+    <span class="first"><a href="/">blue-lotus</a></span>
+    <span><a href="/about">about</a></span>
+    <span class="last"><a href="/atom.xml" title="subscribe via RSS">rss</a></span>
+  </div>
+</hgroup>
+
+</header>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">CSAW CTF 2013 Crypto500 Writeup</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-23T00:00:00+08:00" pubdate data-updated="true">Sep 23<span>rd</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><h2 id="problem-description">Problem Description</h2>
+<p>We’ve found the source to the Arstotzka spies rendevous server, we must find out their new vault key. Source code is <a href="http://shell-storm.org/repo/CTF/CSAW-2013/Crypto/slurp-500/slurp.py">here</a>.</p>
+
+<p>So we have to crack sha512 puzzle and calc correct hash. At first i was trying to calculate sEphemeralPriv out, but it seems impossible. after some try, I realized that you can just use “n^m mod === something”.</p>
+
+<p>Code:</p>
+
+<div><div class="CodeRay">
+  <div class="code"><pre><span class="comment">#!/usr/bin/python</span>
+<span class="keyword">import</span> <span class="include">os</span>
+<span class="keyword">import</span> <span class="include">sys</span>
+<span class="keyword">import</span> <span class="include">time</span>
+<span class="keyword">import</span> <span class="include">struct</span>
+<span class="keyword">import</span> <span class="include">socket</span>
+<span class="keyword">import</span> <span class="include">telnetlib</span>
+<span class="keyword">import</span> <span class="include">random</span>,<span class="include">hashlib</span>,<span class="include">base64</span>
+<span class="keyword">from</span> <span class="include">hashlib</span> <span class="keyword">import</span> <span class="include">sha512</span>,<span class="include">sha1</span>
+
+<span class="keyword">def</span> <span class="function">hashToInt</span>(*params):
+    sha=sha512()
+    <span class="keyword">for</span> el <span class="keyword">in</span> params:
+        sha.update(<span class="string"><span class="delimiter">&quot;</span><span class="content">%r</span><span class="delimiter">&quot;</span></span>%el)
+    <span class="keyword">return</span> <span class="predefined">int</span>(sha.hexdigest(), <span class="integer">16</span>)
+
+
+<span class="keyword">def</span> <span class="function">gs</span>(num):
+    <span class="keyword">return</span> hashlib.sha1(num).digest()
+
+<span class="keyword">def</span> <span class="function">crack</span>(sha_p):
+    <span class="keyword">print</span> <span class="string"><span class="delimiter">&quot;</span><span class="content">crack:</span><span class="delimiter">&quot;</span></span>,sha_p
+    ss=<span class="string"><span class="delimiter">&quot;</span><span class="delimiter">&quot;</span></span>
+    ret=<span class="integer">0</span>
+    <span class="keyword">for</span> keylen <span class="keyword">in</span> <span class="predefined">range</span>(<span class="integer">10</span>,<span class="integer">40</span>):
+        <span class="keyword">for</span> add_1 <span class="keyword">in</span> <span class="predefined">range</span> (<span class="integer">0</span>,<span class="integer">140</span>):
+            <span class="keyword">for</span> add_2 <span class="keyword">in</span> <span class="predefined">range</span> (<span class="integer">10</span>,<span class="integer">140</span>):
+                <span class="keyword">for</span> add_3 <span class="keyword">in</span> <span class="predefined">range</span> (<span class="integer">0</span>,<span class="integer">155</span>):
+                    <span class="keyword">for</span> add_4 <span class="keyword">in</span> <span class="predefined">range</span> (<span class="integer">0</span>,<span class="integer">155</span>):
+                        <span class="keyword">for</span> add_5 <span class="keyword">in</span> <span class="predefined">range</span> (<span class="integer">0</span>,<span class="integer">155</span>):
+                            new_msg=sha_p+<span class="predefined">chr</span>(add_1)+<span class="predefined">chr</span>(add_2)+<span class="predefined">chr</span>(add_3)+<span class="predefined">chr</span>(add_4)+<span class="predefined">chr</span>(add_5)
+                        <span class="keyword">if</span> gs(new_msg)[-<span class="integer">3</span>:]==<span class="string"><span class="delimiter">&quot;</span><span class="char">\xff</span><span class="char">\xff</span><span class="char">\xff</span><span class="delimiter">&quot;</span></span>:
+                            <span class="keyword">print</span> <span class="string"><span class="delimiter">&quot;</span><span class="content">got one %s</span><span class="delimiter">&quot;</span></span>%<span class="predefined">len</span>(new_msg)
+                            <span class="keyword">if</span> <span class="predefined">len</span>(new_msg)==<span class="integer">21</span>:
+                                ss=new_msg
+                                <span class="keyword">print</span> <span class="string"><span class="delimiter">&quot;</span><span class="content">WE CRACK THE PUZZLE %d</span><span class="char">\n</span><span class="delimiter">&quot;</span></span>%<span class="predefined">len</span>(ss)
+                                ret=<span class="integer">1</span>
+                                <span class="keyword">return</span> (ret,ss)
+
+<span class="keyword">return</span> (ret,ss)
+
+<span class="comment">#s = socket.create_connection(('128.238.66.222',7788))</span>
+s = socket.create_connection((<span class="string"><span class="delimiter">'</span><span class="content">127.0.0.1</span><span class="delimiter">'</span></span>,<span class="integer">7788</span>))
+se=<span class="string"><span class="delimiter">&quot;</span><span class="delimiter">&quot;</span></span>
+<span class="keyword">for</span> i <span class="keyword">in</span> <span class="predefined">range</span>(<span class="integer">1</span>,<span class="integer">100</span>):
+    ss=s.recv(<span class="integer">1000</span>)
+    <span class="keyword">print</span> ss
+    sha_p=ss[<span class="predefined">len</span>(ss)-<span class="integer">16</span>:]
+    new_msg=crack(sha_p[-<span class="integer">16</span>:])
+    <span class="keyword">if</span> new_msg[<span class="integer">0</span>]:
+        se=new_msg[<span class="integer">1</span>]
+        <span class="keyword">print</span> <span class="string"><span class="delimiter">&quot;</span><span class="content">send:</span><span class="delimiter">&quot;</span></span>,se,hashlib.sha1(se).digest()[-<span class="integer">3</span>:]
+        <span class="keyword">break</span>
+
+
+s.send(se)
+<span class="comment">#raw_input()</span>
+N = <span class="integer">59244860562241836037412967740090202129129493209028128777608075105340045576269119581606482976574497977007826166502644772626633024570441729436559376092540137133423133727302575949573761665758712151467911366235364142212961105408972344133228752133405884706571372774484384452551216417305613197930780130560424424943100169162129296770713102943256911159434397670875927197768487154862841806112741324720583453986631649607781487954360670817072076325212351448760497872482740542034951413536329940050886314722210271560696533722492893515961159297492975432439922689444585637489674895803176632819896331235057103813705143408943511591629</span>
+
+index=<span class="integer">28483644508750028902258833085453121291738558908844640378204850915473006274236033891815596646870094954832384471913373171061099388958373536383247454431214837805096635029244738399662911119306089493137122381562794483801525427601711736403424013966624957471463169984161438593701202381673774894874606950326837142168801614196218030413825361835813060325642766963973454456577907567314093695138863251603368180581162185039224604662844750924047132242103613509637088222461132023037724162558095265336717907895786691004801515830247270579025866384571194244368350362690250445425121639616294300827554006418861422621428030154329451920623</span><span class="comment">#17095359415354811031956139176232822755293333580176796651092816713929142596363160518183074582333639666374490434453616522976528693318889544211598801485465809374370977363040240176466544504447562622451988654983833567639785357067606037932165650485806709538575591881306056180364137612491852807151445333929946180083335184143784040034635507293616742432550220001472750029503246943474764484598756871323795898352813684410952415776064654304191774216122857994311730048413954488815342894838841918071841785821830683677234982197021652871796420412165927837273704381564043458200253387672509280296033910910416083249362331740208987494679</span>
+
+cEphemeral=<span class="integer">1</span>
+send_num1=<span class="predefined">str</span>(<span class="predefined">hex</span>(index))[<span class="integer">2</span>:][:-<span class="integer">1</span>]
+send_num2=<span class="predefined">str</span>(<span class="predefined">hex</span>(cEphemeral))[<span class="integer">2</span>:]
+
+s.send(struct.pack(<span class="string"><span class="delimiter">&quot;</span><span class="content">H</span><span class="delimiter">&quot;</span></span>,<span class="predefined">len</span>(send_num1)))
+s.send(send_num1)<span class="comment">#send numberc index--&gt;base number</span>
+
+<span class="keyword">print</span> <span class="string"><span class="delimiter">&quot;</span><span class="content">1:</span><span class="delimiter">&quot;</span></span>,s.recv(<span class="integer">72</span>)
+<span class="keyword">print</span> <span class="string"><span class="delimiter">&quot;</span><span class="content">2:</span><span class="delimiter">&quot;</span></span>,s.recv(<span class="integer">60</span>)
+
+s.send(struct.pack(<span class="string"><span class="delimiter">&quot;</span><span class="content">H</span><span class="delimiter">&quot;</span></span>,<span class="predefined">len</span>(send_num2)))
+s.send(send_num2)<span class="comment">#send number cEphemeral</span>
+
+salt=<span class="predefined">int</span>(s.recv(<span class="integer">128</span>),<span class="integer">16</span>)
+sEphemeral=<span class="predefined">long</span>(<span class="predefined">int</span>(s.recv(<span class="integer">514</span>),<span class="integer">16</span>))
+                          
+<span class="comment">#print &quot;3:salt:&quot;,salt</span>
+<span class="comment">#print &quot;4:sEphemeral:&quot;,sEphemeral</span>
+tmp=hashToInt(salt,<span class="string"><span class="delimiter">&quot;</span><span class="delimiter">&quot;</span></span>)
+storedKey = <span class="predefined">pow</span>(index,tmp , N)
+cq_sEphemeral=(<span class="integer">3</span> * storedKey) % N
+tmp1=(sEphemeral-cq_sEphemeral)%N
+
+
+<span class="comment">#agreedKey_withouthash = (cEphemeral * index^[sha512(salt, password) * slush])^sEphemeralPriv mod Nwhoami</span>
+<span class="comment">#   cEphemeral=1  --&gt;</span>
+<span class="comment">#agreedKey_withouthash = (index^[sha512(salt, password) * slush])^sEphemeralPriv mod N</span>
+<span class="comment">#cause cEphemeral^^3 mod N =1</span>
+<span class="comment">#so if sha512(salt, password) * slush * sEphemeralPriv mod 3 == 0</span>
+<span class="comment">#agreedKey_withouthash = 1</span>
+<span class="comment">#so we don't need to know sEphemeralPriv</span>
+
+slush = hashToInt(cEphemeral, sEphemeral)
+salt=hashToInt(index)
+agreedKey=hashToInt(<span class="integer">1L</span>)
+gennedKey=hashToInt(hashToInt(N) ^ hashToInt(index), hashToInt(index), salt,<span class="predefined">int</span>(cEphemeral), <span class="predefined">long</span>(sEphemeral), agreedKey)
+send_num3=<span class="predefined">str</span>(<span class="predefined">hex</span>(gennedKey))[<span class="integer">2</span>:][:-<span class="integer">1</span>]
+s.send(struct.pack(<span class="string"><span class="delimiter">&quot;</span><span class="content">H</span><span class="delimiter">&quot;</span></span>,<span class="predefined">len</span>(send_num3)))
+s.send(send_num3)
+
+
+<span class="keyword">print</span> s.recv(<span class="integer">1000</span>)
+<span class="keyword">print</span> s.recv(<span class="integer">1000</span>)<span class="comment">#--&gt;flag recv</span>
+<span class="keyword">print</span> s.recv(<span class="integer">1000</span>)
+</pre></div>
+</div>
+</div>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">hellok</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-23T00:00:00+08:00" pubdate data-updated="true">Sep 23<span>rd</span>, 2013</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ctf/'>CTF</a>, <a class='category' href='/blog/categories/writeup/'>writeup</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/asis-ctf-finals-2013-login/" title="Previous Post: ASIS CTF Finals 2013 Login">&laquo; ASIS CTF Finals 2013 Login</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-memdump-writeup/">ASIS CTF Memdump Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufo-ctf-2013-reverse-keygenme-writeup/">UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'bluelotus';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://www.blue-lotus.net//csaw-ctf-2013-crypto500-writeup/';
+        var disqus_url = 'http://www.blue-lotus.net//csaw-ctf-2013-crypto500-writeup/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>

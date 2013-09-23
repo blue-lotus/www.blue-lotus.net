@@ -109,7 +109,7 @@ sqli_db
 test
 </code></pre>
 
-<p>Obviously, sqli_db is suspicious, let&#8217;s see what it has.</p>
+<p>Obviously, sqli_db is suspicious, let’s see what it has.</p>
 
 <pre><code>users
 </code></pre>
@@ -122,12 +122,12 @@ user_email
 user_password_hash
 </code></pre>
 
-<p>At the beginning, we trying to fetch some data from it, but it is empty, some time later, we fetch a string from user&#95;password&#95;hash.</p>
+<p>At the beginning, we trying to fetch some data from it, but it is empty, some time later, we fetch a string from user_password_hash.</p>
 
 <pre><code>$2y$10$gyI0vxnE3ZncmdLNGVmwTew/aPwBZPY4cEMCRENAjN4?0l8iu9O5R6iW
 </code></pre>
 
-<p>Just google &#8220;$2y$10&#8243;, we find it is the head of PHP blowfish hash, but it seems that there is no way to get the original value from it.</p>
+<p>Just google “$2y$10″, we find it is the head of PHP blowfish hash, but it seems that there is no way to get the original value from it.</p>
 
 <p>At that time, the admin give a hint on this problem:</p>
 
@@ -220,6 +220,7 @@ print get_string( '(SELECT IFNULL(CAST(table_name AS CHAR) ,0x20) FROM INFORMATI
 <p>a.php</p>
 
 <p>Founded from <a href="http://pastebin.com/y9GKtx0b">pastebin</a></p>
+
 </div>
 
 
@@ -266,6 +267,8 @@ print get_string( '(SELECT IFNULL(CAST(table_name AS CHAR) ,0x20) FROM INFORMATI
         <a class="basic-alignment left" href="/asis-ctf-memdump-writeup/" title="Previous Post: ASIS CTF memdump writeup">&laquo; ASIS CTF memdump writeup</a>
       
       
+        <a class="basic-alignment right" href="/csaw-ctf-2013-crypto500-writeup/" title="Next Post: CSAW CTF 2013 crypto500 writeup">CSAW CTF 2013 crypto500 writeup &raquo;</a>
+      
     </p>
   </footer>
 </article>
@@ -277,6 +280,10 @@ print get_string( '(SELECT IFNULL(CAST(table_name AS CHAR) ,0x20) FROM INFORMATI
     <section>
   <h1>Recent Posts</h1>
   <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
     
       <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
@@ -292,10 +299,6 @@ print get_string( '(SELECT IFNULL(CAST(table_name AS CHAR) ,0x20) FROM INFORMATI
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

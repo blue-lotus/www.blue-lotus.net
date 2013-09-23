@@ -9,7 +9,7 @@
   <meta name="author" content="blue-lotus">
 
   
-  <meta name="description" content="It&#8217;s a snake game. Playing it for a while, we find that w,s,a,d can control the snake in 4 directions, &#8220;enter&#8221; key will stop the &hellip;">
+  <meta name="description" content="It’s a snake game. Playing it for a while, we find that w,s,a,d can control the snake in 4 directions, “enter” key will stop the snake, and b will &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -74,13 +74,13 @@
   </header>
 
 
-<div class="entry-content"><p>It&#8217;s a snake game.</p>
+<div class="entry-content"><p>It’s a snake game.</p>
 
-<p>Playing it for a while, we find that w,s,a,d can control the snake in 4 directions, &#8220;enter&#8221; key will stop the snake, and b will start the game in single step mode.</p>
+<p>Playing it for a while, we find that w,s,a,d can control the snake in 4 directions, “enter” key will stop the snake, and b will start the game in single step mode.</p>
 
-<p>The clue printed before game started is important, it says, <code>HIT (ALMOST) ANY KEY TO START GAME</code>, so there must be some key which will generate different output. After some try and fail, we find that &#8216;#&#8217; key will dump the binary file in hex code. This is the first breakthrough we got. Now we can disassemble the binary and play the game locally.</p>
+<p>The clue printed before game started is important, it says, <code>HIT (ALMOST) ANY KEY TO START GAME</code>, so there must be some key which will generate different output. After some try and fail, we find that ‘#’ key will dump the binary file in hex code. This is the first breakthrough we got. Now we can disassemble the binary and play the game locally.</p>
 
-<p>Using the binary file, we find a stack overflow vulnerability immediately, which is located at game exit, used to input the player&#8217;s name, exposed by function <code>fgets</code>. But the logic of the game shows we need a score larger than 313336, which is impossible to acquire by playing the game.</p>
+<p>Using the binary file, we find a stack overflow vulnerability immediately, which is located at game exit, used to input the player’s name, exposed by function <code>fgets</code>. But the logic of the game shows we need a score larger than 313336, which is impossible to acquire by playing the game.</p>
 
 <p>By reading the assembly of the binary, we got some more findings. The first discovery indicates that if we get a score equal to 666, the program will print out some memory layout information. The second discovery shows that, if we get 1221 score, the program will erase the last 4 wall of the game board by space. Furthermore, the memory location of the walls locate adjacently to that of the score variable.</p>
 
@@ -88,7 +88,7 @@
 
 <p><a href="http://www.blue-lotus.net/wp-content/uploads/2013/06/1221.png"><img src="http://www.blue-lotus.net/wp-content/uploads/2013/06/1221.png" alt="" width="600" class="alignnone size-medium wp-image-634" /></a></p>
 
-<p>Now we just need to grab the shell using ret2libc. Calculate the system function offset and &#8220;/bin/sh&#8221; offset, using the offset provided by memory info printed. The final script is as follows, note that the system offset and &#8220;/bin/sh&#8221; offset need to be recalculated for different platforms.</p>
+<p>Now we just need to grab the shell using ret2libc. Calculate the system function offset and “/bin/sh” offset, using the offset provided by memory info printed. The final script is as follows, note that the system offset and “/bin/sh” offset need to be recalculated for different platforms.</p>
 
 <pre><code>import struct
 
@@ -133,6 +133,7 @@ Some solutions we seen write a lot of code to read server input and parse the li
 
 aay, cbmixx, kelwin contribute most of the work for solving this problem. Thanks very much!
 </code></pre>
+
 </div>
 
 
@@ -194,6 +195,10 @@ aay, cbmixx, kelwin contribute most of the work for solving this problem. Thanks
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -207,10 +212,6 @@ aay, cbmixx, kelwin contribute most of the work for solving this problem. Thanks
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

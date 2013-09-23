@@ -103,7 +103,7 @@
 
 <p>大家看到ip的字段，并没有转义，看起来是有希望可以注入的。</p>
 
-<p>接下来，看到$data[&lsquo;ip&rsquo;]的来源是：</p>
+<p>接下来，看到$data[‘ip’]的来源是：</p>
 
 <p>library/Micro/Http/Request.php文件中：</p>
 
@@ -121,9 +121,9 @@
 }
 </code></pre>
 
-<p>可见，就是先检查HTTP请求header中的CLIENT&#95;IP然后检查X&#95;FORWARDED_FOR，如果都不存在就用远端的地址。</p>
+<p>可见，就是先检查HTTP请求header中的CLIENT_IP然后检查X_FORWARDED_FOR，如果都不存在就用远端的地址。</p>
 
-<p>那么HTTP请求中CLIENT&#95;IP和FORWARDED&#95;FOR都是可以注入的地方。我就用X&#95;FORWARDED&#95;FOR了</p>
+<p>那么HTTP请求中CLIENT_IP和FORWARDED_FOR都是可以注入的地方。我就用X_FORWARDED_FOR了</p>
 
 <p>由于这个是INSERT语句，无法获知查找出来的内容，于是只能通过INSERT语句的成功与否（网页返回200或者500）来判断了。</p>
 
@@ -220,6 +220,10 @@
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -233,10 +237,6 @@
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

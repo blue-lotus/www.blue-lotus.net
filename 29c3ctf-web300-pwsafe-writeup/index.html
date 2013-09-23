@@ -9,7 +9,7 @@
   <meta name="author" content="blue-lotus">
 
   
-  <meta name="description" content="This is a rather straight-forward web problem with a little cryptography trick and it&#8217;s solved under the joint effort of fqj and me. The &hellip;">
+  <meta name="description" content="This is a rather straight-forward web problem with a little cryptography trick and it’s solved under the joint effort of fqj and me. The initial page &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -74,18 +74,18 @@
   </header>
 
 
-<div class="entry-content"><p>This is a rather straight-forward web problem with a little cryptography trick and it&#8217;s solved under the joint effort of fqj and me. The initial page consists of login form and register form. After registration user can login in to a pastebin like page in which he or she can edit and save text. Those are nearly all the functionalities.</p>
+<div class="entry-content"><p>This is a rather straight-forward web problem with a little cryptography trick and it’s solved under the joint effort of fqj and me. The initial page consists of login form and register form. After registration user can login in to a pastebin like page in which he or she can edit and save text. Those are nearly all the functionalities.</p>
 
-<p>At first we tried sqli on form, but doesn&#8217;t work. Further investigation on potential xss also doesn&#8217;t work. Then we turned to focus on http headers. It seems there are some patterns in &#8220;session&#8221; item of cookie. After comparing several accounts&#8217; cookie with different names and from different computers, fqj found the cookie is actually</p>
+<p>At first we tried sqli on form, but doesn’t work. Further investigation on potential xss also doesn’t work. Then we turned to focus on http headers. It seems there are some patterns in “session” item of cookie. After comparing several accounts’ cookie with different names and from different computers, fqj found the cookie is actually</p>
 
 <pre><code>954a33ddafa959cf59247cd21b4cc163 + md5(username) + md5(ip)
 </code></pre>
 
-<p>wow, very useful discovery. The &#8220;ip&#8221; can be forged by X-Forwarded-For header.</p>
+<p>wow, very useful discovery. The “ip” can be forged by X-Forwarded-For header.</p>
 
-<p>Then, how to use this important pattern? Inferred from the statement of this problem, administrator account may be needed. After fuzzing and crawling we found juicy uris, /admin and /server-status. Based on the return of /admin we figure out that the administrator account username is &#8220;admin&#8221;, and accessing /server-status shows connections to /admin, which contains ip &#8220;1.2.3.4&#8243;. Why not give it a try?</p>
+<p>Then, how to use this important pattern? Inferred from the statement of this problem, administrator account may be needed. After fuzzing and crawling we found juicy uris, /admin and /server-status. Based on the return of /admin we figure out that the administrator account username is “admin”, and accessing /server-status shows connections to /admin, which contains ip “1.2.3.4″. Why not give it a try?</p>
 
-<p>So construct session cookie with username &#8220;admin&#8221; and ip &#8220;1.2.3.4&#8243;, access login page, and key is there <img src='http://www.blue-lotus.net/wp-includes/images/smilies/icon_smile.gif' alt=':)' class='wp-smiley' /></p>
+<p>So construct session cookie with username “admin” and ip “1.2.3.4″, access login page, and key is there <img src="http://www.blue-lotus.net/wp-includes/images/smilies/icon_smile.gif" alt=":)" class="wp-smiley" /></p>
 </div>
 
 
@@ -147,6 +147,10 @@
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -160,10 +164,6 @@
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

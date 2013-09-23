@@ -76,7 +76,7 @@
 
 <div class="entry-content"><p>This task was solved by <em>aay</em> soon after the the problem came up.ym.</p>
 
-<p>The initial intention of the organizer is that the vulnerability is in session and the cookie is decrypt byte per byte so we can post some username like &#8216;admiX&#8217; and brute force the ciphertext of the last letter to get the admin&#8217;s session.However there&#8217;s another quick way to achieve the goal.</p>
+<p>The initial intention of the organizer is that the vulnerability is in session and the cookie is decrypt byte per byte so we can post some username like ‘admiX’ and brute force the ciphertext of the last letter to get the admin’s session.However there’s another quick way to achieve the goal.</p>
 
 <p>As we visited the page, corresponding to the experience of solving the 3dub problem before, we tried to login as admin.But the ruby program had a runtime error.We thought that we should decode and construct the cookie.</p>
 
@@ -97,7 +97,7 @@ cipher.key = CRYPTO_KEY
 iv = cipher.random_iv
 </code></pre>
 
-<p>That says the POST variable username is checked and cannot be admin.The key point is that we can use <strong>username[]</strong> to bypass since Array is a totally different thing from String.So just modify the form&#8217;s field from <em>username</em> to <em>username[]</em> and it takes effect.The problem is solved so far.</p>
+<p>That says the POST variable username is checked and cannot be admin.The key point is that we can use <strong>username[]</strong> to bypass since Array is a totally different thing from String.So just modify the form’s field from <em>username</em> to <em>username[]</em> and it takes effect.The problem is solved so far.</p>
 
 <p>However, the fact that really confuse me is that since username[] is an Array, why the program manages to run correctly by username[] which replaces username.</p>
 
@@ -125,7 +125,7 @@ cookies[:verification] = params[:verification]
 <pre><code>plaintext = Hash[*params.sort.flatten].to_param
 </code></pre>
 
-<p>The params list is sorted and then flattened which means that the inner square brackets [] are token out so that [&lsquo;admin&rsquo;] are changed into &#8216;admin&#8217;.</p>
+<p>The params list is sorted and then flattened which means that the inner square brackets [] are token out so that [‘admin’] are changed into ‘admin’.</p>
 </div>
 
 
@@ -187,6 +187,10 @@ cookies[:verification] = params[:verification]
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -200,10 +204,6 @@ cookies[:verification] = params[:verification]
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

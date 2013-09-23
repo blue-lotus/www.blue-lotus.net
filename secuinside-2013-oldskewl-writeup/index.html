@@ -76,7 +76,7 @@
 
 <div class="entry-content"><p>The binary is obfuscated by adding random <em>0xF0</em> in order to stop IDA from analyzing the binary correctly. So first we should de-obfuscate the binary.</p>
 
-<p>After de-obfuscation, we could find a tiny VM engine after spending some time in analysis. Function <em>0x4015b0</em> is the vital function for initializing VM dispatching functions. Sorry for those ambiguous function names <img src='http://www.blue-lotus.net/wp-includes/images/smilies/icon_razz.gif' alt=':P' class='wp-smiley' /> .</p>
+<p>After de-obfuscation, we could find a tiny VM engine after spending some time in analysis. Function <em>0x4015b0</em> is the vital function for initializing VM dispatching functions. Sorry for those ambiguous function names <img src="http://www.blue-lotus.net/wp-includes/images/smilies/icon_razz.gif" alt=":P" class="wp-smiley" /> .</p>
 
 <pre><code>/* 0x4015b0 */
 struct_vm *__thiscall init_struct_vm(struct_vm *this)
@@ -92,7 +92,7 @@ struct_vm *__thiscall init_struct_vm(struct_vm *this)
 }
 </code></pre>
 
-<p>After that it&#8217;s trivial to rip the actual VM&#8217;ed code out and reverse it into human-understandable logics. The code appears to be reading three strings out from the sokcet and hashing them. At first we thought it to be a hash-construction problem, but a hint told us a dictionary is needed. Then we had to write a Python script to bruteforce for hash collisions.</p>
+<p>After that it’s trivial to rip the actual VM’ed code out and reverse it into human-understandable logics. The code appears to be reading three strings out from the sokcet and hashing them. At first we thought it to be a hash-construction problem, but a hint told us a dictionary is needed. Then we had to write a Python script to bruteforce for hash collisions.</p>
 
 <pre><code>def calc(lst):
     x = 0
@@ -224,6 +224,10 @@ if __name__ == '__main__':
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -237,10 +241,6 @@ if __name__ == '__main__':
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

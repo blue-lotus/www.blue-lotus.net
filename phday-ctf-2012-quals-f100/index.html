@@ -74,30 +74,28 @@
   </header>
 
 
-<div class="entry-content"><p>此题为图片隐藏信息提取题。图片如下，<br/>
-<a href="http://www.blue-lotus.net/wp-content/uploads/2012/12/png"><img src="http://www.blue-lotus.net/wp-content/uploads/2012/12/png-300x300." alt="" width="300" height="300" class="alignnone size-medium wp-image-186" /></a></p>
+<div class="entry-content"><p>此题为图片隐藏信息提取题。图片如下，<br />
+<a href="http://www.blue-lotus.net/wp-content/uploads/2012/12/png"><img src="http://www.blue-lotus.net/wp-content/uploads/2012/12/png-300x300." alt="" width="300" height="300" class="alignnone size-medium wp-image-186" /></a><br />
+<!--more--></p>
 
-<!--more-->
-
-
-<p>一开始当作QR码提取数据出来，<br/>
-7F454C46010000000000000000004305020003001A0043051A00430504000000B931004305B220CD80252000010093CD803030343330354232323043443830323532303030303130303933434438300A<br/>
-发现为ELF文件，执行后输出004305B220CD80252000010093CD80<br/>
+<p>一开始当作QR码提取数据出来，<br />
+7F454C46010000000000000000004305020003001A0043051A00430504000000B931004305B220CD80252000010093CD803030343330354232323043443830323532303030303130303933434438300A<br />
+发现为ELF文件，执行后输出004305B220CD80252000010093CD80<br />
 此路不通。改之。</p>
 
-<p>使用图信息提取工具<a href="https://www.wechall.net/downloads/by/user_name/ASC/page-1">setgsolve.jar</a>.可以方便的提前图片中的信息。比python暴力搜索更高效，直观。<br/>
+<p>使用图信息提取工具<a href="https://www.wechall.net/downloads/by/user_name/ASC/page-1">setgsolve.jar</a>.可以方便的提前图片中的信息。比python暴力搜索更高效，直观。<br />
 图片变换的方式此处通常为LSB和MSB,行或者列变幻，RGB或RBG或GBR顺序</p>
 
-<p>“ 　1、MSB<br/>
-　　MSB是Most Significant Bit/Byte的首字母缩写，通常译为最重要的位或者最<br/>
-重要的字节。它通常用来表明在一个bit序列（如一个byte是8个bit组成的一个序<br/>
-列）或者一个byte序列（如word是两个byte组成的一个序列）中对整个序列取值影<br/>
-响最大的那个bit/byte。<br/>
-　　2、LSB<br/>
-　　LSB是Least Significant Bit/Byte的首字母缩写，通常译为最不重要的位或<br/>
-者最不重要的字节。它通常用来表明在一个bit序列（如一个byte是8个bit组成的<br/>
-一个序列）或者一个byte序列（如word是两个byte组成的一个序列）中对整个序<br/>
-列取值影响最小的那个bit/byte。<br/>
+<p>“ 　1、MSB<br />
+　　MSB是Most Significant Bit/Byte的首字母缩写，通常译为最重要的位或者最<br />
+重要的字节。它通常用来表明在一个bit序列（如一个byte是8个bit组成的一个序<br />
+列）或者一个byte序列（如word是两个byte组成的一个序列）中对整个序列取值影<br />
+响最大的那个bit/byte。<br />
+　　2、LSB<br />
+　　LSB是Least Significant Bit/Byte的首字母缩写，通常译为最不重要的位或<br />
+者最不重要的字节。它通常用来表明在一个bit序列（如一个byte是8个bit组成的<br />
+一个序列）或者一个byte序列（如word是两个byte组成的一个序列）中对整个序<br />
+列取值影响最小的那个bit/byte。<br />
 ”</p>
 
 <p>通过python PIL库可以更直观的看出此题的解题过程：</p>
@@ -147,6 +145,7 @@ f.close()
 </code></pre>
 
 <p>发现输出结果为加密的rar文件，用之前的密码即可解出得到最终KEY</p>
+
 </div>
 
 
@@ -208,6 +207,10 @@ f.close()
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -221,10 +224,6 @@ f.close()
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Uncategorized | blue-lotus]]></title>
   <link href="http://www.blue-lotus.net//blog/categories/uncategorized/atom.xml" rel="self"/>
   <link href="http://www.blue-lotus.net//"/>
-  <updated>2013-09-14T00:56:02+08:00</updated>
+  <updated>2013-09-23T23:50:16+08:00</updated>
   <id>http://www.blue-lotus.net//</id>
   <author>
     <name><![CDATA[blue-lotus]]></name>
@@ -22,13 +22,13 @@
 
 <p>There are 3 levels.All about sqli.</p>
 
-<p>The first level only needs username and password.After trying for several hours with some common sqli like &#8216; or &#8217;1&#8242;=&#8217;1 and so on but all failed,I accidentally found that &#8221; or &#8220;1&#8243;=&#8221;1 made sense.And @fqj use sqlmap to find the true username and level1_password in the database.(sqlmap also told that the database is sqlite).</p>
+<p>The first level only needs username and password.After trying for several hours with some common sqli like ‘ or ’1′=’1 and so on but all failed,I accidentally found that ” or “1″=”1 made sense.And @fqj use sqlmap to find the true username and level1_password in the database.(sqlmap also told that the database is sqlite).</p>
 
-<p>The second level needs username,level1&#95;password and level2&#95;password.<em>Note that you must back to level 1 and use true username and password to get to level2 again or you&#8217;ll never go ahead anymore</em>.And seeking for more hours,I find that &#8220;%&#8221; in sqlite can match strings(including empty strings) and &#8220;&#95;&#8221; can match single char.In this level,&#8221;%&#8221; is just the payload.And we use &#8220;&#95;&#8221; to brutefoce the true password.</p>
+<p>The second level needs username,level1_password and level2_password.<em>Note that you must back to level 1 and use true username and password to get to level2 again or you’ll never go ahead anymore</em>.And seeking for more hours,I find that “%” in sqlite can match strings(including empty strings) and “_” can match single char.In this level,”%” is just the payload.And we use “_” to brutefoce the true password.</p>
 
-<p>The third level needs level3&#95;password and a confirm for level3&#95;password.And for payload &#8216; or password like &#8216;%&#8217; &#8212; the site told us that password3.1 passed but password3.2 failed.In confirm blank a mistake happened but we know that the sqli took effect.That is enough,by using &#8220;_&#8221; we can bruteforce the true password(if the site told us only password 3.2 failed then it makes sense).</p>
+<p>The third level needs level3_password and a confirm for level3_password.And for payload ‘ or password like ‘%’ — the site told us that password3.1 passed but password3.2 failed.In confirm blank a mistake happened but we know that the sqli took effect.That is enough,by using “_” we can bruteforce the true password(if the site told us only password 3.2 failed then it makes sense).</p>
 
-<p>@H.Shao wrote the script to find the password for level2 and level3 and finally got the FLAG.There is trap in level3,because there is &#8220;&#95;&#8221; in the level3&#95;password and this time &#8220;&#95;&#8221; doesnt represent any single char but just &#8220;_&#8221;.</p>
+<p>@H.Shao wrote the script to find the password for level2 and level3 and finally got the FLAG.There is trap in level3,because there is “_” in the level3_password and this time “_” doesnt represent any single char but just “_”.</p>
 ]]></content>
   </entry>
   
@@ -39,7 +39,7 @@
     <id>http://www.blue-lotus.net//sigint-2013-crypto300-satisfaction</id>
     <content type="html"><![CDATA[<p><a href="http://slipper.tk/writeup/2013/07/11/sigint-2013-crypto-satisfaction/">http://slipper.tk/writeup/2013/07/11/sigint-2013-crypto-satisfaction/</a></p>
 
-<h1><a href="http://slipper.tk/writeup/2013/07/11/sigint-2013-crypto-satisfaction/">SIGINT 2013 crypto300 satisfaction</a></h1>
+<h1 id="sigint-2013-crypto300-satisfaction1"><a href="http://slipper.tk/writeup/2013/07/11/sigint-2013-crypto-satisfaction/">SIGINT 2013 crypto300 satisfaction</a></h1>
 
 <p>Description</p>
 
@@ -71,7 +71,7 @@ end
     client.puts eval(ruby_code)
 </code></pre>
 
-<p>If the brainfuck code which we submit only contains <code>+-[].</code>, then the sever will calculate the crc of the code and check if it matches the signature.<br/>
+<p>If the brainfuck code which we submit only contains <code>+-[].</code>, then the sever will calculate the crc of the code and check if it matches the signature.<br />
 Then how does <code>crc32()</code> work? The code in the script seems different from classic <a href="http://en.wikipedia.org/wiki/Crc32">CRC32</a>.</p>
 
 <pre><code>def crc32(str)
@@ -92,10 +92,10 @@ Then how does <code>crc32()</code> work? The code in the script seems different 
 end
 </code></pre>
 
-<p>Standard CRC32 is the remainder of a polynomial division of the target string. In practice it employs the finite field GF(2). XOR is equivalent to division in GF(2).<br/>
-As a hash function, CRC32 is easy to collision.<br/>
-In the code above, XOR was taken when <code>h_crc_bit == h_byte_bit</code>.<br/>
-However, in standard CRC32, it should be <code>h_crc_bit == 1 &amp;amp;&amp;amp; h_byte_bit == 1</code><br/>
+<p>Standard CRC32 is the remainder of a polynomial division of the target string. In practice it employs the finite field GF(2). XOR is equivalent to division in GF(2).<br />
+As a hash function, CRC32 is easy to collision.<br />
+In the code above, XOR was taken when <code>h_crc_bit == h_byte_bit</code>.<br />
+However, in standard CRC32, it should be <code>h_crc_bit == 1 &amp;amp;&amp;amp; h_byte_bit == 1</code><br />
 Maybe the new crc32 is more likely to collision.</p>
 
 <p>To study this algorithm, I rewrite it in C++.</p>
@@ -119,7 +119,7 @@ Maybe the new crc32 is more likely to collision.</p>
 }
 </code></pre>
 
-<p>In this problem, it seems that we can&rsquo;t sign the code because we don&rsquo;t know the constants in <code>./rsa_keys.rb</code>.<br/>
+<p>In this problem, it seems that we can’t sign the code because we don’t know the constants in <code>./rsa_keys.rb</code>.<br />
 The basic idea is very simple. If we keep the <code>crc=0</code> or <code>crc=1</code>, then signature is always the same with crc(0 or 1). Now we just need to find something excutable whose crc is 0 or 1.</p>
 
 <p>First we should write a brainfuck program whose output is a legal ruby code, then append some useless character to the code to make its crc be 0 or 1.</p>
@@ -163,17 +163,17 @@ The basic idea is very simple. If we keep the <code>crc=0</code> or <code>crc=1<
 
 <p><code>crc_table</code> is a pre-calculated table.</p>
 
-<p>If the crc sum is 0, then `r &lt;> 8;<br/>
-x |= (i ^ s) &lt;&lt; 24;<br/>
-if (extend(x, s) == r) {<br/>
-//some code<br/>
-}<br/>
-}<br/>
+<p>If the crc sum is 0, then `r &lt;&gt; 8;<br />
+x |= (i ^ s) « 24;<br />
+if (extend(x, s) == r) {<br />
+//some code<br />
+}<br />
+}<br />
 }</p>
 
-<p>But charset that we can use is limited, so we don&rsquo;t need to worry about too many solutions.</p>
+<p>But charset that we can use is limited, so we don’t need to worry about too many solutions.</p>
 
-<p>I used a bidirectional search algorithm to speed up my search in my code.<br/>
+<p>I used a bidirectional search algorithm to speed up my search in my code.<br />
 <a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/satisfaction/crc32.cpp">crc32.cpp</a></p>
 
 <p>It works well even I only use <code>+-</code> to generate collisions.</p>
@@ -208,10 +208,11 @@ if __name__ == '__main__' :
         print s.recv(4096)
 </code></pre>
 
-<p><a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/satisfaction/go.py">go.py</a><br/>
+<p><a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/satisfaction/go.py">go.py</a><br />
 Then I read <a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/satisfaction/the_flag.rb">./the_flag.rb</a> and <a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/satisfaction/rsa_keys.rb">./rsa_keys.rb</a>.</p>
 
 <p>The FLAG is <code>goozbartouuu</code></p>
+
 ]]></content>
   </entry>
   
@@ -222,7 +223,7 @@ Then I read <a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGIN
     <id>http://www.blue-lotus.net//sigint-2013-crypto-200-rsa</id>
     <content type="html"><![CDATA[<p><a href="http://slipper.tk/writeup/2013/07/10/sigint-2013-crypto-rsa/">http://slipper.tk/writeup/2013/07/10/sigint-2013-crypto-rsa/</a></p>
 
-<h1><a href="http://slipper.tk/writeup/2013/07/10/sigint-2013-crypto-rsa/">SIGINT2013 crypto200 rsa</a></h1>
+<h1 id="sigint2013-crypto200-rsa1"><a href="http://slipper.tk/writeup/2013/07/10/sigint-2013-crypto-rsa/">SIGINT2013 crypto200 rsa</a></h1>
 
 <p>Description</p>
 
@@ -251,13 +252,12 @@ def randfunc(n):
 <p>RSAPublicKey的结构：</p>
 
 <ul>
-<li>The key type</li>
-<li>A chunk of PEM-encoded data</li>
-<li>A comment</li>
+  <li>The key type</li>
+  <li>A chunk of PEM-encoded data</li>
+  <li>A comment</li>
 </ul>
 
-
-<p>PEM是<a href="http://en.wikipedia.org/wiki/Base64#Privacy-enhanced_mail">Privacy Enhanced Mail</a>的缩写。<br/>
+<p>PEM是<a href="http://en.wikipedia.org/wiki/Base64#Privacy-enhanced_mail">Privacy Enhanced Mail</a>的缩写。<br />
 对于ssh密钥，PEM是由一些小数据块(big-endian)组成的。每一块前面是数据长度，后面就是数据。</p>
 
 <pre><code>def b2i(s):
@@ -288,8 +288,9 @@ if __name__ == &amp;#039;__main__&amp;#039;:
 
 <p><a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/rsa/my.py">my.py</a></p>
 
-<p>SIGINT_some_people_pay_100_euro_for_this<br/>
+<p>SIGINT_some_people_pay_100_euro_for_this<br />
 <a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/rsa/flag">flag</a></p>
+
 ]]></content>
   </entry>
   
@@ -300,7 +301,7 @@ if __name__ == &amp;#039;__main__&amp;#039;:
     <id>http://www.blue-lotus.net//sigint2013-cloud200-bloat</id>
     <content type="html"><![CDATA[<p><a href="http://slipper.tk/writeup/2013/07/09/sigint2013-cloud-bloat/">http://slipper.tk/writeup/2013/07/09/sigint2013-cloud-bloat/</a></p>
 
-<h1><a href="http://slipper.tk/writeup/2013/07/09/sigint2013-cloud-bloat/">SIGINT 2013 cloud 200 bloat</a></h1>
+<h1 id="sigint-2013-cloud-200-bloat1"><a href="http://slipper.tk/writeup/2013/07/09/sigint2013-cloud-bloat/">SIGINT 2013 cloud 200 bloat</a></h1>
 
 <p>Description</p>
 
@@ -389,11 +390,11 @@ Somehow it looks diff-erent o_O:
 
 <p>这里用到了修改过的常量<code>OPENID_DH_DEFAULT_GEN</code>。</p>
 
-<p>drupal&#95;map&#95;assoc()返回的是数组，所以在redirect过程中会被强转成字符串&#8221;Array&#8221;，最后在跳转的时候会出错。</p>
+<p>drupal_map_assoc()返回的是数组，所以在redirect过程中会被强转成字符串”Array”，最后在跳转的时候会出错。</p>
 
-<p>而这个<a href="https://api.drupal.org/api/drupal/includes%21common.inc/function/drupal_map_assoc/7">drupal&#95;map&#95;assoc()</a>则暗藏玄机。</p>
+<p>而这个<a href="https://api.drupal.org/api/drupal/includes%21common.inc/function/drupal_map_assoc/7">drupal_map_assoc()</a>则暗藏玄机。</p>
 
-<p>根据官方文档，drupal&#95;map&#95;assoc()会把第一个参数$array中的每个参数依次传入第二个参数$callable执行并返回一个数组。</p>
+<p>根据官方文档，drupal_map_assoc()会把第一个参数$array中的每个参数依次传入第二个参数$callable执行并返回一个数组。</p>
 
 <p>这里藏着一个命令执行后门啊。。。。</p>
 
@@ -425,7 +426,7 @@ php &amp;gt; echo _openid_dh_base64_to_long('exec')/OPENID_DH_DEFAULT_GEN ."\n";
 93802
 </code></pre>
 
-<p>因为这里的is&#95;callable是不区分大小写的，本来我还以为后门作者刻意选择了大小写混用的函数名，本来差点要写程序暴搜的。还好偶然发现exec正好符合要求。^&#95;^</p>
+<p>因为这里的is_callable是不区分大小写的，本来我还以为后门作者刻意选择了大小写混用的函数名，本来差点要写程序暴搜的。还好偶然发现exec正好符合要求。^_^</p>
 
 <p><strong>如果以后要用这种方法做后门，记得一个有大因子的大小写混用的函数名哦。</strong></p>
 
@@ -459,6 +460,7 @@ SIGINT_d4b0844c
 </code></pre>
 
 <p>看来果然是木有写权限～～</p>
+
 ]]></content>
   </entry>
   
@@ -467,7 +469,7 @@ SIGINT_d4b0844c
     <link href="http://www.blue-lotus.net//def-con-ctf-qualifier-2013-omgacm-4-writeup/"/>
     <updated>2013-06-18T00:00:00+08:00</updated>
     <id>http://www.blue-lotus.net//def-con-ctf-qualifier-2013-omgacm-4-writeup</id>
-    <content type="html"><![CDATA[<h1>Problem Description</h1>
+    <content type="html"><![CDATA[<h1 id="problem-description">Problem Description</h1>
 
 <p>Each problem gives you a circuit board, which will have a dimension, a set of nulls (that trace cannot go through), a feed point, and a set of antenna points.</p>
 
@@ -475,11 +477,11 @@ SIGINT_d4b0844c
 
 <p>The distance of these traces must also be equal for all antenna points.</p>
 
-<h1>Our Solution</h1>
+<h1 id="our-solution">Our Solution</h1>
 
 <p>Since we intuitively classify this problem as NP-Complete, we resort to iterative deepening depth-first search for solving it.</p>
 
-<p>In our algorithm, we choose to &#8220;grow&#8221; the traces from antenna points, which means that all the traces simultaneously start from their respective antenna point and go one step further one by one.</p>
+<p>In our algorithm, we choose to “grow” the traces from antenna points, which means that all the traces simultaneously start from their respective antenna point and go one step further one by one.</p>
 
 <p>This strategy forces that all the traces will be equal length with each other, thus many unnecessary states are avoided.</p>
 
@@ -488,29 +490,27 @@ SIGINT_d4b0844c
 <p>More specifically, in order to record the current state, we use:</p>
 
 <ol>
-<li>Nine bool variables for each point: one for the point and 8 for adjacent edges;</li>
-<li>One pair &lt; int, int > (one for 1 and the other for sqrt 2) variable for each point to store the distance from this point to the corresponding antenna point if it has been covered by a trace;</li>
-<li>Current &#8220;growing&#8221; point for each trace;</li>
-<li>Which trace’s turn is it to grow in this iteration;</li>
-<li>The final distance, if one of the traces has reached the feed point;</li>
+  <li>Nine bool variables for each point: one for the point and 8 for adjacent edges; </li>
+  <li>One pair &lt; int, int &gt; (one for 1 and the other for sqrt 2) variable for each point to store the distance from this point to the corresponding antenna point if it has been covered by a trace; </li>
+  <li>Current “growing” point for each trace; </li>
+  <li>Which trace’s turn is it to grow in this iteration; </li>
+  <li>The final distance, if one of the traces has reached the feed point; </li>
 </ol>
-
 
 <p>And we also use a set of pruning tricks to accelerate the algorithm.</p>
 
 <ol>
-<li>Iterative deepening on length of each path;</li>
-<li>Limit the depth of dfs to be at most 30. (This ought to have been another iterative deepening argument, but we hard code it with an empirical number for simplifying the code);</li>
-<li>Preprocess the minimal distance from each point to the feed point and combine this information with iterative deepening threshold for further pruning;</li>
-<li>If one of the trace has already reached the feed point, use the distance for pruning.</li>
+  <li>Iterative deepening on length of each path; </li>
+  <li>Limit the depth of dfs to be at most 30. (This ought to have been another iterative deepening argument, but we hard code it with an empirical number for simplifying the code); </li>
+  <li>Preprocess the minimal distance from each point to the feed point and combine this information with iterative deepening threshold for further pruning; </li>
+  <li>If one of the trace has already reached the feed point, use the distance for pruning. </li>
 </ol>
-
 
 <p>Here is another tip:</p>
 
 <p>The intersections will not only happen at points but also in small squares, you may need to double check this.</p>
 
-<h1>Code</h1>
+<h1 id="code">Code</h1>
 
 <pre><code>#include &lt;stdio.h&gt;
 #include &lt;stdlib.h&gt;
@@ -780,7 +780,7 @@ int main() {
 }
 </code></pre>
 
-<h1>Result</h1>
+<h1 id="result">Result</h1>
 
 <p>You can check out <a href="http://ascii.io/a/3644">http://ascii.io/a/3644</a> for the result.</p>
 

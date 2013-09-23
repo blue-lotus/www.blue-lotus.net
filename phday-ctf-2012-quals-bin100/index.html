@@ -9,7 +9,7 @@
   <meta name="author" content="blue-lotus">
 
   
-  <meta name="description" content="bin100为2进制分析题 我们直接运行程序发现 提示我们出错 载入IDA。发现主要5个函数。 函数我们分别重命名为f1->f5 读代码。5个函数功能大概如下,f1到f4函数为字符串变幻。f5函数实际最终调用了exec(calc)并且死循环。 f1 input 8 return 0 f2 &hellip;">
+  <meta name="description" content="bin100为2进制分析题 我们直接运行程序发现 提示我们出错 载入IDA。发现主要5个函数。 函数我们分别重命名为f1-&gt;f5 读代码。5个函数功能大概如下,f1到f4函数为字符串变幻。f5函数实际最终调用了exec(calc)并且死循环。 f1 input 8 return 0 f2 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -74,10 +74,8 @@
   </header>
 
 
-<div class="entry-content"><p>bin100为2进制分析题</p>
-
-<!--more-->
-
+<div class="entry-content"><p>bin100为2进制分析题<br />
+<!--more--></p>
 
 <p>我们直接运行程序发现</p>
 
@@ -89,7 +87,7 @@
 
 <p><a href="http://www.blue-lotus.net/wp-content/uploads/2012/12/2.png"><img src="http://www.blue-lotus.net/wp-content/uploads/2012/12/2.png" alt="" width="262" height="82" class="alignnone size-full wp-image-173" /></a></p>
 
-<p>函数我们分别重命名为f1->f5</p>
+<p>函数我们分别重命名为f1-&gt;f5</p>
 
 <p>读代码。5个函数功能大概如下,f1到f4函数为字符串变幻。f5函数实际最终调用了exec(calc)并且死循环。</p>
 
@@ -97,9 +95,9 @@
 
 <p>f2 input 32 return 0</p>
 
-<p>f3 input>=16 xor first 16 return 1</p>
+<p>f3 input&gt;=16 xor first 16 return 1</p>
 
-<p>f4 8>==xor return 0</p>
+<p>f4 8&gt;==xor return 0</p>
 
 <p>f5 call calc exec return 0</p>
 
@@ -117,13 +115,22 @@
 
 <p>顺序为</p>
 
-<p>f4&#8211;>f1&#8211;>f2&#045;&#8211;||>f3</p>
+<table>
+  <tbody>
+    <tr>
+      <td>f4–&gt;f1–&gt;f2-–</td>
+      <td> </td>
+      <td>&gt;f3</td>
+    </tr>
+  </tbody>
+</table>
 
 <p>重新运行程序即可得到KEY</p>
 
 <p>需要注意个是中间有个资源释放和本题无关。</p>
 
 <p><a href="http://www.blue-lotus.net/wp-content/uploads/2012/12/5.jpg"><img src="http://www.blue-lotus.net/wp-content/uploads/2012/12/5.jpg" alt="" width="185" height="158" class="alignnone size-full wp-image-178" /></a></p>
+
 </div>
 
 
@@ -185,6 +192,10 @@
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -198,10 +209,6 @@
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

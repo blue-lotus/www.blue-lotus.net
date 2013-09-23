@@ -10,11 +10,11 @@
 
   
   <meta name="description" content="这道题是一个远程的binary服务，提供了消息操作的接口，连上去会有如下提示： Welcome
-1 &#8211; save message
-2 &#8211; show message
-3 &#8211; append message
-4 &#8211; rewrite message
-5 &# &hellip;">
+1 – save message
+2 – show message
+3 – append message
+4 – rewrite message
+5 – delete message &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -79,26 +79,23 @@
   </header>
 
 
-<div class="entry-content"><p>这道题是一个远程的binary服务，提供了消息操作的接口，连上去会有如下提示：</p>
+<div class="entry-content"><p>这道题是一个远程的binary服务，提供了消息操作的接口，连上去会有如下提示：<br />
+<!--more--></p>
 
-<!--more-->
-
-
-<p>Welcome<br/>
-1 &#8211; save message<br/>
-2 &#8211; show message<br/>
-3 &#8211; append message<br/>
-4 &#8211; rewrite message<br/>
-5 &#8211; delete message</p>
+<p>Welcome<br />
+1 – save message<br />
+2 – show message<br />
+3 – append message<br />
+4 – rewrite message<br />
+5 – delete message</p>
 
 <p>下载下来的binary文件名位heaptaskforbin，即可推断此题的利用点为heap。使用IDA反编译分析C代码，首先注意到客户端连接上以后，一个初始化的函数做了如下操作：</p>
 
 <ol>
-<li>随机在堆上存了n个随机的message，n也是100以内的随机数</li>
-<li>将flag文件读入堆中，指针不free也不引用</li>
-<li>随机free掉堆上在步骤1中已经分配的大约n/2个message</li>
+  <li>随机在堆上存了n个随机的message，n也是100以内的随机数</li>
+  <li>将flag文件读入堆中，指针不free也不引用</li>
+  <li>随机free掉堆上在步骤1中已经分配的大约n/2个message</li>
 </ol>
-
 
 <p>这是将flag读入堆中的代码：</p>
 
@@ -110,9 +107,9 @@
 
 <p><img src="http://www.blue-lotus.net/wp-content/uploads/2012/12/pwn200_exploit.jpg" alt="pwn200_exploit" /></p>
 
-<p>上述代码中仅仅将输入的&#8221;\n&#8221;和&#8221;\r&#8221;换成&#8221;\0&#8243;，如果输入的字串中没有&#8221;\n&#8221;和&#8221;\r&#8221;，则堆里面写入的字符串将没有结尾符，可以利用这一点先写入无结尾符的message，如果正好跟堆中flag的位置相连，就能把字符串连带flag给show出来。</p>
+<p>上述代码中仅仅将输入的”\n”和”\r”换成”\0″，如果输入的字串中没有”\n”和”\r”，则堆里面写入的字符串将没有结尾符，可以利用这一点先写入无结尾符的message，如果正好跟堆中flag的位置相连，就能把字符串连带flag给show出来。</p>
 
-<p>利用这个思路，先往里save256个&#8221;A&#8221;，然后show这个字符串，比对这两者差异，如果相差较多，则很可能拿到的是flag，如果不够多，只差了几个字节，那么append一些&#8221;A&#8221;，将堆中的&#8221;\0&#8243;覆盖掉，进一步探测。</p>
+<p>利用这个思路，先往里save256个”A”，然后show这个字符串，比对这两者差异，如果相差较多，则很可能拿到的是flag，如果不够多，只差了几个字节，那么append一些”A”，将堆中的”\0″覆盖掉，进一步探测。</p>
 
 <pre><code>def save(buf):
     s.send("1")
@@ -180,6 +177,7 @@ for i in range(20000):
 <p>写完这个自动探测的程序，我第一遍跑就拿到了flag：</p>
 
 <p><img src="http://www.blue-lotus.net/wp-content/uploads/2012/12/pwn200_flag.jpg" alt="pwn200_flag" /></p>
+
 </div>
 
 
@@ -241,6 +239,10 @@ for i in range(20000):
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -254,10 +256,6 @@ for i in range(20000):
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

@@ -100,7 +100,7 @@
 
 <p>As the CodeGate give the hint:</p>
 
-<p>[Bin 300 Hint] Routine that makes the &#8220;Note&#8221;</p>
+<p>[Bin 300 Hint] Routine that makes the “Note”</p>
 
 <p>[Bin 300 Hint2] Find out notes that are created in somewhere where is not 1,2,3 difficulty level,</p>
 
@@ -112,12 +112,12 @@
 
 <p>After case 1,2,3, there is a default case, where the GraphBuffer2 is filled from note_default. It must be noted that there are 2 graph buffers.</p>
 
-<p><a href="http://www.blue-lotus.net/wp-content/uploads/2013/03/graph_buff1.png"><img src="http://www.blue-lotus.net/wp-content/uploads/2013/03/graph_buff1.png" alt="" width="358" height="67" class="aligncenter size-full wp-image-405" /></a><br/>
+<p><a href="http://www.blue-lotus.net/wp-content/uploads/2013/03/graph_buff1.png"><img src="http://www.blue-lotus.net/wp-content/uploads/2013/03/graph_buff1.png" alt="" width="358" height="67" class="aligncenter size-full wp-image-405" /></a><br />
 In other cases, the GraphBuffer1 is filled. And the GraphBuffer1 is the actual output buffer.</p>
 
 <p>We launch the program in OllyDbg, at the “switch” point we modify the “Difficulty” to 4(or any other value but not 1,2,3) then the “case default” can be covered.</p>
 
-<p>At the “case default”, modify the code “pOutGraph = pGraphLine2&#95;1 &#8211; 1;” into “pOutGraph = pGraphLine &#8211; 1;” to change the output buffer to GraphBuffer1. At the asm level, it’s change the “mov ecx, [ebp+pGraphLine2&#95;1]” into “lea ecx, [edi]”.</p>
+<p>At the “case default”, modify the code “pOutGraph = pGraphLine2_1 – 1;” into “pOutGraph = pGraphLine – 1;” to change the output buffer to GraphBuffer1. At the asm level, it’s change the “mov ecx, [ebp+pGraphLine2_1]” into “lea ecx, [edi]”.</p>
 
 <p><a href="http://www.blue-lotus.net/wp-content/uploads/2013/03/out.png"><img src="http://www.blue-lotus.net/wp-content/uploads/2013/03/out.png" alt="" width="369" height="109" class="aligncenter size-full wp-image-400" /></a></p>
 
@@ -128,6 +128,7 @@ In other cases, the GraphBuffer1 is filled. And the GraphBuffer1 is the actual o
 <p>EYE IS PRECIOUS</p>
 
 <p><a href="http://www.blue-lotus.net/wp-content/uploads/2013/03/graph.png"><img src="http://www.blue-lotus.net/wp-content/uploads/2013/03/graph.png" alt="" width="480" height="443" class="aligncenter size-full wp-image-401" /></a></p>
+
 </div>
 
 
@@ -189,6 +190,10 @@ In other cases, the GraphBuffer1 is filled. And the GraphBuffer1 is the actual o
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -202,10 +207,6 @@ In other cases, the GraphBuffer1 is filled. And the GraphBuffer1 is the actual o
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

@@ -95,17 +95,17 @@ INSERT INTO users VALUES('aledivlew','fcccdf1344ad3078c2fbec2194996a08','FLGeFrC
 <pre><code>query = "select username, score from users where history LIKE '%%%s%%' and not session='%s'" % (history, session)
 </code></pre>
 
-<p>The session variable is well checked and hard to inject, but we can control history variable, since the url path will be joined using &#8216;:&#8217; as separator to form the history string, e.g. &#8220;/:/solution&#8221;.</p>
+<p>The session variable is well checked and hard to inject, but we can control history variable, since the url path will be joined using ‘:’ as separator to form the history string, e.g. “/:/solution”.</p>
 
 <p>Then we carefully construct a path:</p>
 
-<p>%&amp;#8217; or 1=1 union select username, authorization from users where 1=1 or &amp;#8217;:/solution%&amp;#8217;=&amp;#8217;</p>
+<p>%\’ or 1=1 union select username, authorization from users where 1=1 or \’:/solution%\’=\’</p>
 
 <p>which will be urlencoded to</p>
 
-<p>%25&amp;#8217;%20or%201%3D1%20union%20select%20username%2C%20authorization%20from%20users%20where%201%3D1%20or%20&amp;#8217;%3A%2Fsolution%25&amp;#8217;%3D&amp;#8217;</p>
+<p>%25\’%20or%201%3D1%20union%20select%20username%2C%20authorization%20from%20users%20where%201%3D1%20or%20\’%3A%2Fsolution%25\’%3D\’</p>
 
-<p>Register a user and login to get a session, hit this urlpath, then it will be stored as the history string. After that, we hit &#8220;/solution&#8221; again to trigger the injected sql, and the flag string will be returned in html. So just parse out the flag and return!</p>
+<p>Register a user and login to get a session, hit this urlpath, then it will be stored as the history string. After that, we hit “/solution” again to trigger the injected sql, and the flag string will be returned in html. So just parse out the flag and return!</p>
 
 <p>Here is the exploit code:</p>
 
@@ -190,6 +190,7 @@ INSERT INTO users VALUES('aledivlew','fcccdf1344ad3078c2fbec2194996a08','FLGeFrC
 <p>Have known above, we can easily fix the exploit by replace the string concatenation of the sql by sqlite library construction.</p>
 
 <p>Many thanks to Chao Liu who showed expert level hacking skills working with me on this problem.</p>
+
 </div>
 
 
@@ -251,6 +252,10 @@ INSERT INTO users VALUES('aledivlew','fcccdf1344ad3078c2fbec2194996a08','FLGeFrC
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -264,10 +269,6 @@ INSERT INTO users VALUES('aledivlew','fcccdf1344ad3078c2fbec2194996a08','FLGeFrC
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

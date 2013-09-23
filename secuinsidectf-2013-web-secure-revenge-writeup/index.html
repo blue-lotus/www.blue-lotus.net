@@ -76,7 +76,7 @@
 
 <div class="entry-content"><p>This not a hard one.</p>
 
-<h3><strong>Bin Part</strong></h3>
+<h3 id="bin-part"><strong>Bin Part</strong></h3>
 
 <p>mod_dontwebhack350.so is a php plugin which helps the upload site to filter files.</p>
 
@@ -93,18 +93,18 @@ if ( check_bad_php_string(src) == 1 )
 }
 </code></pre>
 
-<p>As mentioned above, strings that the file contains and the file&#8217;s extension name are checked.</p>
+<p>As mentioned above, strings that the file contains and the file’s extension name are checked.</p>
 
-<p>After a bit more exploration, it is safe to draw the conlusion that only these extension names <em>&#8220;.php&#8221; &#8220;.phtml&#8221; &#8220;.ht&#8221;</em> can be executed.</p>
+<p>After a bit more exploration, it is safe to draw the conlusion that only these extension names <em>“.php” “.phtml” “.ht”</em> can be executed.</p>
 
-<pre><code>.rodata:00000F75 aPhp            db 'php',0              ; DATA XREF: check_extension_name+31o
-.rodata:00000F79 aPhtml          db 'phtml',0            ; DATA XREF: check_extension_name:loc_ACFo
-.rodata:00000F7F a_ht            db '.ht',0              ; DATA XREF: check_extension_name:loc_AF8o
+<pre><code>.rodata:00000F75 aPhp            db 'php',0              ; DATA XREF: check_extension_name+31o
+.rodata:00000F79 aPhtml          db 'phtml',0            ; DATA XREF: check_extension_name:loc_ACFo
+.rodata:00000F7F a_ht            db '.ht',0              ; DATA XREF: check_extension_name:loc_AF8o
 </code></pre>
 
 <p>and these strings are forbiddened in the upload file:</p>
 
-<pre><code>.data:00003060 off_3060        dd offset a?            ; DATA XREF: check_bad_php_string+17o
+<pre><code>.data:00003060 off_3060        dd offset a?            ; DATA XREF: check_bad_php_string+17o
 .data:00003060                                         ; "&amp;lt;?&amp;quot;
 .data:00003064                 dd offset aKey          ; &amp;quot;key&amp;quot;
 .data:00003068                 dd offset aFlag         ; &amp;quot;flag&amp;quot;
@@ -122,7 +122,7 @@ if ( check_bad_php_string(src) == 1 )
 .data:00003098                 dd offset aEscapeshellcmd ; &amp;quot;escapeshellcmd&amp;quot;
 </code></pre>
 
-<h3><strong>Web Part</strong></h3>
+<h3 id="web-part"><strong>Web Part</strong></h3>
 
 <p>Easy to find this php script in <em>upload.txt</em>:</p>
 
@@ -154,7 +154,7 @@ else { ...
 
 <p>We find that the file folder name is produced by <code>md5(crypt($_SERVER["REMOTE_ADDR"], $_POST['code'] ))</code>.</p>
 
-<p>It&#8217;s time to upload some php scripts.Considering the fact that special functions are banned as mentioned in the bin part, if we want to execute some commands, we can use <em>assert()</em>.</p>
+<p>It’s time to upload some php scripts.Considering the fact that special functions are banned as mentioned in the bin part, if we want to execute some commands, we can use <em>assert()</em>.</p>
 
 <p>Such php file like this is to uploaded:</p>
 
@@ -235,6 +235,10 @@ flags%22,%22r%22),filesize(%22/home/dwh_revenge/flags%22)))
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -248,10 +252,6 @@ flags%22,%22r%22),filesize(%22/home/dwh_revenge/flags%22)))
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

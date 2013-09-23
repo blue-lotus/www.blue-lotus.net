@@ -9,7 +9,7 @@
   <meta name="author" content="blue-lotus">
 
   
-  <meta name="description" content="This problem is solved by jay. I write this writeup to admire his work! This a php web problem. After diving into the website, we found that, it&# &hellip;">
+  <meta name="description" content="This problem is solved by jay. I write this writeup to admire his work! This a php web problem. After diving into the website, we found that, it’s a &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -76,11 +76,11 @@
 
 <div class="entry-content"><p>This problem is solved by jay. I write this writeup to admire his work!</p>
 
-<p>This a php web problem. After diving into the website, we found that, it&#8217;s a online shop, with 2 items in it, but the account balance is 0, however we can have some bonus code the reduce the price by 5, so we can by the unimportant note, which shows file not found. So we can deduce that if we have a 1337 bonus to buy the important note, we can have the flag.</p>
+<p>This a php web problem. After diving into the website, we found that, it’s a online shop, with 2 items in it, but the account balance is 0, however we can have some bonus code the reduce the price by 5, so we can by the unimportant note, which shows file not found. So we can deduce that if we have a 1337 bonus to buy the important note, we can have the flag.</p>
 
-<p>Scan this website(use wvs, wwwscan, nikto, etc), we can get <a href="http://94.45.252.234/free.php">http://94.45.252.234/free.php</a> , which can generate 5 bonus for us. Then somebody tried some malformed bonus token, such as FpqIyUuxZClovPxTaXfWHGEKeNBOBE892V59/fYAvON/MmQV , at the top of the page, a php warning shows, revealing another page: <a href="http://94.45.252.234/reduction.inc">http://94.45.252.234/reduction.inc</a></p>
+<p>Scan this website(use wvs, wwwscan, nikto, etc), we can get http://94.45.252.234/free.php , which can generate 5 bonus for us. Then somebody tried some malformed bonus token, such as FpqIyUuxZClovPxTaXfWHGEKeNBOBE892V59/fYAvON/MmQV , at the top of the page, a php warning shows, revealing another page: http://94.45.252.234/reduction.inc</p>
 
-<p>The code in reduction.inc shows how token are generated and verified. So we need to construct another token of 1337 bonus to crack it. Note that, the crypto method uses ofb mode, which is very weak. The <a href="http://en.wikipedia.org/wiki/Block_cipher_modes_of_operation">wiki</a> has a simple illustration on how it works. Actually, we don&#8217;t need the key and iv to do encryption, what we need is the original plain text, then we can construct new encryption using xor operation: (original&#95;encyption xor original&#95;plain&#95;text xor new&#95;plain_text). The original plain text is &#8220;$salt.5.1&#8243; So we only need the salt, which is 16 bytes long, indicated by 3-DES. And this is where I got stucked.</p>
+<p>The code in reduction.inc shows how token are generated and verified. So we need to construct another token of 1337 bonus to crack it. Note that, the crypto method uses ofb mode, which is very weak. The <a href="http://en.wikipedia.org/wiki/Block_cipher_modes_of_operation">wiki</a> has a simple illustration on how it works. Actually, we don’t need the key and iv to do encryption, what we need is the original plain text, then we can construct new encryption using xor operation: (original_encyption xor original_plain_text xor new_plain_text). The original plain text is “$salt.5.1″ So we only need the salt, which is 16 bytes long, indicated by 3-DES. And this is where I got stucked.</p>
 
 <p>But jay solved this problem using a python script:</p>
 
@@ -128,7 +128,7 @@ for i in range(16):
                        print byte
 </code></pre>
 
-<p>This script is a little complicated. It reduces the attempt time of cracking salt from 256<sup>16</sup> down to 256*16. The important thing is that, the server will response with warning notice when we construct a fake bonus token which contains less than 2 period symbols, which is caused by following line:</p>
+<p>This script is a little complicated. It reduces the attempt time of cracking salt from 256^16 down to 256*16. The important thing is that, the server will response with warning notice when we construct a fake bonus token which contains less than 2 period symbols, which is caused by following line:</p>
 
 <pre><code>    list($in_salt, $amount, $rnd) = explode('.', $reduction);
 </code></pre>
@@ -143,6 +143,7 @@ for i in range(16):
 <p>After cracking the salt, we already knows how to construct the encryption, and md5 is also straight-forward.</p>
 
 <p>Admire jay again! Any comments?</p>
+
 </div>
 
 
@@ -204,6 +205,10 @@ for i in range(16):
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -217,10 +222,6 @@ for i in range(16):
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

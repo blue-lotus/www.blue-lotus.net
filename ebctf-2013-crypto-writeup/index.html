@@ -9,7 +9,7 @@
   <meta name="author" content="blue-lotus">
 
   
-  <meta name="description" content="The problem offers 2 encrypted message and 1 secret key for one of them. And it&#8217;s our mission to decrypt the other message. Plain message is &hellip;">
+  <meta name="description" content="The problem offers 2 encrypted message and 1 secret key for one of them. And it’s our mission to decrypt the other message. Plain message is divided &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -74,7 +74,7 @@
   </header>
 
 
-<div class="entry-content"><p>The problem offers 2 encrypted message and 1 secret key for one of them. And it&#8217;s our mission to decrypt the other message.</p>
+<div class="entry-content"><p>The problem offers 2 encrypted message and 1 secret key for one of them. And it’s our mission to decrypt the other message.</p>
 
 <p>Plain message is divided into 16-bytes blocks, the encryption use sha256 to generate encryption cipher and xor the message to get encryption message.</p>
 
@@ -82,16 +82,18 @@
 
 <p>Use the secret key provided, we can decrypt one of the messages and it turns out to be an email.</p>
 
-<blockquote><p>From: Vlugge Japie To: Baron van Neemweggen<br/>
-** Subj: Weekly update</p>
+<blockquote>
+  <p>From: Vlugge Japie To: Baron van Neemweggen<br />
+** Subj: Weekly update  </p>
 
-<p>Boss,</p>
+  <p>Boss,  </p>
 
-<p>Sorry, I failed to get my hands on the information you requested.<br/>
-Please don&#8217;t tell the bureau &#8211; I&#8217;ll have it next week, promise!</p>
+  <p>Sorry, I failed to get my hands on the information you requested.<br />
+Please don’t tell the bureau – I’ll have it next week, promise!  </p>
 
-<p>Vlugge Japie</p>
-So it&#8217;s very likely the other message should also be an email, and if this is true, we can get the first 16 bytes of plain text: &#8220;From: Vlugge Jap&#8221;. Use xor, we can get the cipher: xor(cipher, &#8220;From: Vlugge Jap&#8221;)</p></blockquote>
+  <p>Vlugge Japie&lt;/p&gt; 
+So it’s very likely the other message should also be an email, and if this is true, we can get the first 16 bytes of plain text: “From: Vlugge Jap”. Use xor, we can get the cipher: xor(cipher, “From: Vlugge Jap”)</p>
+</blockquote>
 
 <p>The solution is straightforward now.</p>
 
@@ -178,6 +180,10 @@ print out
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -191,10 +197,6 @@ print out
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

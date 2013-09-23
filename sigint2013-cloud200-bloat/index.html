@@ -76,7 +76,7 @@
 
 <div class="entry-content"><p><a href="http://slipper.tk/writeup/2013/07/09/sigint2013-cloud-bloat/">http://slipper.tk/writeup/2013/07/09/sigint2013-cloud-bloat/</a></p>
 
-<h1><a href="http://slipper.tk/writeup/2013/07/09/sigint2013-cloud-bloat/">SIGINT 2013 cloud 200 bloat</a></h1>
+<h1 id="sigint-2013-cloud-200-bloat1"><a href="http://slipper.tk/writeup/2013/07/09/sigint2013-cloud-bloat/">SIGINT 2013 cloud 200 bloat</a></h1>
 
 <p>Description</p>
 
@@ -165,11 +165,11 @@ Somehow it looks diff-erent o_O:
 
 <p>这里用到了修改过的常量<code>OPENID_DH_DEFAULT_GEN</code>。</p>
 
-<p>drupal&#95;map&#95;assoc()返回的是数组，所以在redirect过程中会被强转成字符串&#8221;Array&#8221;，最后在跳转的时候会出错。</p>
+<p>drupal_map_assoc()返回的是数组，所以在redirect过程中会被强转成字符串”Array”，最后在跳转的时候会出错。</p>
 
-<p>而这个<a href="https://api.drupal.org/api/drupal/includes%21common.inc/function/drupal_map_assoc/7">drupal&#95;map&#95;assoc()</a>则暗藏玄机。</p>
+<p>而这个<a href="https://api.drupal.org/api/drupal/includes%21common.inc/function/drupal_map_assoc/7">drupal_map_assoc()</a>则暗藏玄机。</p>
 
-<p>根据官方文档，drupal&#95;map&#95;assoc()会把第一个参数$array中的每个参数依次传入第二个参数$callable执行并返回一个数组。</p>
+<p>根据官方文档，drupal_map_assoc()会把第一个参数$array中的每个参数依次传入第二个参数$callable执行并返回一个数组。</p>
 
 <p>这里藏着一个命令执行后门啊。。。。</p>
 
@@ -201,7 +201,7 @@ php &amp;gt; echo _openid_dh_base64_to_long('exec')/OPENID_DH_DEFAULT_GEN ."\n";
 93802
 </code></pre>
 
-<p>因为这里的is&#95;callable是不区分大小写的，本来我还以为后门作者刻意选择了大小写混用的函数名，本来差点要写程序暴搜的。还好偶然发现exec正好符合要求。^&#95;^</p>
+<p>因为这里的is_callable是不区分大小写的，本来我还以为后门作者刻意选择了大小写混用的函数名，本来差点要写程序暴搜的。还好偶然发现exec正好符合要求。^_^</p>
 
 <p><strong>如果以后要用这种方法做后门，记得一个有大因子的大小写混用的函数名哦。</strong></p>
 
@@ -235,6 +235,7 @@ SIGINT_d4b0844c
 </code></pre>
 
 <p>看来果然是木有写权限～～</p>
+
 </div>
 
 
@@ -296,6 +297,10 @@ SIGINT_d4b0844c
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -309,10 +314,6 @@ SIGINT_d4b0844c
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

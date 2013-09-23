@@ -77,7 +77,7 @@ Use 'l' &hellip;">
 
 <div class="entry-content"><p>DEF CON CTF Qualifier 2013 OMGACM 3 Writeup</p>
 
-<h2>Problem Description</h2>
+<h2 id="problem-description">Problem Description</h2>
 
 <p>The remote host offers a racing game:</p>
 
@@ -86,7 +86,7 @@ Use 'l' and 'r' to move. Don't crash.
 Press return to start
 </code></pre>
 
-<p>We send a line feed to start the game and receive a 5&#215;9 board:</p>
+<p>We send a line feed to start the game and receive a 5×9 board:</p>
 
 <pre><code>|-----|
 |     |
@@ -101,19 +101,19 @@ Press return to start
 |-----|
 </code></pre>
 
-<p>We can send &#8220;l\n&#8221; to move left, &#8220;r\n&#8221; to move right, or &#8220;\n&#8221; to stand.<br/>
+<p>We can send “l\n” to move left, “r\n” to move right, or “\n” to stand.<br />
 At the end of the round, all obstacles fall. It is obvious that we need to avoide those obstacles.</p>
 
-<h2>Solution</h2>
+<h2 id="solution">Solution</h2>
 
-<p>One way to view the problem is that we are forced to move forward one step each round.<br/>
+<p>One way to view the problem is that we are forced to move forward one step each round.<br />
 We can choose one of the three grids in front us. This is a special case of the dynamic pathfinding problem.</p>
 
-<p>We can apply a breadth-first search to find a safe path from <code>u</code> to some cell in the first row.<br/>
-During the main loop of the search, we record for each cell how to reach it from the orignal grid.<br/>
+<p>We can apply a breadth-first search to find a safe path from <code>u</code> to some cell in the first row.<br />
+During the main loop of the search, we record for each cell how to reach it from the orignal grid.<br />
 As decisions are made once per round, we can record only the first step for each path.</p>
 
-<p>Moreover, we find that there will be a finishing line made up by a row of <code>=</code> not far beyond the 1000th round.<br/>
+<p>Moreover, we find that there will be a finishing line made up by a row of <code>=</code> not far beyond the 1000th round.<br />
 It seems that <code>=</code> does not represent an obstacle.</p>
 
 <pre><code>Round 1062 s
@@ -154,7 +154,7 @@ Round 1066 r
 
 <p>So our criterion to check whether a grid represents an obstacle is: <code>c != ' ' &amp;amp;&amp;amp; c != 'u' &amp;amp;&amp;amp; c != '='</code>.</p>
 
-<h2>Programs</h2>
+<h2 id="programs">Programs</h2>
 
 <p>Here is the program with BFS:</p>
 
@@ -258,7 +258,7 @@ int main()
 }
 </code></pre>
 
-<p>During the contest, we use another approach to solve this task by using a heuristic to find the &#8220;safest&#8221; column: the one with the least obstacles in the inverted triangle behind it.<br/>
+<p>During the contest, we use another approach to solve this task by using a heuristic to find the “safest” column: the one with the least obstacles in the inverted triangle behind it.<br />
 And then plan a path to move to the safest column while dodging obstacles nearby.</p>
 
 <pre><code>#include 
@@ -422,6 +422,10 @@ void work()
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -435,10 +439,6 @@ void work()
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

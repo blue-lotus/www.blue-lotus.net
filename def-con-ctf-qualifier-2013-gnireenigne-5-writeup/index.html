@@ -255,7 +255,7 @@ void calc_hash(unsigned char* input, unsigned int size, unsigned char* output)
 }
 </code></pre>
 
-<p>According to <a href="http://en.wikipedia.org/wiki/Md5#Pseudocode">Wikipedia</a>, it is a revised MD5. The IV is changed to &#8220;hi my name is it&#8221;. To find a collision, you may download and compile <a href="http://dl.packetstormsecurity.net/crypt/md/md5coll.c">md5coll</a> by Patrick Stach, and execute it with new IV.</p>
+<p>According to <a href="http://en.wikipedia.org/wiki/Md5#Pseudocode">Wikipedia</a>, it is a revised MD5. The IV is changed to “hi my name is it”. To find a collision, you may download and compile <a href="http://dl.packetstormsecurity.net/crypt/md/md5coll.c">md5coll</a> by Patrick Stach, and execute it with new IV.</p>
 
 <pre><code>fish@fish-Linux-Mint-13 ~/defconctf/tastycloud $ ./md5coll-optimized 0x6d206968 0x616e2079 0x6920656d 0x74692073
 block #1 done
@@ -306,7 +306,8 @@ print s.recv(1024)
 
 <p>Run the script, we get the key: <strong>pringlelingus and redbull without a cause</strong></p>
 
-<p>This is one of the few challenges that we didn&#8217;t manage to solve during the game. It&#8217;s a pity as we finally noticed the final hashing algorithm is a revised MD5, however we have no time to construct a collision. It&#8217;s all my fault that I didn&#8217;t realized it was a MD5 as soon as possible <img src='http://www.blue-lotus.net/wp-includes/images/smilies/icon_razz.gif' alt=':P' class='wp-smiley' /> . Many thanks to NWMonster, Slipper and cq for their precious help.</p>
+<p>This is one of the few challenges that we didn’t manage to solve during the game. It’s a pity as we finally noticed the final hashing algorithm is a revised MD5, however we have no time to construct a collision. It’s all my fault that I didn’t realized it was a MD5 as soon as possible <img src="http://www.blue-lotus.net/wp-includes/images/smilies/icon_razz.gif" alt=":P" class="wp-smiley" /> . Many thanks to NWMonster, Slipper and cq for their precious help.</p>
+
 </div>
 
 
@@ -368,6 +369,10 @@ print s.recv(1024)
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -381,10 +386,6 @@ print s.recv(1024)
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

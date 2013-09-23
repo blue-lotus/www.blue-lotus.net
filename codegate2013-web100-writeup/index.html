@@ -78,11 +78,11 @@ $result = &hellip;">
   </header>
 
 
-<div class="entry-content"><h1>Web100</h1>
+<div class="entry-content"><h1 id="web100">Web100</h1>
 
 <p><em>yuzeming@gmail.com</em></p>
 
-<p>一个登陆页面，需要以admin登录。<br/>
+<p>一个登陆页面，需要以admin登录。<br />
 核心代码如下</p>
 
 <pre><code>&lt;?php
@@ -92,16 +92,15 @@ $result = mysql_query("select * from users where user_id='$id' and user_ps='$ps'
 ?&gt;
 </code></pre>
 
-<p>可以注意到hash函数的第三个参数为true，使得hash函数返回的是二进制串。任何字符都可能出现在字符串内。<br/>
+<p>可以注意到hash函数的第三个参数为true，使得hash函数返回的是二进制串。任何字符都可能出现在字符串内。<br />
 如果<code>'='</code>出现在hash后的字符串内可能导致注入。</p>
 
 <p>原理是当这个字符串带入查询后，查询串为<code>where user_ps='XXXX'='YYY'</code>。</p>
 
 <ul>
-<li>第一步运算 <code>user_ps='XXXX'</code>得到一个int值。由于不相等应该等于0.</li>
-<li>第二步运算 int值与字符串比较，会把字符串转换为int，转换结果也等于0。</li>
+  <li>第一步运算 <code>user_ps='XXXX'</code>得到一个int值。由于不相等应该等于0.</li>
+  <li>第二步运算 int值与字符串比较，会把字符串转换为int，转换结果也等于0。</li>
 </ul>
-
 
 <p>这绕过了密码检验。</p>
 
@@ -167,6 +166,10 @@ $result = mysql_query("select * from users where user_id='$id' and user_ps='$ps'
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -180,10 +183,6 @@ $result = mysql_query("select * from users where user_id='$id' and user_ps='$ps'
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

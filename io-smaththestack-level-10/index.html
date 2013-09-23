@@ -152,7 +152,7 @@ $2 = {_flags = -72539000,
   _unused2 = '\000' &lt;repeats 39 times&gt;}
 </code></pre>
 
-<p>这里注意到&#95;IO&#95;read&#95;ptr已经有了数值，相比较&#95;IO&#95;read&#95;base有了0&#215;14字节的偏移，因为第一次读取了0&#215;14字节。我们只需要将&#95;IO&#95;read&#95;ptr的最低一个字节覆盖为0，这样下一次fread就又从头开始读了。查看fp->&#95;IO&#95;read&#95;ptr所在地址和ptr地址：</p>
+<p>这里注意到_IO_read_ptr已经有了数值，相比较_IO_read_base有了0×14字节的偏移，因为第一次读取了0×14字节。我们只需要将_IO_read_ptr的最低一个字节覆盖为0，这样下一次fread就又从头开始读了。查看fp-&gt;_IO_read_ptr所在地址和ptr地址：</p>
 
 <pre><code>(gdb) p &amp;fp-&gt;_IO_read_ptr
 $3 = (char **) 0x804b00c
@@ -165,7 +165,7 @@ $4 = 0xbffff4e4
 <pre><code>(gdb) set fp-&gt;_IO_read_ptr=0xb7fdf000
 </code></pre>
 
-<p>现在如果我们要利用参数来覆盖&#95;IO&#95;read&#95;base的最低字节，只需要计算便宜&amp;fp->&#95;IO&#95;read&#95;ptr-ptr即可，在BT5中计算到0x804b00c-0xbffff4e4=1208269608，但是在远程的主机上这个数值肯定不同，而且由于关闭了ASLR，这个数值是固定的，因此我们可以对其附近的范围进行穷举，在/tmp目录中新建一个目录，写入如下python脚本：</p>
+<p>现在如果我们要利用参数来覆盖_IO_read_base的最低字节，只需要计算便宜&amp;fp-&gt;_IO_read_ptr-ptr即可，在BT5中计算到0x804b00c-0xbffff4e4=1208269608，但是在远程的主机上这个数值肯定不同，而且由于关闭了ASLR，这个数值是固定的，因此我们可以对其附近的范围进行穷举，在/tmp目录中新建一个目录，写入如下python脚本：</p>
 
 <pre><code>#!/usr/bin/env python
 import subprocess
@@ -180,7 +180,7 @@ for i in range(start, end):
     continue
 </code></pre>
 
-<p>很快就能穷举完，在一堆ACCESS DENIED&#8230;之中你会发现一个key，拿到这个key之后再作为参数传入level10中运行即可得到euid为level10的shell。值得注意的是key中有两个感叹号，shell中默认代表上一条指令，因此需要加反斜杠&#8217;\&lsquo;进行转义。</p>
+<p>很快就能穷举完，在一堆ACCESS DENIED…之中你会发现一个key，拿到这个key之后再作为参数传入level10中运行即可得到euid为level10的shell。值得注意的是key中有两个感叹号，shell中默认代表上一条指令，因此需要加反斜杠’&#8217;进行转义。</p>
 </div>
 
 
@@ -242,6 +242,10 @@ for i in range(start, end):
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -255,10 +259,6 @@ for i in range(start, end):
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

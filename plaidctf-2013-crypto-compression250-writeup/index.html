@@ -158,12 +158,11 @@ fi.close()
 
 <p>测试时发现即使不发送数据返回的长度也比20个Byte全不同的KEY小，于是可以判断KEY中本身就有重复</p>
 
-<p>暴力跑出了</p>
+<p>暴力跑出了<br />
+&gt; ime ays cri e_s <em>so met me</em><br />
+等串</p>
 
-<blockquote><p>ime ays cri e_s <em>so met me</em><br/>
-等串</p></blockquote>
-
-<p>以此为基准按位猜解跑出 crimes_pays ，但由于key本身含有重复，会影响按位猜解，于是卡住了，最终由@Slipper大神人肉猜解出KEY：<br/>
+<p>以此为基准按位猜解跑出 crimes_pays ，但由于key本身含有重复，会影响按位猜解，于是卡住了，最终由@Slipper大神人肉猜解出KEY：<br />
 <code>crime_sometimes_pays</code></p>
 
 <p>ps:其实对于lz77还是不太明白，个人理解4Byte的数据压缩为3Byte才会导致长度减小，爆破时不知道为什么有3Byte重复就长度减小了，请大牛们指点</p>
@@ -228,6 +227,10 @@ fi.close()
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -241,10 +244,6 @@ fi.close()
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

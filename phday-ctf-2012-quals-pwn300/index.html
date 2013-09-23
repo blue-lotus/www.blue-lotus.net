@@ -74,10 +74,8 @@
   </header>
 
 
-<div class="entry-content"><p>这题是基于twisted框架的一个web服务，题目给了一个web.py和process.pyc，阅读web.py代码发现处理post请求的核心函数在process模块中。使用unpyc这个工具反编译process.pyc，得到如下代码：</p>
-
-<!--more-->
-
+<div class="entry-content"><p>这题是基于twisted框架的一个web服务，题目给了一个web.py和process.pyc，阅读web.py代码发现处理post请求的核心函数在process模块中。使用unpyc这个工具反编译process.pyc，得到如下代码：<br />
+<!--more--></p>
 
 <p>def create_function(name, args_count, choice, actions, human):</p>
 
@@ -124,7 +122,7 @@ def process():
 
 <p>这题涉及到Python对象内部结构的知识，包括Python字节码、PyObject和PyCodeObject对象的结构等知识，可以参考hellok找的资料<a href="http://kdr2.net/blog/pyc_format.html">PYC格式文件分析</a>。</p>
 
-<p>阅读process代码发现，create&#95;function函数将actions写入函数y()的co&#95;names字段，将human合并上None写入co_consts字段，再将choice插入字节码中。我们可以在本地使用Python自带的反汇编工具包<a href="http://docs.python.org/2/library/dis.html">dis</a>查看函数y()被改成了什么样子。</p>
+<p>阅读process代码发现，create_function函数将actions写入函数y()的co_names字段，将human合并上None写入co_consts字段，再将choice插入字节码中。我们可以在本地使用Python自带的反汇编工具包<a href="http://docs.python.org/2/library/dis.html">dis</a>查看函数y()被改成了什么样子。</p>
 
 <p>先传入args:</p>
 
@@ -144,9 +142,9 @@ def process():
               9 RETURN_VALUE
 </code></pre>
 
-<p>这下就很容易理解为什么我们在网页上看到的是“Kenny was arrested”，传进去的actions实际上是供调用的函数符号表，human实际上就是作为arrest的参数（通过LOAD&#95;CONST传入python的栈中），然后choice就是在函数符号表co&#95;names（actions）中选择哪一个函数来执行。</p>
+<p>这下就很容易理解为什么我们在网页上看到的是“Kenny was arrested”，传进去的actions实际上是供调用的函数符号表，human实际上就是作为arrest的参数（通过LOAD_CONST传入python的栈中），然后choice就是在函数符号表co_names（actions）中选择哪一个函数来执行。</p>
 
-<p>如此一来，我们就知道怎么去执行任意想要的函数了，只需要把函数名方在names中，用choice去指向它，然后把参数放入human。最简单的方式是使用eval(&#8220;/etc/passwd&#8221;)的方式来获得flag。渗透脚本如下：</p>
+<p>如此一来，我们就知道怎么去执行任意想要的函数了，只需要把函数名方在names中，用choice去指向它，然后把参数放入human。最简单的方式是使用eval(“/etc/passwd”)的方式来获得flag。渗透脚本如下：</p>
 
 <pre><code>url_ = "http://ctf.phdays.com:2137/"
 
@@ -167,6 +165,7 @@ if __name__ == "__main__":
     human = "open('/etc/passwd').read()"
     send(choice, actions, human)
 </code></pre>
+
 </div>
 
 
@@ -228,6 +227,10 @@ if __name__ == "__main__":
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -241,10 +244,6 @@ if __name__ == "__main__":
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

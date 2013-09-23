@@ -75,13 +75,13 @@
   </header>
 
 
-<div class="entry-content"><h1>Web500</h1>
+<div class="entry-content"><h1 id="web500">Web500</h1>
 
 <p><em>yuzeming@gmail.com</em></p>
 
 <p>网站修改user-agant后才可以查看。</p>
 
-<p>在网页源代码中发现一个加密的javascript<a href="http://58.229.122.16:33445/site/main.js">(连接)</a><br/>
+<p>在网页源代码中发现一个加密的javascript<a href="http://58.229.122.16:33445/site/main.js">(连接)</a><br />
 这个文件可以使用Chrome 的调试功能进行解密。</p>
 
 <p>解密后发现当我们需要访问某个页面都会通过这个JS中的load_page()函数进行加载。</p>
@@ -97,7 +97,7 @@
 }
 </code></pre>
 
-<p>猜想index.php中有一个读取文件的函数，当参数p与s相对应。php就会把这个文件读取出来。<br/>
+<p>猜想index.php中有一个读取文件的函数，当参数p与s相对应。php就会把这个文件读取出来。<br />
 尝试读取一下index.php本身。读取出来的主要代码如下。</p>
 
 <pre><code>&lt;?php
@@ -117,7 +117,7 @@ function load_page($page, $sum){
 &lt;?php echo load_page($page, $sum); ?&gt;
 </code></pre>
 
-<p>的确可以读取任意文件，再尝试读取simulator.php</p>
+<p>的确可以读取任意文件，再尝试读取simulator.php </p>
 
 <pre><code>&lt;?php
     session_start();
@@ -134,15 +134,16 @@ function load_page($page, $sum){
 &lt;?php if (isset($row[0])) echo gzuncompress($row['memo.memo']); ?&gt;
 </code></pre>
 
-<p>看到程序对GM的数据进行了保护。那么我们可以尝试绕过这个保护。<br/>
+<p>看到程序对GM的数据进行了保护。那么我们可以尝试绕过这个保护。<br />
 不需要执行注入，可以直接下载这个/var/game_db/gamesim_GM.db文件。尝试使用../来跳转。</p>
 
 <p>最后通过这个连接，可以下载到这个数据文件</p>
 
-<p><code>http://58.229.122.16:33445/site/index.php?p=../../../var/game_db/gamesim_GM.db&amp;s=858497733a79dbc8bddd5f3f6b0fa8d0adf70049</code><br/>
-这是一个Sqlite 2.1格式的数据库文件 。<br/>
-使用Sqlite官网上的管理器打开就可以读取了。<br/>
+<p><code>http://58.229.122.16:33445/site/index.php?p=../../../var/game_db/gamesim_GM.db&amp;s=858497733a79dbc8bddd5f3f6b0fa8d0adf70049</code><br />
+这是一个Sqlite 2.1格式的数据库文件 。<br />
+使用Sqlite官网上的管理器打开就可以读取了。<br />
 注意读取出来的数据是经过压缩的。</p>
+
 </div>
 
 
@@ -204,6 +205,10 @@ function load_page($page, $sum){
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -217,10 +222,6 @@ function load_page($page, $sum){
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

@@ -9,7 +9,7 @@
   <meta name="author" content="blue-lotus">
 
   
-  <meta name="description" content="There&#8217;s a python remote service in this challenge, which runs a classical windows game &#8220;minesweeper&#8221;. You can send command to play &hellip;">
+  <meta name="description" content="There’s a python remote service in this challenge, which runs a classical windows game “minesweeper”. You can send command to play the game and get &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -74,7 +74,7 @@
   </header>
 
 
-<div class="entry-content"><p>There&#8217;s a python remote service in this challenge, which runs a classical windows game &#8220;minesweeper&#8221;. You can send command to play the game and get game status from remote server. What&#8217;s interesting in the challenge is the load and save mechanism. If you choose to send &#8220;save&#8221; command, you will get a string which you can use it to restore the game. However, it uses a Python module &#8220;Pickle&#8221; to save and load the game status object. &#8220;Pickle&#8221; module has vulnerablity which you can exploit it to execute arbitrarily command. Vulnerable code is as below:</p>
+<div class="entry-content"><p>There’s a python remote service in this challenge, which runs a classical windows game “minesweeper”. You can send command to play the game and get game status from remote server. What’s interesting in the challenge is the load and save mechanism. If you choose to send “save” command, you will get a string which you can use it to restore the game. However, it uses a Python module “Pickle” to save and load the game status object. “Pickle” module has vulnerablity which you can exploit it to execute arbitrarily command. Vulnerable code is as below:</p>
 
 <pre><code>def load(self, data):
     self.__dict__ = pickle.loads(data)
@@ -83,7 +83,7 @@ def save(self):
     return pickle.dumps(self.__dict__, 1)
 </code></pre>
 
-<p>However, to construnct malformed data for the server to load is not that easy. It uses a remote side key to encode the game status data after &#8220;save&#8221; function and decode it before &#8220;load&#8221;. So in order to construct what we want to pass to &#8220;load&#8221; correctly, we should first figure the encryption key out. It&#8217;s an easy xor algorithm. We can win a game manully and use the mines&#8217; position information to construct the encoding process locally. With the help of returned &#8220;save&#8221; string for restore, we can recover the remote key. Using the key, we can construnt anything evil to capture the flag.</p>
+<p>However, to construnct malformed data for the server to load is not that easy. It uses a remote side key to encode the game status data after “save” function and decode it before “load”. So in order to construct what we want to pass to “load” correctly, we should first figure the encryption key out. It’s an easy xor algorithm. We can win a game manully and use the mines’ position information to construct the encoding process locally. With the help of returned “save” string for restore, we can recover the remote key. Using the key, we can construnt anything evil to capture the flag.</p>
 
 <p>Code sample for exploitation is below:</p>
 
@@ -219,6 +219,10 @@ f.load(msg[9+h.digest_size:])
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -232,10 +236,6 @@ f.load(msg[9+h.digest_size:])
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

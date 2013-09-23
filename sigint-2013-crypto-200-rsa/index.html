@@ -78,7 +78,7 @@ ssh to &hellip;">
 
 <div class="entry-content"><p><a href="http://slipper.tk/writeup/2013/07/10/sigint-2013-crypto-rsa/">http://slipper.tk/writeup/2013/07/10/sigint-2013-crypto-rsa/</a></p>
 
-<h1><a href="http://slipper.tk/writeup/2013/07/10/sigint-2013-crypto-rsa/">SIGINT2013 crypto200 rsa</a></h1>
+<h1 id="sigint2013-crypto200-rsa1"><a href="http://slipper.tk/writeup/2013/07/10/sigint-2013-crypto-rsa/">SIGINT2013 crypto200 rsa</a></h1>
 
 <p>Description</p>
 
@@ -107,13 +107,12 @@ def randfunc(n):
 <p>RSAPublicKey的结构：</p>
 
 <ul>
-<li>The key type</li>
-<li>A chunk of PEM-encoded data</li>
-<li>A comment</li>
+  <li>The key type</li>
+  <li>A chunk of PEM-encoded data</li>
+  <li>A comment</li>
 </ul>
 
-
-<p>PEM是<a href="http://en.wikipedia.org/wiki/Base64#Privacy-enhanced_mail">Privacy Enhanced Mail</a>的缩写。<br/>
+<p>PEM是<a href="http://en.wikipedia.org/wiki/Base64#Privacy-enhanced_mail">Privacy Enhanced Mail</a>的缩写。<br />
 对于ssh密钥，PEM是由一些小数据块(big-endian)组成的。每一块前面是数据长度，后面就是数据。</p>
 
 <pre><code>def b2i(s):
@@ -144,8 +143,9 @@ if __name__ == &amp;#039;__main__&amp;#039;:
 
 <p><a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/rsa/my.py">my.py</a></p>
 
-<p>SIGINT_some_people_pay_100_euro_for_this<br/>
+<p>SIGINT_some_people_pay_100_euro_for_this<br />
 <a href="https://github.com/5lipper/CTF-Challenges/blob/master/SIGINT2013/crypto/rsa/flag">flag</a></p>
+
 </div>
 
 
@@ -207,6 +207,10 @@ if __name__ == &amp;#039;__main__&amp;#039;:
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -220,10 +224,6 @@ if __name__ == &amp;#039;__main__&amp;#039;:
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>

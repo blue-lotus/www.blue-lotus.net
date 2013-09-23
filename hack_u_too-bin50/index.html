@@ -80,7 +80,6 @@
 
 <!--more-->
 
-
 <p>程序如下：</p>
 
 <p>1.anti调试器。通过简单的补丁等可绕过</p>
@@ -105,15 +104,29 @@
 
 <p>其中4个变量关系如下：</p>
 
-<p>v13|v14=0&#215;77</p>
+<table>
+  <tbody>
+    <tr>
+      <td>v13</td>
+      <td>v14=0×77</td>
+    </tr>
+  </tbody>
+</table>
 
-<p>v13<sup>v14</sup>=0&#215;46</p>
+<p>v13^v14=0×46</p>
 
-<p>v14<sup>v15</sup>=0&#215;45</p>
+<p>v14^v15=0×45</p>
 
-<p>v15<sup>v16</sup>=0x1c</p>
+<p>v15^v16=0x1c</p>
 
-<p>v15|v15=0x7c</p>
+<table>
+  <tbody>
+    <tr>
+      <td>v15</td>
+      <td>v15=0x7c</td>
+    </tr>
+  </tbody>
+</table>
 
 <p>手动计算，或者暴力都好。</p>
 
@@ -191,15 +204,16 @@ answer变为42343
 
 <p>发现资源文件里面可以找到注册名</p>
 
-<p>k0hyacu</p>
+<p>k0hyacu</p>
 
 <p>最终有2组解</p>
 
-<p>k0hyacu fr0m&#95;hacky0u&#95;w1th_l0v3~</p>
+<p>k0hyacu fr0m_hacky0u_w1th_l0v3~</p>
 
-<p>k0hyacu fr0m&#95;hacky0u&#95;s5pl_l0v3~</p>
+<p>k0hyacu fr0m_hacky0u_s5pl_l0v3~</p>
 
 <p>组1可成功提交</p>
+
 </div>
 
 
@@ -261,6 +275,10 @@ answer变为42343
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/csaw-ctf-2013-crypto500-writeup/">CSAW CTF 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
         <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
       </li>
     
@@ -274,10 +292,6 @@ answer变为42343
     
       <li class="post">
         <a href="/ufoctf2013-web100-flagstore/">UFOCTF2013 Web100 FlagStore</a>
-      </li>
-    
-      <li class="post">
-        <a href="/sigint-2013-crypto300-satisfaction/">SIGINT 2013 Crypto300 Satisfaction</a>
       </li>
     
   </ul>
