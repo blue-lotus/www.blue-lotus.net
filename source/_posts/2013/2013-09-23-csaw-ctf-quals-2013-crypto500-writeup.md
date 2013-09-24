@@ -1,8 +1,8 @@
 ---
-title: CSAW CTF 2013 crypto500 writeup
+title: CSAW CTF Quals 2013 crypto500 writeup
 author: hellok
 layout: post
-permalink: /csaw-ctf-2013-crypto500-writeup/
+permalink: /csaw-ctf-quals-2013-crypto500-writeup/
 comments: true
 categories:
   - CTF
