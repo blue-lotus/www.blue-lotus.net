@@ -65,7 +65,7 @@ We also have some other players from other universities and teams.
       <img src="http://www.blue-lotus.net/wp-content/uploads/2012/10/Adrian.jpg" alt="" width="150px" /><br /> <span>Adrian</span><br /> <span>CS BE</span><br /> <span>Ocean University of China</span>
     </td>
     <td align="center" style="vertical-align: baseline;">
-      <img src="http://www.blue-lotus.net/wp-content/uploads/2012/10/lovelydream1.jpg" alt="" width="150px" /><br /> <span>lovelydream</span><br /> <span>CS BS</span><br /> <span>SJTU</span>
+      <img src="http://www.blue-lotus.net/wp-content/uploads/2012/10/fqj.jpg" alt="" width="150px" /><br /> <a href="https://fqj.me/" target="_blank">fqj</a><br /> <span>CS BS</span><br /> <span>HUST</span>
     </td>
   </tr>
       
