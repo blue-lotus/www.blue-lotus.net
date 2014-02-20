@@ -8,6 +8,10 @@ Blue-lotus is a security research team in Tsinghua University. We have played se
 
 We also have some other players from other universities and teams.
 
+<a href="http://www.anquanbao.com" target="_blank"><img src="http://www.anquanbao.com/img/home/logo.jpg" /></a>
+<br />
+Thanks for sponsorship from <a href="http://www.anquanbao.com" target="_blank">Anquanbao.com</a>.
+
 ## Advisor
 
 <table border="0" style="width: 100%; font-size: 0.8em;">
