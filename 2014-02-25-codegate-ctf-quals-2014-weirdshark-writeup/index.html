@@ -1,0 +1,294 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Codegate CTF Quals 2014 weirdshark writeup - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="A pcap file is given here for analysis. check type using file # file weird_shark.pcap_f5f1e42dd398f18c43af89ba972b3ee7
+weird_shark. &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net//2014-02-25-codegate-ctf-quals-2014-weirdshark-writeup">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <div id="header-inner">
+    <span class="first"><a href="/">blue-lotus</a></span>
+    <span><a href="/about">about</a></span>
+    <span class="last"><a href="/atom.xml" title="subscribe via RSS">rss</a></span>
+  </div>
+</hgroup>
+
+</header>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Codegate CTF Quals 2014 Weirdshark Writeup</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-02-25T00:00:00+08:00" pubdate data-updated="true">Feb 25<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>A pcap file is given here for analysis. check type using <code>file</code></p>
+
+<pre><code># file weird_shark.pcap_f5f1e42dd398f18c43af89ba972b3ee7
+weird_shark.pcap_f5f1e42dd398f18c43af89ba972b3ee7: pcap-ng capture file - version 1.0
+</code></pre>
+
+<p>Open the file using wireshark, but no luck, wireshark reports malformed file format and refuse to open it.</p>
+
+<p>So we need to extract the packets inside manually.</p>
+
+<!-- more -->
+
+<p>Soon I got the file format document <a href="https://www.winpcap.org/ntar/draft/PCAP-DumpFileFormat.html">here</a>, the file format is really simple, it’s organized in blocks, and according to my comprehension, each block contains a single network frame packet.</p>
+
+<p>According to <code>general block structure</code> section in the pcap document, we can easily get the block type, length, and content.</p>
+
+<p>And as for the packet, there are several levels of network protocol headers, a brief hex view shows that the network traffic are HTTP requests and responses, so the protocol stack should be IP + TCP + HTTP</p>
+
+<pre><code>| 6 + 6 bytes MAC addr + 2 bytes (ethertype 08 00) | 20 bytes IP header | 20 bytes TCP header | HTTP Header + HTTP Body |
+</code></pre>
+
+<p>the hard thing here to do manually pcap parse is to assemble TCP packets into byte stream, which require a good understanding of TCP control sequence. But we can assume that the network condition is good, no packet loss or retranssmission happens, just assemble them one by one and see what happens.</p>
+
+<p>use the following python code to extract all http content</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+<span class="line-number">12</span>
+<span class="line-number">13</span>
+<span class="line-number">14</span>
+<span class="line-number">15</span>
+<span class="line-number">16</span>
+<span class="line-number">17</span>
+<span class="line-number">18</span>
+<span class="line-number">19</span>
+<span class="line-number">20</span>
+<span class="line-number">21</span>
+</pre></td><td class="code"><pre><code class="python"><span class="line"><span class="kn">import</span> <span class="nn">os</span><span class="o">,</span> <span class="nn">sys</span><span class="o">,</span> <span class="nn">struct</span>
+</span><span class="line">
+</span><span class="line"><span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">&#39;weird_shark.pcap_f5f1e42dd398f18c43af89ba972b3ee7&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+</span><span class="line"><span class="n">total</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+</span><span class="line">
+</span><span class="line"><span class="c"># skip the first two blocks, which seems broken, 0x80 and 0x9c are the block sizes respectively</span>
+</span><span class="line"><span class="n">index</span> <span class="o">=</span> <span class="mh">0x80</span> <span class="o">+</span> <span class="mh">0x9c</span>
+</span><span class="line">
+</span><span class="line"><span class="n">w</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">&#39;http-content.bin&#39;</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span>
+</span><span class="line">
+</span><span class="line"><span class="k">while</span> <span class="n">index</span> <span class="o">&lt;</span> <span class="n">total</span><span class="p">:</span>
+</span><span class="line">    <span class="n">block_type</span> <span class="o">=</span> <span class="n">f</span><span class="p">[</span><span class="n">index</span><span class="p">:</span><span class="n">index</span><span class="o">+</span><span class="mi">4</span><span class="p">]</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s">&#39;hex&#39;</span><span class="p">)</span>
+</span><span class="line">    <span class="n">block_size</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;I&#39;</span><span class="p">,</span> <span class="n">f</span><span class="p">[</span><span class="n">index</span><span class="o">+</span><span class="mi">4</span><span class="p">:</span><span class="n">index</span><span class="o">+</span><span class="mi">8</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+</span><span class="line">    <span class="n">captured_len</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;I&#39;</span><span class="p">,</span> <span class="n">f</span><span class="p">[</span><span class="n">index</span><span class="o">+</span><span class="mi">20</span><span class="p">:</span><span class="n">index</span><span class="o">+</span><span class="mi">24</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+</span><span class="line">    <span class="n">packet_len</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;I&#39;</span><span class="p">,</span> <span class="n">f</span><span class="p">[</span><span class="n">index</span><span class="o">+</span><span class="mi">24</span><span class="p">:</span><span class="n">index</span><span class="o">+</span><span class="mi">28</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+</span><span class="line">    <span class="k">print</span> <span class="n">index</span><span class="p">,</span> <span class="n">block_size</span><span class="p">,</span> <span class="n">packet_len</span><span class="p">,</span> <span class="n">captured_len</span><span class="p">,</span> <span class="n">block_type</span>
+</span><span class="line">    <span class="n">w</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">f</span><span class="p">[</span><span class="n">index</span><span class="o">+</span><span class="mi">28</span><span class="o">+</span><span class="mi">54</span><span class="p">:</span><span class="n">index</span><span class="o">+</span><span class="mi">28</span><span class="o">+</span><span class="n">packet_len</span><span class="p">])</span>
+</span><span class="line">    <span class="n">w</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+</span><span class="line">    <span class="n">index</span> <span class="o">+=</span> <span class="n">block_size</span>
+</span><span class="line">
+</span><span class="line"><span class="n">w</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<p>The result seems very promising,  just concat the packet contents one by one really works! which indicates the network condition is really good. There are several http requests inside</p>
+
+<pre><code>GET / HTTP/1.1
+GET /favicon.ico HTTP/1.1
+GET /mario.png HTTP/1.1
+GET /favicon.ico HTTP/1.1
+GET /obama.bmp HTTP/1.1
+GET /codegate.jpg HTTP/1.1
+GET /multiple.pdf HTTP/1.1
+GET /grayhash.jpg HTTP/1.1
+</code></pre>
+
+<p>And to my surprise, the flag is not in <code>codegate.jpg</code>, but in <code>multiple.pdf</code></p>
+
+<p>FLAG = <code>FORENSICS_WITH_HAXORS</code></p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">zTrix</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-02-25T00:00:00+08:00" pubdate data-updated="true">Feb 25<span>th</span>, 2014</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ctf/'>CTF</a>, <a class='category' href='/blog/categories/writeup/'>writeup</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/2014-02-25-codegate-ctf-quals-2014-weird_snus-writeup/" title="Previous Post: Codegate CTF Quals 2014 weird_snus writeup">&laquo; Codegate CTF Quals 2014 weird_snus writeup</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/2014-02-25-codegate-ctf-quals-2014-weirdshark-writeup/">Codegate CTF Quals 2014 Weirdshark Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014-02-25-codegate-ctf-quals-2014-weird_snus-writeup/">Codegate CTF Quals 2014 Weird_snus Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014-02-25-codegate-ctf-quals-2014-web_proxy-writeup/">Codegate CTF Quals 2014 Web Proxy Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014-02-25-codegate-ctf-quals-2014-clone-technique-writeup/">Codegate CTF Quals 2014 Clone Technique Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014-02-25-codegate-ctf-quals-2014-chrono-writeup/">Codegate CTF Quals 2014 Chrono Writeup</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'bluelotus';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://www.blue-lotus.net//2014-02-25-codegate-ctf-quals-2014-weirdshark-writeup/';
+        var disqus_url = 'http://www.blue-lotus.net//2014-02-25-codegate-ctf-quals-2014-weirdshark-writeup/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>

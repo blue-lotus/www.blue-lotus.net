@@ -1,0 +1,297 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Codegate CTF Quals 2014 Clone Technique writeup - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="Clone_Techique is a 250 points reverseme. The given program is a win32 PE. After load it in IDA pro, we can see the main function contains a loop &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net//2014-02-25-codegate-ctf-quals-2014-clone-technique-writeup">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <div id="header-inner">
+    <span class="first"><a href="/">blue-lotus</a></span>
+    <span><a href="/about">about</a></span>
+    <span class="last"><a href="/atom.xml" title="subscribe via RSS">rss</a></span>
+  </div>
+</hgroup>
+
+</header>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Codegate CTF Quals 2014 Clone Technique Writeup</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-02-25T00:00:00+08:00" pubdate data-updated="true">Feb 25<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>Clone_Techique is a 250 points reverseme. The given program is a win32 PE. </p>
+
+<p>After load it in IDA pro, we can see the main function contains a loop which calls <code>CreateProcessW</code> many many times, that explains the title “clone technique”. Before <code>CreateProcessW</code>, command string is prepared by <code>wsnprintf</code>, in which add some arguements when create new process. Except that, nothing special in main function.</p>
+
+<pre><code>if ( (unsigned int)count &lt;= 0xD0000000 )
+{
+    count = v1;
+    dword_409754 = v6;
+    GetModuleFileNameW(0, &amp;Filename, 0x12Cu);
+    do
+    {
+        if ( (unsigned int)dword_409758 &gt; 0x190 )
+        return 0;
+        ++dword_409758;
+        wsprintfW(&amp;CommandLine, L"\"%s\" %u %u %u", &amp;Filename, v1, v6, dword_409758);
+        CreateProcessW(0, &amp;CommandLine, 0, 0, 0, 0, 0, 0, &amp;StartupInfo, &amp;ProcessInformation);
+        WaitForSingleObject(ProcessInformation.hProcess, 0xFFFFFFFFu);
+        GetExitCodeProcess(ProcessInformation.hProcess, &amp;ExitCode);
+        v1 = ExitCode;
+        v6 = sub_401280(ExitCode ^ v6, ExitCode % 0x1E);
+    }
+    while ( ExitCode );
+    result = 0;
+}
+</code></pre>
+
+<p>It took me sometime to figure out where to store the flag. Finally I notice a strange string near the const string used by <code>wsprintfW</code>.</p>
+
+<pre><code>.data:00407030 magic_string    db 0Fh,'帪9=^?▃h',0Ch,'=嫮判{',9,'4叮g],0,0
+.data:00407030                                         ; DATA XREF: sub_401160+90o
+.data:0040704C ; const WCHAR aSUUU
+.data:0040704C aSUUU:                                  ; DATA XREF: real_main+128o
+.data:0040704C                 unicode 0, &lt;"%s" %u %u %u&gt;,0
+.data:00407068                 align 10h
+</code></pre>
+
+<p>Using Xref, IDA lead me to a interesting function. Noticing the <code>GetCommandLineW</code> call and <code>WriteProcessMemory</code> call, I believe it should be the key functin. </p>
+
+<p>But there is some anti-decompile technique disable IDA to decompile this function. </p>
+
+<pre><code>add     esp, 80h
+sub     esp, 80h
+</code></pre>
+
+<p>By filling the line shown above with nop. The IDA successfully decompile it.</p>
+
+<pre><code>v0 = GetCommandLineW();
+v5 = CommandLineToArgvW(v0, &amp;pNumArgs);
+if ( pNumArgs == 4 )
+{
+    Buffer = _wtoi(v5[1]);
+    v7 = _wtoi(v5[2]);
+    dword_409758 = _wtoi(v5[3]);
+}
+else
+{
+    Buffer = 0xA8276BFAu;
+    v7 = 0x92F837EDu;
+    dword_409758 = 1;
+}
+memset(sub_401070(&amp;magic_string, Buffer, v7), 0, 28u);
+Buffer ^= 0xB72AF098u;
+v7 ^= v7 * Buffer;
+lpBaseAddress = (char *)&amp;unk_409748 + 4;
+WriteProcessMemory((HANDLE)0xFFFFFFFF, (char *)&amp;unk_409748 + 4, &amp;Buffer, 4u, &amp;NumberOfBytesWritten);
+lpBaseAddress = (char *)&amp;unk_409750 + 4;
+return WriteProcessMemory((HANDLE)0xFFFFFFFF, (char *)&amp;unk_409750 + 4, &amp;v7, 4u, &amp;NumberOfBytesWritten);
+</code></pre>
+
+<p>It is clear that the program compute the magic string with arguments. And then memset the new string with 0 immediately. The new string is very likely to be the flag. But we must know the correct arguements. Next step we need to find out the all the arguements when createprocess</p>
+
+<p>Using procmon, it is easy to monitor all newlly created process and log them. Export them all into XML file, and do some scripting, and then we get all the arguements when create process.</p>
+
+<p><img src="http://www.blue-lotus.net/images/2013/procmon.png" alt="1" /></p>
+
+<p>Now it very close to the flag, but for me the pain just begins. Not familiar with debugging multi-process in windows, I decide to totally reverse the compute function. Luckily, with help of IDA it’s not that diffcult, but still took me some time. </p>
+
+<p>The most frustrating part is the ROL function provided by IDA don’t behave the same with the reverseme. Using a debugger, I set a breakpoint at the key function and compare the results of my own code and that of reverseme. </p>
+
+<p>With a rewritten key function, just enumerate all the parameters we dumped. Look over the 800+ results, we find:</p>
+
+<pre><code>And Now His Watch is Ended
+</code></pre>
+
+<p>That’s the flag!</p>
+
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">yhy</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-02-25T00:00:00+08:00" pubdate data-updated="true">Feb 25<span>th</span>, 2014</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ctf/'>CTF</a>, <a class='category' href='/blog/categories/writeup/'>writeup</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/2014-02-25-codegate-ctf-quals-2014-chrono-writeup/" title="Previous Post: Codegate CTF Quals 2014 chrono writeup">&laquo; Codegate CTF Quals 2014 chrono writeup</a>
+      
+      
+        <a class="basic-alignment right" href="/2014-02-25-codegate-ctf-quals-2014-web_proxy-writeup/" title="Next Post: Codegate CTF Quals 2014 Web Proxy writeup">Codegate CTF Quals 2014 Web Proxy writeup &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/2014-02-25-codegate-ctf-quals-2014-weirdshark-writeup/">Codegate CTF Quals 2014 Weirdshark Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014-02-25-codegate-ctf-quals-2014-weird_snus-writeup/">Codegate CTF Quals 2014 Weird_snus Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014-02-25-codegate-ctf-quals-2014-web_proxy-writeup/">Codegate CTF Quals 2014 Web Proxy Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014-02-25-codegate-ctf-quals-2014-clone-technique-writeup/">Codegate CTF Quals 2014 Clone Technique Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014-02-25-codegate-ctf-quals-2014-chrono-writeup/">Codegate CTF Quals 2014 Chrono Writeup</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'bluelotus';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://www.blue-lotus.net//2014-02-25-codegate-ctf-quals-2014-clone-technique-writeup/';
+        var disqus_url = 'http://www.blue-lotus.net//2014-02-25-codegate-ctf-quals-2014-clone-technique-writeup/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>

