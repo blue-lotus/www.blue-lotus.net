@@ -22,7 +22,7 @@ The 3rd vulnerability is easier to exploit. We choose it to do exploitation.
 
 Exploitation steps are as below:
 
-1. Leak the stack canary and stack address in the option `5.Fist attack` handler;
+1. Leak the stack canary and stack address in the option `4.Throw mouse` handler;
 2. Launch ROP attack to call write() in the PLT to leak libc address(e.g. write() in GOT), and then we can calculate the address of system()
 3. Launch ROP attack to call system(), and the shell command can be put in the stack since we already know the stack address in step 1
 
