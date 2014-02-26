@@ -4,7 +4,7 @@
   <title><![CDATA[Category: writeup | blue-lotus]]></title>
   <link href="http://www.blue-lotus.net//blog/categories/writeup/atom.xml" rel="self"/>
   <link href="http://www.blue-lotus.net//"/>
-  <updated>2014-02-26T13:24:05+08:00</updated>
+  <updated>2014-02-26T20:07:00+08:00</updated>
   <id>http://www.blue-lotus.net//</id>
   <author>
     <name><![CDATA[blue-lotus]]></name>
@@ -329,7 +329,7 @@ return WriteProcessMemory((HANDLE)0xFFFFFFFF, (char *)&amp;unk_409750 + 4, &amp;
 
 <p>Using procmon, it is easy to monitor all newlly created process and log them. Export them all into XML file, and do some scripting, and then we get all the arguements when create process.</p>
 
-<p><img src="http://www.blue-lotus.net/images/2013/procmon.png" alt="1" /></p>
+<p><img src="http://www.blue-lotus.net/images/2014/procmon.png" alt="1" /></p>
 
 <p>Now it very close to the flag, but for me the pain just begins. Not familiar with debugging multi-process in windows, I decide to totally reverse the compute function. Luckily, with help of IDA it’s not that diffcult, but still took me some time. </p>
 
