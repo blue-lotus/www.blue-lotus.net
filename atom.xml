@@ -4,7 +4,7 @@
   <title><![CDATA[blue-lotus]]></title>
   <link href="http://www.blue-lotus.net//atom.xml" rel="self"/>
   <link href="http://www.blue-lotus.net//"/>
-  <updated>2014-02-25T13:46:00+08:00</updated>
+  <updated>2014-02-26T13:24:05+08:00</updated>
   <id>http://www.blue-lotus.net//</id>
   <author>
     <name><![CDATA[blue-lotus]]></name>
@@ -787,7 +787,7 @@ dash&lt;&amp;4&gt;&amp;4
 <p>Exploitation steps are as below:</p>
 
 <ol>
-  <li>Leak the stack canary and stack address in the option <code>5.Fist attack</code> handler;</li>
+  <li>Leak the stack canary and stack address in the option <code>4.Throw mouse</code> handler;</li>
   <li>Launch ROP attack to call write() in the PLT to leak libc address(e.g. write() in GOT), and then we can calculate the address of system()</li>
   <li>Launch ROP attack to call system(), and the shell command can be put in the stack since we already know the stack address in step 1</li>
 </ol>
