@@ -91,4 +91,4 @@ With a rewritten key function, just enumerate all the parameters we dumped. Look
 
 That's the flag!
 
- [1]: http://www.blue-lotus.net/images/2013/procmon.png
+ [1]: http://www.blue-lotus.net/images/2014/procmon.png
